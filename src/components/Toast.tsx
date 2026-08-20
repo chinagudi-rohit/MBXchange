@@ -10,11 +10,28 @@ export interface ToastMessage {
 
 interface ToastProps {
   toasts: ToastMessage[];
-  onDismiss: (id: string) => void;
+  onDismiss?: (id: string) => void;
+  onRemoveToast?: (id: string) => void;
 }
 
-export const ToastContainer: React.FC<ToastProps> = ({ toasts, onDismiss }) => {
-  if (toasts.length === 0) return null;
+export const ToastContainer: React.FC<ToastProps> = ({ toasts = [], onDismiss, onRemoveToast }) => {
+  if (!Array.isArray(toasts) || toasts.length === 0) return null;
+
+  const handleDismiss = (id: string) => {
+    if (typeof onDismiss === 'function') {
+      try {
+        onDismiss(id);
+      } catch (e) {
+        console.error('Error in onDismiss:', e);
+      }
+    } else if (typeof onRemoveToast === 'function') {
+      try {
+        onRemoveToast(id);
+      } catch (e) {
+        console.error('Error in onRemoveToast:', e);
+      }
+    }
+  };
 
   return (
     <div className="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none">
@@ -41,8 +58,8 @@ export const ToastContainer: React.FC<ToastProps> = ({ toasts, onDismiss }) => {
             )}
           </div>
           <button
-            onClick={() => onDismiss(toast.id)}
-            className="shrink-0 text-slate-500 hover:text-white transition-colors p-0.5 rounded"
+            onClick={() => handleDismiss(toast.id)}
+            className="shrink-0 text-slate-500 hover:text-white transition-colors p-0.5 rounded cursor-pointer"
             aria-label="Dismiss"
           >
             <X className="w-4 h-4" />

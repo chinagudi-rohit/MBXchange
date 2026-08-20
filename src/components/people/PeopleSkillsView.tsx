@@ -61,7 +61,7 @@ export const PeopleSkillsView: React.FC<PeopleSkillsViewProps> = ({
   }, [experts, selectedDept, selectedSkill, searchQuery]);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-in fade-in">
+    <div className="w-full space-y-8 animate-in fade-in">
       
       {/* Top Banner */}
       <div className="bg-[#14171d] border border-[#21242c] rounded-3xl p-6 sm:p-8 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
@@ -143,7 +143,7 @@ export const PeopleSkillsView: React.FC<PeopleSkillsViewProps> = ({
       </div>
 
       {/* Grid of Expert Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4 gap-5">
         {filteredExperts.map((person) => (
           <div
             key={person.id}

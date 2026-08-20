@@ -78,11 +78,11 @@ export const MarketGrid: React.FC<MarketGridProps> = ({
   }, [safeListings, selectedCategory, searchQuery, sortBy]);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+    <div className="w-full animate-in fade-in space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 2xl:grid-cols-12 gap-6">
         
         {/* Left Sidebar: Categories & Create Button */}
-        <aside className="lg:col-span-3 space-y-6">
+        <aside className="lg:col-span-4 xl:col-span-3 space-y-6">
           
           {/* Post item CTA box */}
           <div className="bg-[#14171d] border border-[#21242c] rounded-2xl p-6 shadow-xl relative overflow-hidden">
@@ -145,7 +145,7 @@ export const MarketGrid: React.FC<MarketGridProps> = ({
         </aside>
 
         {/* Right Main Grid */}
-        <main className="lg:col-span-9 space-y-4">
+        <main className="lg:col-span-8 xl:col-span-9 space-y-4">
           
           {/* Filter Bar */}
           <div className="bg-[#14171d] border border-[#21242c] rounded-2xl p-3 shadow-xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
@@ -181,7 +181,7 @@ export const MarketGrid: React.FC<MarketGridProps> = ({
           </div>
 
           {/* Listings Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
             {filteredListings.length === 0 ? (
               <div className="col-span-full bg-[#14171d] border border-[#21242c] rounded-2xl p-12 text-center shadow-xl">
                 <div className="w-12 h-12 rounded-full bg-[#0f1116] border border-[#21242c] flex items-center justify-center mx-auto mb-3 text-slate-500">

@@ -1,5 +1,6 @@
 import { 
   TalentProfile, 
+  UserAccount,
   WorkPost, 
   BandwidthOffer, 
   ManagerApprovalItem, 
@@ -9,15 +10,118 @@ import {
   KnowledgeQuestion, 
   NotificationItem, 
   CapabilityHeatmapItem,
+  DirectMessage,
+  CollaborationRequest,
+  UserSavedMap,
+  CarpoolRide,
   UserRole 
 } from '../types';
 
-export const CURRENT_USER: TalentProfile = {
+export const ADMIN_USER: UserAccount = {
+  id: 'usr_admin',
+  name: 'Dr. Markus Becker',
+  email: 'markus.becker@mercedes-benz.com',
+  role: 'Head of Enterprise Platform',
+  systemRole: 'admin',
+  status: 'active',
+  department: 'PT-THIT',
+  campus: 'Stuttgart Headquarters & MBRDI Global Center',
+  initials: 'MB',
+  experienceYears: 18,
+  primarySkills: ['Enterprise Architecture', 'Organizational Governance', 'Security Governance', 'Cloud Strategy', 'Resource Allocation'],
+  interests: ['Digital Transformation', 'Cross-Domain Engineering', 'Enterprise Portals', 'AI Governance'],
+  availableFor: ['Executive Sponsorship', 'Governance Reviews', 'Resource Allocation', 'System Architecture'],
+  typicalAvailability: 'Ad-hoc',
+  currentAvailabilityHoursThisWeek: 4,
+  contributionScore: 4.99,
+  ratingBreakdown: {
+    helping: 5.0,
+    technicalExpertise: 5.0,
+    collaboration: 5.0,
+    reliability: 4.98
+  },
+  badges: [
+    {
+      id: 'b_adm1',
+      name: 'System Administrator',
+      icon: '🏛️',
+      description: 'Head of MBXchange Platform & Enterprise Operations',
+      dateEarned: 'Jan 2024'
+    },
+    {
+      id: 'b_adm2',
+      name: 'Executive Sponsor',
+      icon: '⭐',
+      description: 'Championed cross-functional engineering mobility',
+      dateEarned: 'Jun 2024'
+    }
+  ],
+  collaborationsCount: 45,
+  departmentsSupportedCount: 10,
+  peopleHelpedCount: 120,
+  hoursContributed: 240,
+  bio: 'Head of PT-TH Enterprise Digital Platforms & Engineering Governance across Mercedes-Benz global software centers.'
+};
+
+export const MANAGER_ELENA: UserAccount = {
+  id: 'usr_elena',
+  name: 'Elena Rostova',
+  email: 'elena.rostova@mercedes-benz.com',
+  role: 'Engineering Manager',
+  systemRole: 'manager',
+  status: 'active',
+  department: 'PT-THIS',
+  managerId: 'usr_admin',
+  managerName: 'Dr. Markus Becker',
+  directReportIds: ['usr_rakesh', 'usr_arjun'],
+  campus: 'MBRDI Bengaluru Hub',
+  initials: 'ER',
+  experienceYears: 14,
+  primarySkills: ['Cloud Infrastructure', 'Kubernetes', 'Capacity Management', 'People Leadership', 'DevOps Strategy'],
+  interests: ['Cloud Scalability', 'Talent Mobility', 'Agile Delivery', 'DevSecOps'],
+  availableFor: ['Manager Approvals', 'Resource Planning', 'Cross-Team Syncs', 'Mentoring'],
+  typicalAvailability: '6–8 hours/month',
+  currentAvailabilityHoursThisWeek: 6,
+  contributionScore: 4.92,
+  ratingBreakdown: {
+    helping: 4.9,
+    technicalExpertise: 4.9,
+    collaboration: 4.95,
+    reliability: 4.95
+  },
+  badges: [
+    {
+      id: 'b_m1',
+      name: 'Talent Champion',
+      icon: '🌟',
+      description: 'Approved 30+ cross-department employee exchanges',
+      dateEarned: 'Aug 2025'
+    },
+    {
+      id: 'b_m2',
+      name: 'Cloud Operations Leader',
+      icon: '🛡️',
+      description: 'Maintained 99.99% infrastructure uptime',
+      dateEarned: 'Dec 2025'
+    }
+  ],
+  collaborationsCount: 32,
+  departmentsSupportedCount: 8,
+  peopleHelpedCount: 45,
+  hoursContributed: 110,
+  bio: 'Engineering Manager for PT-THIS Cloud Infrastructure & Platform Services. Passionate about empowering engineers to expand their craft across squads.'
+};
+
+export const CURRENT_USER: UserAccount = {
   id: 'usr_rakesh',
   name: 'Rakesh Kumar',
   email: 'rakesh.kumar@mercedes-benz.com',
   role: 'Lead DevOps Engineer',
+  systemRole: 'employee',
+  status: 'active',
   department: 'PT-THIS',
+  managerId: 'usr_elena',
+  managerName: 'Elena Rostova',
   campus: 'Mercedes-Benz Research & Development India (MBRDI) Bengaluru',
   initials: 'RK',
   experienceYears: 14,
@@ -70,14 +174,95 @@ export const CURRENT_USER: TalentProfile = {
   bio: 'Lead DevOps specialist at PT-THIS passionate about developer productivity, immutable infrastructure, and helping all PT-TH squads scale on AWS/Azure Kubernetes securely.'
 };
 
-export const EXPERTS_LIST: TalentProfile[] = [
+export const MANAGER_CLARA: UserAccount = {
+  id: 'usr_clara',
+  name: 'Clara Weber',
+  email: 'clara.weber@mercedes-benz.com',
+  role: 'Agile Product & Governance Lead',
+  systemRole: 'manager',
+  status: 'active',
+  department: 'PT-THIP',
+  managerId: 'usr_admin',
+  managerName: 'Dr. Markus Becker',
+  directReportIds: ['usr_priya', 'usr_anand'],
+  campus: 'MBRDI Bengaluru Hub',
+  initials: 'CW',
+  experienceYears: 12,
+  primarySkills: ['Agile Transformation', 'Product Strategy', 'Release Governance', 'People Leadership', 'Jira / Confluence'],
+  interests: ['Engineering Process Optimization', 'Cross-Dept Roadmapping', 'Team Capacity Planning'],
+  availableFor: ['Sprint Planning Reviews', 'Governance Workflow Design', 'Jira Automation Setup', 'Manager Approvals'],
+  typicalAvailability: '5–8 hours/month',
+  currentAvailabilityHoursThisWeek: 5,
+  contributionScore: 4.87,
+  ratingBreakdown: {
+    helping: 4.9,
+    technicalExpertise: 4.8,
+    collaboration: 4.95,
+    reliability: 4.8
+  },
+  badges: [
+    { id: 'b1', name: 'Agile Champion', icon: '✨', description: 'Optimized delivery processes across squads', dateEarned: 'May 2025' }
+  ],
+  collaborationsCount: 22,
+  departmentsSupportedCount: 7,
+  peopleHelpedCount: 34,
+  hoursContributed: 76,
+  bio: 'PT-THIP lead facilitating agile product delivery, sprint governance, and cross-team mobility across Mercedes-Benz India.'
+};
+
+export const MANAGER_JOHANNES: UserAccount = {
+  id: 'usr_johannes',
+  name: 'Dr. Johannes Brandner',
+  email: 'johannes.brandner@mercedes-benz.com',
+  role: 'Principal Functional Safety & Future Tech Lead',
+  systemRole: 'manager',
+  status: 'active',
+  department: 'PT-THIF',
+  managerId: 'usr_admin',
+  managerName: 'Dr. Markus Becker',
+  directReportIds: ['usr_sneha', 'usr_vikram', 'usr_maya'],
+  campus: 'MBRDI & Stuttgart Collaboration Cell',
+  initials: 'JB',
+  experienceYears: 16,
+  primarySkills: ['ISO 26262', 'Functional Safety', 'ASIL D Concepts', 'Safety Architecture', 'Team Leadership', 'HiL Test Governance'],
+  interests: ['Hydrogen Fuel Cell Powertrains', 'System-Theoretic Process Analysis', 'Next-Gen High Voltage Safety'],
+  availableFor: ['ASIL D Safety Concept Audits', 'HARA Workgroups', 'ISO 26262 Compliance Reviews', 'Safety Gate Assessments'],
+  typicalAvailability: '4–6 hours/month',
+  currentAvailabilityHoursThisWeek: 4,
+  contributionScore: 4.96,
+  ratingBreakdown: {
+    helping: 4.95,
+    technicalExpertise: 5.0,
+    collaboration: 4.9,
+    reliability: 4.95
+  },
+  badges: [
+    { id: 'b1', name: 'Safety Authority', icon: '🛡️', description: 'Validated ISO 26262 ASIL D safety concepts for 10+ critical platforms', dateEarned: 'Oct 2025' },
+    { id: 'b2', name: 'Hydrogen Pioneer', icon: '🔬', description: 'Authored core safety manuals for fuel cell propulsion', dateEarned: 'Dec 2025' }
+  ],
+  collaborationsCount: 28,
+  departmentsSupportedCount: 9,
+  peopleHelpedCount: 39,
+  hoursContributed: 96,
+  bio: 'PT-THIF safety authority guiding ISO 26262 compliance, ASIL D architecture design, and hazard analysis for high-voltage battery and hydrogen fuel cell systems.'
+};
+
+export const INITIAL_USER_ACCOUNTS: UserAccount[] = [
+  ADMIN_USER,
+  MANAGER_ELENA,
+  MANAGER_CLARA,
+  MANAGER_JOHANNES,
   CURRENT_USER,
   {
     id: 'usr_priya',
     name: 'Priya Sharma',
     email: 'priya.sharma@mercedes-benz.com',
     role: 'Senior AI / Data Architect',
+    systemRole: 'employee',
+    status: 'active',
     department: 'PT-THIA',
+    managerId: 'usr_clara',
+    managerName: 'Clara Weber',
     campus: 'MBRDI Bengaluru Hub',
     initials: 'PS',
     experienceYears: 9,
@@ -108,7 +293,11 @@ export const EXPERTS_LIST: TalentProfile[] = [
     name: 'Arjun Mehta',
     email: 'arjun.mehta@mercedes-benz.com',
     role: 'Data Engineering Specialist',
+    systemRole: 'employee',
+    status: 'active',
     department: 'PT-THID',
+    managerId: 'usr_elena',
+    managerName: 'Elena Rostova',
     campus: 'MBRDI Whitefield Hub',
     initials: 'AM',
     experienceYears: 7,
@@ -138,7 +327,11 @@ export const EXPERTS_LIST: TalentProfile[] = [
     name: 'Sneha Reddy',
     email: 'sneha.reddy@mercedes-benz.com',
     role: 'Embedded & AUTOSAR Engineer',
+    systemRole: 'employee',
+    status: 'active',
     department: 'PT-THIE',
+    managerId: 'usr_johannes',
+    managerName: 'Dr. Johannes Brandner',
     campus: 'MBRDI Bengaluru Hub',
     initials: 'SR',
     experienceYears: 10,
@@ -159,47 +352,20 @@ export const EXPERTS_LIST: TalentProfile[] = [
     ],
     collaborationsCount: 19,
     departmentsSupportedCount: 6,
-    peopleHelpedCount: 28,
+    peopleHelpedCount: 29,
     hoursContributed: 72,
-    bio: 'PT-THIE embedded firmware engineer specializing in real-time AUTOSAR motor controllers and battery management.'
-  },
-  {
-    id: 'usr_elena',
-    name: 'Elena Rostova',
-    email: 'elena.rostova@mercedes-benz.com',
-    role: 'Enterprise Cloud Architect',
-    department: 'PT-THIT',
-    campus: 'MBRDI & Global Cloud Hub',
-    initials: 'ER',
-    experienceYears: 12,
-    primarySkills: ['AWS', 'Azure', 'Zero-Trust', 'Cybersecurity', 'Microservices', 'API Gateway', 'Terraform'],
-    interests: ['Enterprise IT Security', 'Identity & Access Management', 'Landing Zones', 'Disaster Recovery'],
-    availableFor: ['Cloud Architecture Review', 'Security Threat Modeling', 'API Gateway Design'],
-    typicalAvailability: '4–8 hours/month',
-    currentAvailabilityHoursThisWeek: 6,
-    contributionScore: 4.94,
-    ratingBreakdown: {
-      helping: 4.9,
-      technicalExpertise: 5.0,
-      collaboration: 4.9,
-      reliability: 4.95
-    },
-    badges: [
-      { id: 'b1', name: 'Master Cloud Architect', icon: '☁️', description: 'Designed high-volume enterprise landing zones', dateEarned: 'Sep 2025' },
-      { id: 'b2', name: 'Security Champion', icon: '🛡️', description: 'Audited 10+ departmental cloud systems', dateEarned: 'Jan 2026' }
-    ],
-    collaborationsCount: 29,
-    departmentsSupportedCount: 7,
-    peopleHelpedCount: 41,
-    hoursContributed: 104,
-    bio: 'PT-THIT architect designing secure cloud landing zones, IAM governance, and resilient global IT systems.'
+    bio: 'PT-THIE embedded firmware specialist developing robust AUTOSAR ECU stacks, CAN-FD network layers, and bootloaders.'
   },
   {
     id: 'usr_anand',
     name: 'Anand Rao',
     email: 'anand.rao@mercedes-benz.com',
     role: 'Simulation & CAE Engineer',
+    systemRole: 'employee',
+    status: 'active',
     department: 'PT-THIM',
+    managerId: 'usr_clara',
+    managerName: 'Clara Weber',
     campus: 'MBRDI Pune Powertrain Center',
     initials: 'AR',
     experienceYears: 11,
@@ -225,41 +391,15 @@ export const EXPERTS_LIST: TalentProfile[] = [
     bio: 'PT-THIM specialist in vehicle powertrain thermal dynamics, motor CAD/CAE simulations, and manufacturing digital twins.'
   },
   {
-    id: 'usr_clara',
-    name: 'Clara Weber',
-    email: 'clara.weber@mercedes-benz.com',
-    role: 'Agile Product & Governance Lead',
-    department: 'PT-THIP',
-    campus: 'MBRDI Bengaluru Hub',
-    initials: 'CW',
-    experienceYears: 8,
-    primarySkills: ['Agile Transformation', 'Jira / Confluence', 'Release Governance', 'Product Strategy', 'Figma'],
-    interests: ['Engineering Process Optimization', 'Cross-Dept Roadmapping', 'Team Capacity Planning'],
-    availableFor: ['Sprint Planning Reviews', 'Governance Workflow Design', 'Jira Automation Setup'],
-    typicalAvailability: '5–8 hours/month',
-    currentAvailabilityHoursThisWeek: 5,
-    contributionScore: 4.87,
-    ratingBreakdown: {
-      helping: 4.9,
-      technicalExpertise: 4.8,
-      collaboration: 4.95,
-      reliability: 4.8
-    },
-    badges: [
-      { id: 'b1', name: 'Agile Champion', icon: '✨', description: 'Optimized delivery processes across squads', dateEarned: 'May 2025' }
-    ],
-    collaborationsCount: 16,
-    departmentsSupportedCount: 7,
-    peopleHelpedCount: 24,
-    hoursContributed: 56,
-    bio: 'PT-THIP lead facilitating seamless collaboration, sprint governance, and agile product delivery across Mercedes-Benz India.'
-  },
-  {
     id: 'usr_vikram',
     name: 'Vikramaditya Sengupta',
     email: 'vikramaditya.sengupta@mercedes-benz.com',
     role: 'Lead HiL & Test Bench Architect',
+    systemRole: 'employee',
+    status: 'active',
     department: 'PT-THIG',
+    managerId: 'usr_johannes',
+    managerName: 'Dr. Johannes Brandner',
     campus: 'MBRDI Bengaluru Hub',
     initials: 'VS',
     experienceYears: 13,
@@ -290,7 +430,11 @@ export const EXPERTS_LIST: TalentProfile[] = [
     name: 'Maya Kulkarni',
     email: 'maya.kulkarni@mercedes-benz.com',
     role: 'Senior Powertrain Controls & Calibration Specialist',
+    systemRole: 'employee',
+    status: 'active',
     department: 'PT-THIC',
+    managerId: 'usr_johannes',
+    managerName: 'Dr. Johannes Brandner',
     campus: 'MBRDI Bengaluru & Pune Test Track',
     initials: 'MK',
     experienceYears: 10,
@@ -314,41 +458,211 @@ export const EXPERTS_LIST: TalentProfile[] = [
     peopleHelpedCount: 26,
     hoursContributed: 62,
     bio: 'PT-THIC powertrain controls engineer specializing in EV traction motor calibration, torque safety curves, and high-frequency in-vehicle telemetry.'
-  },
-  {
-    id: 'usr_johannes',
-    name: 'Johannes Brandner',
-    email: 'johannes.brandner@mercedes-benz.com',
-    role: 'Principal Functional Safety & Future Tech Lead',
-    department: 'PT-THIF',
-    campus: 'MBRDI & Stuttgart Collaboration Cell',
-    initials: 'JB',
-    experienceYears: 15,
-    primarySkills: ['ISO 26262', 'Functional Safety', 'ASIL D Concepts', 'HARA Analysis', 'Fuel Cell Systems', 'Safety Architecture', 'FMEA'],
-    interests: ['Hydrogen Fuel Cell Powertrains', 'System-Theoretic Process Analysis', 'Next-Gen High Voltage Safety'],
-    availableFor: ['ASIL D Safety Concept Audits', 'HARA Workgroups', 'ISO 26262 Compliance Reviews', 'Safety Gate Assessments'],
-    typicalAvailability: '4–6 hours/month',
-    currentAvailabilityHoursThisWeek: 4,
-    contributionScore: 4.96,
-    ratingBreakdown: {
-      helping: 4.95,
-      technicalExpertise: 5.0,
-      collaboration: 4.9,
-      reliability: 4.95
-    },
-    badges: [
-      { id: 'b1', name: 'Safety Authority', icon: '🛡️', description: 'Validated ISO 26262 ASIL D safety concepts for 10+ critical platforms', dateEarned: 'Oct 2025' },
-      { id: 'b2', name: 'Hydrogen Pioneer', icon: '🔬', description: 'Authored core safety manuals for fuel cell propulsion', dateEarned: 'Dec 2025' }
-    ],
-    collaborationsCount: 28,
-    departmentsSupportedCount: 9,
-    peopleHelpedCount: 39,
-    hoursContributed: 96,
-    bio: 'PT-THIF safety authority guiding ISO 26262 compliance, ASIL D architecture design, and hazard analysis for high-voltage battery and hydrogen fuel cell systems.'
   }
 ];
 
-export const INITIAL_TALENT_PROFILES: TalentProfile[] = EXPERTS_LIST;
+export const INITIAL_TALENT_PROFILES: TalentProfile[] = INITIAL_USER_ACCOUNTS;
+export const EXPERTS_LIST: TalentProfile[] = INITIAL_USER_ACCOUNTS;
+
+export const INITIAL_DIRECT_MESSAGES: DirectMessage[] = [
+  {
+    id: 'msg_1',
+    senderId: 'usr_priya',
+    senderName: 'Priya Sharma',
+    senderInitials: 'PS',
+    senderRole: 'Senior AI / Data Architect',
+    recipientId: 'usr_rakesh',
+    recipientName: 'Rakesh Kumar',
+    recipientInitials: 'RK',
+    recipientRole: 'Lead DevOps Engineer',
+    text: 'Hi Rakesh, thank you for the tips on AKS private cluster DNS. The GenAI copilot search latency dropped from 420ms to 65ms after we configured internal endpoint caching!',
+    timestamp: Date.now() - 3600000 * 3,
+    time: '3h ago',
+    read: false,
+    contextType: 'work',
+    contextTitle: 'GenAI Knowledge Graph Latency Optimization',
+    contextId: 102
+  },
+  {
+    id: 'msg_2',
+    senderId: 'usr_rakesh',
+    senderName: 'Rakesh Kumar',
+    senderInitials: 'RK',
+    senderRole: 'Lead DevOps Engineer',
+    recipientId: 'usr_priya',
+    recipientName: 'Priya Sharma',
+    recipientInitials: 'PS',
+    recipientRole: 'Senior AI / Data Architect',
+    text: 'That is fantastic news, Priya! Let me know if you need automated Helm charts for the semantic vector indexing pipeline.',
+    timestamp: Date.now() - 3600000 * 2,
+    time: '2h ago',
+    read: true,
+    contextType: 'work',
+    contextTitle: 'GenAI Knowledge Graph Latency Optimization',
+    contextId: 102
+  },
+  {
+    id: 'msg_3',
+    senderId: 'usr_elena',
+    senderName: 'Elena Rostova',
+    senderInitials: 'ER',
+    senderRole: 'Engineering Manager & Tech Lead',
+    recipientId: 'usr_rakesh',
+    recipientName: 'Rakesh Kumar',
+    recipientInitials: 'RK',
+    recipientRole: 'Lead DevOps Engineer',
+    text: 'Hi Rakesh, I approved your 8-hour cross-department collaboration request for PT-THIA. Great to see our cloud patterns being leveraged by AI squads.',
+    timestamp: Date.now() - 3600000 * 5,
+    time: '5h ago',
+    read: false,
+    contextType: 'collab',
+    contextTitle: 'Manager Approval: PT-THIA Cross-Collaboration'
+  },
+  {
+    id: 'msg_4',
+    senderId: 'usr_arjun',
+    senderName: 'Arjun Mehta',
+    senderInitials: 'AM',
+    senderRole: 'Data Engineering Specialist',
+    recipientId: 'usr_elena',
+    recipientName: 'Elena Rostova',
+    recipientInitials: 'ER',
+    recipientRole: 'Engineering Manager & Tech Lead',
+    text: 'Hi Elena, I submitted a request to support the Powertrain Telemetry Pipeline gig for 6 hours next week. My sprint commitments for MBRDI Kafka streaming are on track.',
+    timestamp: Date.now() - 3600000 * 1,
+    time: '1h ago',
+    read: false,
+    contextType: 'collab',
+    contextTitle: 'Approval Request: Powertrain Telemetry Pipeline'
+  },
+  {
+    id: 'msg_5',
+    senderId: 'usr_sneha',
+    senderName: 'Sneha Reddy',
+    senderInitials: 'SR',
+    senderRole: 'Embedded & AUTOSAR Engineer',
+    recipientId: 'usr_johannes',
+    recipientName: 'Dr. Johannes Brandner',
+    recipientInitials: 'JB',
+    recipientRole: 'Principal Functional Safety & Tech Lead',
+    text: 'Dr. Brandner, the ECU CAN-FD stack validation on the Sindelfingen test bench is ready for your safety sign-off.',
+    timestamp: Date.now() - 3600000 * 4,
+    time: '4h ago',
+    read: false,
+    contextType: 'work',
+    contextTitle: 'CAN-FD Telemetry Safety Review'
+  },
+  {
+    id: 'msg_6',
+    senderId: 'usr_anand',
+    senderName: 'Anand Verma',
+    senderInitials: 'AV',
+    senderRole: 'Cloud Security & Compliance Engineer',
+    recipientId: 'usr_clara',
+    recipientName: 'Clara Schumacher',
+    recipientInitials: 'CS',
+    recipientRole: 'Head of Software Strategy',
+    text: 'Clara, the automated IAM role segregation audit across our Azure Landing Zones passed all CIS benchmarks.',
+    timestamp: Date.now() - 3600000 * 6,
+    time: '6h ago',
+    read: false,
+    contextType: 'general',
+    contextTitle: 'Cloud Security Audit Status'
+  },
+  {
+    id: 'msg_7',
+    senderId: 'usr_johannes',
+    senderName: 'Dr. Johannes Brandner',
+    senderInitials: 'JB',
+    senderRole: 'Principal Functional Safety & Tech Lead',
+    recipientId: 'usr_admin',
+    recipientName: 'Dr. Markus Becker',
+    recipientInitials: 'MB',
+    recipientRole: 'Head of Enterprise Platform',
+    text: 'Markus, the cross-department HiL test validation sharing between PT-THIG and PT-THIE has saved approximately 180 engineering hours this quarter.',
+    timestamp: Date.now() - 3600000 * 24,
+    time: '1d ago',
+    read: true,
+    contextType: 'general',
+    contextTitle: 'Quarterly Cross-Department Mobility Metrics'
+  }
+];
+
+export const INITIAL_USER_SAVED_MAP: UserSavedMap = {
+  usr_rakesh: {
+    workIds: [102, 105],
+    listingIds: [201, 203],
+    communityIds: [301],
+    carpoolIds: ['ride_2', 'ride_5']
+  },
+  usr_priya: {
+    workIds: [101, 104],
+    listingIds: [205],
+    communityIds: [301],
+    carpoolIds: ['ride_1']
+  },
+  usr_elena: {
+    workIds: [101, 102, 107],
+    listingIds: [202],
+    communityIds: [301],
+    carpoolIds: ['ride_3']
+  },
+  usr_clara: {
+    workIds: [102, 106],
+    listingIds: [204],
+    communityIds: [302],
+    carpoolIds: ['ride_4']
+  },
+  usr_johannes: {
+    workIds: [103, 108],
+    listingIds: [201],
+    communityIds: [303],
+    carpoolIds: ['ride_3']
+  },
+  usr_admin: {
+    workIds: [101, 108, 110],
+    listingIds: [201, 202],
+    communityIds: [301, 302],
+    carpoolIds: ['ride_1', 'ride_3']
+  }
+};
+
+export const INITIAL_COLLABORATION_REQUESTS: CollaborationRequest[] = [
+  {
+    id: 'collab_1',
+    requesterId: 'usr_priya',
+    requesterName: 'Priya Sharma',
+    requesterRole: 'Senior AI / Data Architect',
+    requesterDepartment: 'PT-THIA',
+    targetTalentId: 'usr_rakesh',
+    targetTalentName: 'Rakesh Kumar',
+    targetDepartment: 'PT-THIS',
+    taskTitle: 'Terraform & EKS Automation for GenAI Knowledge Graph Cluster',
+    estimatedHours: '8 hours (2 sessions)',
+    dates: '24–26 Aug 2026',
+    notes: 'Need expert DevOps review for provisioning private EKS node groups with GPU acceleration for local LLM inference.',
+    status: 'accepted',
+    timestamp: Date.now() - 3600000 * 24,
+    time: 'Yesterday'
+  },
+  {
+    id: 'collab_2',
+    requesterId: 'usr_anand',
+    requesterName: 'Anand Rao',
+    requesterRole: 'Simulation & CAE Engineer',
+    requesterDepartment: 'PT-THIM',
+    targetTalentId: 'usr_sneha',
+    targetTalentName: 'Sneha Reddy',
+    targetDepartment: 'PT-THIE',
+    taskTitle: 'Simulink to AUTOSAR C Code Generation Verification',
+    estimatedHours: '6 hours',
+    dates: '28 Aug 2026',
+    notes: 'Validating generated C algorithms on motor inverter firmware loops.',
+    status: 'pending',
+    timestamp: Date.now() - 3600000 * 6,
+    time: '6h ago'
+  }
+];
 
 export const INITIAL_WORK_POSTS: WorkPost[] = [
   {
@@ -749,9 +1063,11 @@ export const INITIAL_BANDWIDTH_OFFERS: BandwidthOffer[] = [
 export const INITIAL_MANAGER_APPROVALS: ManagerApprovalItem[] = [
   {
     id: 'mng_app_1',
+    employeeId: 'usr_rakesh',
     employeeName: 'Rakesh Kumar',
     employeeRole: 'Lead DevOps Engineer',
     employeeDepartment: 'PT-THIS',
+    managerId: 'usr_elena',
     opportunityId: 101,
     opportunityTitle: 'Need DevOps Engineer – Deployment Automation on AWS & EKS',
     targetDepartment: 'PT-THIA',
@@ -765,9 +1081,29 @@ export const INITIAL_MANAGER_APPROVALS: ManagerApprovalItem[] = [
   },
   {
     id: 'mng_app_2',
+    employeeId: 'usr_arjun',
+    employeeName: 'Arjun Mehta',
+    employeeRole: 'Data Engineering Specialist',
+    employeeDepartment: 'PT-THIS',
+    managerId: 'usr_elena',
+    opportunityId: 104,
+    opportunityTitle: 'Powertrain Telemetry Pipeline – Kafka & Snowflake Streaming',
+    targetDepartment: 'PT-THID',
+    requestedCommitment: '6 hours',
+    period: '23–25 Aug 2026',
+    currentProject: 'Vehicle Diagnostic Data Ingestion Pipeline',
+    aiRecommendation: 'Approve',
+    aiRecommendationReason: 'Arjun completed 100% of sprint deliverables 2 days ahead of schedule. Cross-functional data sharing will accelerate PT-THID roadmap.',
+    status: 'Pending',
+    requestedAt: '3 hours ago'
+  },
+  {
+    id: 'mng_app_3',
+    employeeId: 'usr_priya',
     employeeName: 'Priya Sharma',
     employeeRole: 'Senior AI / Data Architect',
     employeeDepartment: 'PT-THIA',
+    managerId: 'usr_clara',
     opportunityId: 102,
     opportunityTitle: 'Need AI Specialist for 3 days — Diagnostic Copilot & RAG Pipeline',
     targetDepartment: 'PT-THID',
@@ -779,6 +1115,271 @@ export const INITIAL_MANAGER_APPROVALS: ManagerApprovalItem[] = [
     status: 'Approved',
     requestedAt: 'Yesterday',
     managerNotes: 'Approved. Great cross-department collaboration between PT-THIA and PT-THID.'
+  },
+  {
+    id: 'mng_app_4',
+    employeeId: 'usr_anand',
+    employeeName: 'Anand Verma',
+    employeeRole: 'Cloud Security & Compliance Engineer',
+    employeeDepartment: 'PT-THIA',
+    managerId: 'usr_clara',
+    opportunityId: 108,
+    opportunityTitle: 'Cloud Security Architecture Assessment — Zero Trust VPC Peering',
+    targetDepartment: 'PT-THIT',
+    requestedCommitment: '8 hours',
+    period: '26–28 Aug 2026',
+    currentProject: 'Azure Landing Zone Automated Governance',
+    aiRecommendation: 'Approve',
+    aiRecommendationReason: 'Anand holds Lead AWS & Azure Security certifications. Excellent knowledge transfer opportunity.',
+    status: 'Pending',
+    requestedAt: '4 hours ago'
+  },
+  {
+    id: 'mng_app_5',
+    employeeId: 'usr_sneha',
+    employeeName: 'Sneha Reddy',
+    employeeRole: 'Embedded & AUTOSAR Engineer',
+    employeeDepartment: 'PT-THIG',
+    managerId: 'usr_johannes',
+    opportunityId: 103,
+    opportunityTitle: 'AUTOSAR Classic Migration for Battery Management System',
+    targetDepartment: 'PT-THIB',
+    requestedCommitment: '10 hours',
+    period: '24–27 Aug 2026',
+    currentProject: 'CAN-FD High-Speed Telemetry Stack',
+    aiRecommendation: 'Approve with Conditions',
+    aiRecommendationReason: 'Ensure Sindelfingen test bench HIL validation run on Thursday is not delayed.',
+    status: 'Pending',
+    requestedAt: '2 hours ago'
+  },
+  {
+    id: 'mng_app_6',
+    employeeId: 'usr_vikram',
+    employeeName: 'Vikram Joshi',
+    employeeRole: 'HiL Test Automation Specialist',
+    employeeDepartment: 'PT-THIE',
+    managerId: 'usr_johannes',
+    opportunityId: 105,
+    opportunityTitle: 'Hardware-in-the-Loop Test Script Automation in Python/dSPACE',
+    targetDepartment: 'PT-THIC',
+    requestedCommitment: '8 hours',
+    period: '25–28 Aug 2026',
+    currentProject: 'dSPACE HiL Test Bench Automation',
+    aiRecommendation: 'Approve',
+    aiRecommendationReason: 'Strong domain alignment with dSPACE test automation frameworks.',
+    status: 'Pending',
+    requestedAt: '5 hours ago'
+  }
+];
+
+export const INITIAL_CARPOOL_RIDES: CarpoolRide[] = [
+  {
+    id: 'ride_1',
+    driverId: 'usr_rakesh',
+    driverName: 'Rakesh Kumar',
+    driverRole: 'Lead DevOps Engineer',
+    driverDepartment: 'PT-THIS',
+    driverInitials: 'RK',
+    driverRating: 4.9,
+    origin: 'Indiranagar 100ft Road (Metro Gate 1)',
+    destination: 'MBRDI Whitefield Campus (Building 3)',
+    campus: 'MBRDI Whitefield Hub',
+    departureTime: '08:15 AM',
+    returnTime: '05:45 PM',
+    scheduleType: 'Daily (Mon–Fri)',
+    vehicleModel: 'Mercedes-Benz EQA 250+ (Electric)',
+    vehicleType: 'Electric (EV)',
+    totalSeats: 4,
+    availableSeats: 2,
+    passengers: [
+      {
+        id: 'usr_arjun',
+        name: 'Arjun Mehta',
+        role: 'Data Engineering Specialist',
+        department: 'PT-THIS',
+        initials: 'AM',
+        status: 'confirmed'
+      },
+      {
+        id: 'usr_priya',
+        name: 'Priya Sharma',
+        role: 'Senior AI / Data Architect',
+        department: 'PT-THIA',
+        initials: 'PS',
+        status: 'confirmed'
+      }
+    ],
+    costSharingPerTrip: 'Free / Eco-Commute',
+    notes: 'EV silent drive with Wi-Fi hotspot. Daily commute via Marathahalli flyover. Charging reserved at Whitefield Hub B2.',
+    routeHighlights: ['Indiranagar Metro', 'HAL Old Airport Rd', 'Marathahalli Bridge', 'Whitefield Gate 3'],
+    amenities: ['EV Zero Emissions', 'Climate Control AC', 'Quiet Work Mode', 'Device Fast Charger'],
+    contactPref: 'chat',
+    createdAt: Date.now() - 3600000 * 24
+  },
+  {
+    id: 'ride_2',
+    driverId: 'usr_elena',
+    driverName: 'Elena Rostova',
+    driverRole: 'Engineering Manager & Tech Lead',
+    driverDepartment: 'PT-THIS',
+    driverInitials: 'ER',
+    driverRating: 5.0,
+    origin: 'Koramangala 4th Block (Sony World Signal)',
+    destination: 'MBRDI Whitefield Campus (Building 1)',
+    campus: 'MBRDI Whitefield Hub',
+    departureTime: '08:45 AM',
+    returnTime: '06:15 PM',
+    scheduleType: 'Mon, Wed, Fri',
+    vehicleModel: 'Mercedes-Benz C 300e (PHEV)',
+    vehicleType: 'Hybrid (PHEV)',
+    totalSeats: 4,
+    availableSeats: 3,
+    passengers: [
+      {
+        id: 'usr_anand',
+        name: 'Anand Verma',
+        role: 'Cloud Security Engineer',
+        department: 'PT-THIA',
+        initials: 'AV',
+        status: 'confirmed'
+      }
+    ],
+    costSharingPerTrip: 'Free / Eco-Commute',
+    notes: 'Manager commute. Open to mentorship chats or silent morning prep. Non-smoking vehicle.',
+    routeHighlights: ['Koramangala Ring Rd', 'Bellandur EcoSpace', 'ORR Mahadevapura', 'MBRDI Whitefield'],
+    amenities: ['Hybrid Commute', 'Mentorship Friendly', 'Coffee Cup Holders', 'Spacious Trunk'],
+    contactPref: 'chat',
+    createdAt: Date.now() - 3600000 * 48
+  },
+  {
+    id: 'ride_3',
+    driverId: 'usr_johannes',
+    driverName: 'Dr. Johannes Brandner',
+    driverRole: 'Principal Functional Safety & Tech Lead',
+    driverDepartment: 'PT-THIG',
+    driverInitials: 'JB',
+    driverRating: 4.95,
+    origin: 'Stuttgart Hbf / Charlottenplatz',
+    destination: 'Sindelfingen Plant (Tor 3 R&D Center)',
+    campus: 'Sindelfingen Plant & Tech Center',
+    departureTime: '07:45 AM',
+    returnTime: '04:45 PM',
+    scheduleType: 'Daily (Mon–Fri)',
+    vehicleModel: 'Mercedes-Benz EQS 450+ (Electric)',
+    vehicleType: 'Electric (EV)',
+    totalSeats: 4,
+    availableSeats: 2,
+    passengers: [
+      {
+        id: 'usr_sneha',
+        name: 'Sneha Reddy',
+        role: 'Embedded & AUTOSAR Engineer',
+        department: 'PT-THIG',
+        initials: 'SR',
+        status: 'confirmed'
+      },
+      {
+        id: 'usr_vikram',
+        name: 'Vikram Joshi',
+        role: 'HiL Test Specialist',
+        department: 'PT-THIE',
+        initials: 'VJ',
+        status: 'confirmed'
+      }
+    ],
+    costSharingPerTrip: 'Free / Eco-Commute',
+    notes: 'Sindelfingen daily R&D commute. Highway A81 corridor. Dedicated EV charging at Tor 3.',
+    routeHighlights: ['Stuttgart Süd', 'Vaihingen Kreuz', 'Böblingen Nord', 'Sindelfingen Tor 3'],
+    amenities: ['MBUX Hyperscreen Music', 'EV Silent Cruise', 'Heated/Cooled Seats', 'Spacious Trunk'],
+    contactPref: 'chat',
+    createdAt: Date.now() - 3600000 * 36
+  },
+  {
+    id: 'ride_4',
+    driverId: 'usr_clara',
+    driverName: 'Clara Schumacher',
+    driverRole: 'Head of Software Strategy',
+    driverDepartment: 'PT-THIA',
+    driverInitials: 'CS',
+    driverRating: 4.98,
+    origin: 'Tübingen Bahnhof / Lustnau',
+    destination: 'Böblingen Tech Hub & R&D Campus',
+    campus: 'Böblingen Tech Hub',
+    departureTime: '08:00 AM',
+    returnTime: '05:30 PM',
+    scheduleType: 'Tue, Thu',
+    vehicleModel: 'Mercedes-Benz EQE 350+ (Electric)',
+    vehicleType: 'Electric (EV)',
+    totalSeats: 4,
+    availableSeats: 3,
+    passengers: [],
+    costSharingPerTrip: 'Free / Eco-Commute',
+    notes: 'Tübingen to Böblingen fast commute. Ideal for software developers heading to the Tech Campus.',
+    routeHighlights: ['Tübingen B27', 'Walddorfhäslach', 'Dettenhausen', 'Böblingen Flugfeld'],
+    amenities: ['EV Clean Ride', 'Air Quality Plus Filter', 'Podcast Friendly', 'Luggage Space'],
+    contactPref: 'chat',
+    createdAt: Date.now() - 3600000 * 18
+  },
+  {
+    id: 'ride_5',
+    driverId: 'usr_priya',
+    driverName: 'Priya Sharma',
+    driverRole: 'Senior AI / Data Architect',
+    driverDepartment: 'PT-THIA',
+    driverInitials: 'PS',
+    driverRating: 4.88,
+    origin: 'Electronic City Phase 1 (Wipro Gate)',
+    destination: 'MBRDI Whitefield Campus',
+    campus: 'MBRDI Whitefield Hub',
+    departureTime: '08:30 AM',
+    returnTime: '06:00 PM',
+    scheduleType: 'Mon, Wed, Fri',
+    vehicleModel: 'Mercedes-Benz GLA 220d',
+    vehicleType: 'Diesel / Petrol',
+    totalSeats: 4,
+    availableSeats: 3,
+    passengers: [],
+    costSharingPerTrip: 'Split Fuel / Eco-share',
+    notes: 'Taking NICE road & Sarjapur outer ring route to avoid Silk Board congestion.',
+    routeHighlights: ['Electronic City Toll', 'Hosa Road', 'Sarjapur Junction', 'Whitefield ITPL'],
+    amenities: ['Smooth Highway Route', 'Air Conditioned', 'Music Allowed', 'Flexible Pickup'],
+    contactPref: 'chat',
+    createdAt: Date.now() - 3600000 * 12
+  },
+  {
+    id: 'ride_6',
+    driverId: 'usr_arjun',
+    driverName: 'Arjun Mehta',
+    driverRole: 'Data Engineering Specialist',
+    driverDepartment: 'PT-THIS',
+    driverInitials: 'AM',
+    driverRating: 4.85,
+    origin: 'Kothrud / Baner Highway Hub',
+    destination: 'MBRDI Pune Powertrain Center',
+    campus: 'MBRDI Pune Center',
+    departureTime: '08:20 AM',
+    returnTime: '05:40 PM',
+    scheduleType: 'Daily (Mon–Fri)',
+    vehicleModel: 'Mercedes-Benz GLC 300 4MATIC',
+    vehicleType: 'Hybrid (PHEV)',
+    totalSeats: 4,
+    availableSeats: 2,
+    passengers: [
+      {
+        id: 'usr_maya',
+        name: 'Maya Lin',
+        role: 'Lead UX & In-Cabin AI Specialist',
+        department: 'PT-THID',
+        initials: 'ML',
+        status: 'confirmed'
+      }
+    ],
+    costSharingPerTrip: 'Free / Eco-Commute',
+    notes: 'Daily Pune powertrain engineering corridor. Friendly rides with tech discussions.',
+    routeHighlights: ['Baner Road', 'Pashan Circle', 'Aundh Ravet BRT', 'Pune Campus Gate 1'],
+    amenities: ['Dual Climate Zone', 'Quiet Cabin', 'Apple CarPlay', 'Fast USB-C Charging'],
+    contactPref: 'chat',
+    createdAt: Date.now() - 3600000 * 8
   }
 ];
 
@@ -1055,21 +1656,80 @@ export const INITIAL_CAPABILITY_HEATMAP: CapabilityHeatmapItem[] = [
 ];
 
 export const INITIAL_NOTIFICATIONS: NotificationItem[] = [
+  // Elena's Manager Notifications (Direct Reports: Rakesh, Arjun)
   {
-    id: 'n1',
+    id: 'n_elena_1',
+    recipientId: 'usr_elena',
+    recipientRole: 'manager',
     type: 'manager_approval',
-    title: 'Manager Approval Required',
-    description: 'Rakesh has requested manager approval for an 8-hour cross-department collaboration with PT-THIA.',
+    title: 'Manager Approval: Rakesh Kumar',
+    description: 'Rakesh requested approval to allocate 8h to PT-THIA deployment automation on AWS & EKS.',
     time: '1h ago',
     timestamp: Date.now() - 3600000,
     read: false,
     targetTab: 'manager'
   },
   {
-    id: 'n2',
+    id: 'n_elena_2',
+    recipientId: 'usr_elena',
+    recipientRole: 'manager',
+    type: 'manager_approval',
+    title: 'Manager Approval: Arjun Mehta',
+    description: 'Arjun requested approval for 6h powertrain Kafka streaming support for PT-THID.',
+    time: '3h ago',
+    timestamp: Date.now() - 10800000,
+    read: false,
+    targetTab: 'manager'
+  },
+
+  // Clara's Manager Notifications (Direct Reports: Priya, Anand)
+  {
+    id: 'n_clara_1',
+    recipientId: 'usr_clara',
+    recipientRole: 'manager',
+    type: 'manager_approval',
+    title: 'Manager Approval: Anand Verma',
+    description: 'Anand requested approval for 8h zero-trust VPC architecture assessment with PT-THIT.',
+    time: '4h ago',
+    timestamp: Date.now() - 14400000,
+    read: false,
+    targetTab: 'manager'
+  },
+
+  // Johannes's Manager Notifications (Direct Reports: Sneha, Vikram, Maya)
+  {
+    id: 'n_johannes_1',
+    recipientId: 'usr_johannes',
+    recipientRole: 'manager',
+    type: 'manager_approval',
+    title: 'Manager Approval: Sneha Reddy',
+    description: 'Sneha requested approval for 10h AUTOSAR Classic migration with PT-THIB.',
+    time: '2h ago',
+    timestamp: Date.now() - 7200000,
+    read: false,
+    targetTab: 'manager'
+  },
+  {
+    id: 'n_johannes_2',
+    recipientId: 'usr_johannes',
+    recipientRole: 'manager',
+    type: 'manager_approval',
+    title: 'Manager Approval: Vikram Joshi',
+    description: 'Vikram requested approval for 8h dSPACE HiL test automation with PT-THIC.',
+    time: '5h ago',
+    timestamp: Date.now() - 18000000,
+    read: false,
+    targetTab: 'manager'
+  },
+
+  // Rakesh's Employee Notifications
+  {
+    id: 'n_rakesh_1',
+    recipientId: 'usr_rakesh',
+    recipientRole: 'employee',
     type: 'match_found',
     title: '94% AI Skill Match Found',
-    description: 'PT-THIS published a 2-day DevOps request matching your AWS & Terraform expertise.',
+    description: 'PT-THIA published a 2-day DevOps requirement matching your AWS & Terraform expertise.',
     time: '2h ago',
     timestamp: Date.now() - 7200000,
     read: false,
@@ -1077,17 +1737,21 @@ export const INITIAL_NOTIFICATIONS: NotificationItem[] = [
     targetId: 101
   },
   {
-    id: 'n3',
+    id: 'n_rakesh_2',
+    recipientId: 'usr_rakesh',
+    recipientRole: 'employee',
     type: 'feedback_received',
     title: '⭐ 5.0 Feedback Received',
-    description: 'Amit Sharma (PT-THIS) rated your collaboration 5/5: "Exceptional Terraform modularization!"',
+    description: 'Priya Sharma (PT-THIA) rated your AKS cluster optimization 5/5: "Super fast response and clean IaC!"',
     time: 'Yesterday',
     timestamp: Date.now() - 86400000,
     read: true,
     targetTab: 'myxchange'
   },
   {
-    id: 'n4',
+    id: 'n_rakesh_3',
+    recipientId: 'usr_rakesh',
+    recipientRole: 'employee',
     type: 'community_reply',
     title: 'Accepted Answer in Cloud Guild',
     description: 'Your solution on AKS private DNS was marked as the Accepted Expert Answer by Klaus Lindner.',
@@ -1095,6 +1759,35 @@ export const INITIAL_NOTIFICATIONS: NotificationItem[] = [
     timestamp: Date.now() - 172800000,
     read: true,
     targetTab: 'community'
+  },
+
+  // Priya's Employee Notifications
+  {
+    id: 'n_priya_1',
+    recipientId: 'usr_priya',
+    recipientRole: 'employee',
+    type: 'match_found',
+    title: '92% Skill Synergy Detected',
+    description: 'Diagnostic copilot pipeline gig is open in PT-THID.',
+    time: '1d ago',
+    timestamp: Date.now() - 86400000,
+    read: false,
+    targetTab: 'work',
+    targetId: 102
+  },
+
+  // Admin System Notifications
+  {
+    id: 'n_admin_1',
+    recipientId: 'usr_admin',
+    recipientRole: 'admin',
+    type: 'system_alert',
+    title: 'Quarterly Mobility Audit Generated',
+    description: '1,248 cross-department collaboration hours logged with 100% manager governance sign-off.',
+    time: '1h ago',
+    timestamp: Date.now() - 3600000,
+    read: false,
+    targetTab: 'admin'
   }
 ];
 

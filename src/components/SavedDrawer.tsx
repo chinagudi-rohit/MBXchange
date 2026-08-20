@@ -1,6 +1,6 @@
 import React from 'react';
-import { Bookmark, X, Briefcase, ShoppingBag, ArrowRight, Trash2 } from 'lucide-react';
-import { WorkPost, MarketListing, CommunityPost } from '../types';
+import { Bookmark, X, Briefcase, ShoppingBag, ArrowRight, Trash2, Car } from 'lucide-react';
+import { WorkPost, MarketListing, CommunityPost, CarpoolRide } from '../types';
 
 interface SavedDrawerProps {
   isOpen: boolean;
@@ -8,11 +8,14 @@ interface SavedDrawerProps {
   savedWorkPosts: WorkPost[];
   savedListings: MarketListing[];
   savedCommunityPosts: CommunityPost[];
+  savedCarpoolRides?: CarpoolRide[];
   onOpenWork: (id: number) => void;
   onOpenListing: (id: number) => void;
   onOpenCommunity: (id: number) => void;
+  onOpenCarpool?: (id: string) => void;
   onToggleWorkBookmark: (id: number) => void;
   onToggleListingBookmark: (id: number) => void;
+  onToggleCarpoolBookmark?: (id: string) => void;
 }
 
 export const SavedDrawer: React.FC<SavedDrawerProps> = ({
@@ -21,19 +24,23 @@ export const SavedDrawer: React.FC<SavedDrawerProps> = ({
   savedWorkPosts = [],
   savedListings = [],
   savedCommunityPosts = [],
+  savedCarpoolRides = [],
   onOpenWork,
   onOpenListing,
   onOpenCommunity,
+  onOpenCarpool,
   onToggleWorkBookmark,
-  onToggleListingBookmark
+  onToggleListingBookmark,
+  onToggleCarpoolBookmark
 }) => {
   if (!isOpen) return null;
 
   const safeWork = Array.isArray(savedWorkPosts) ? savedWorkPosts : [];
   const safeListings = Array.isArray(savedListings) ? savedListings : [];
   const safeCommunity = Array.isArray(savedCommunityPosts) ? savedCommunityPosts : [];
+  const safeCarpool = Array.isArray(savedCarpoolRides) ? savedCarpoolRides : [];
 
-  const totalSaved = safeWork.length + safeListings.length + safeCommunity.length;
+  const totalSaved = safeWork.length + safeListings.length + safeCommunity.length + safeCarpool.length;
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-xs animate-in fade-in" onClick={onClose}>
@@ -51,7 +58,7 @@ export const SavedDrawer: React.FC<SavedDrawerProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="text-slate-500 hover:text-white p-1.5 rounded-lg hover:bg-[#1a1d26] transition-colors"
+            className="text-slate-500 hover:text-white p-1.5 rounded-lg hover:bg-[#1a1d26] transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -65,20 +72,68 @@ export const SavedDrawer: React.FC<SavedDrawerProps> = ({
               </div>
               <h4 className="text-sm font-semibold text-slate-300">No saved items yet</h4>
               <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">
-                Bookmark important Work requests, marketplace bargains, and community events to review later.
+                Bookmark important Work requests, carpool routes, marketplace bargains, and community events to review later.
               </p>
             </div>
           ) : (
             <>
-              {/* Work Posts Section */}
-              {savedWorkPosts.length > 0 && (
+              {/* Carpool Routes Section */}
+              {safeCarpool.length > 0 && (
                 <div>
-                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">
-                    <Briefcase className="w-3.5 h-3.5 text-indigo-400" />
-                    <span>Work Requests ({savedWorkPosts.length})</span>
+                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-400 mb-3">
+                    <Car className="w-3.5 h-3.5" />
+                    <span>Carpool Routes ({safeCarpool.length})</span>
                   </div>
                   <div className="space-y-2.5">
-                    {savedWorkPosts.map((post) => (
+                    {safeCarpool.map((ride) => (
+                      <div
+                        key={ride.id}
+                        className="p-3.5 rounded-xl border border-[#21242c] hover:border-emerald-500/50 bg-[#0f1116] transition-all flex flex-col gap-2 group"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            {ride.campus}
+                          </span>
+                          {onToggleCarpoolBookmark && (
+                            <button
+                              onClick={() => onToggleCarpoolBookmark(ride.id)}
+                              className="text-slate-500 hover:text-rose-400 transition-colors p-1 cursor-pointer"
+                              title="Remove bookmark"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                        <h5
+                          onClick={() => { if (onOpenCarpool) onOpenCarpool(ride.id); onClose(); }}
+                          className="text-xs font-semibold text-white group-hover:text-emerald-400 cursor-pointer line-clamp-2"
+                        >
+                          {ride.origin} → {ride.destination}
+                        </h5>
+                        <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1 border-t border-[#21242c]">
+                          <span>{ride.driverName} · <strong className="text-emerald-400">{ride.departureTime}</strong></span>
+                          <button
+                            onClick={() => { if (onOpenCarpool) onOpenCarpool(ride.id); onClose(); }}
+                            className="text-emerald-400 font-semibold flex items-center gap-1 hover:underline cursor-pointer"
+                          >
+                            View <ArrowRight className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Work Posts Section */}
+              {safeWork.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-indigo-400 mb-3">
+                    <Briefcase className="w-3.5 h-3.5" />
+                    <span>Work Requests ({safeWork.length})</span>
+                  </div>
+                  <div className="space-y-2.5">
+                    {safeWork.map((post) => (
                       <div
                         key={post.id}
                         className="p-3.5 rounded-xl border border-[#21242c] hover:border-indigo-500/50 bg-[#0f1116] transition-all flex flex-col gap-2 group"
@@ -89,7 +144,7 @@ export const SavedDrawer: React.FC<SavedDrawerProps> = ({
                           </span>
                           <button
                             onClick={() => onToggleWorkBookmark(post.id)}
-                            className="text-slate-500 hover:text-rose-400 transition-colors p-1"
+                            className="text-slate-500 hover:text-rose-400 transition-colors p-1 cursor-pointer"
                             title="Remove bookmark"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -105,7 +160,7 @@ export const SavedDrawer: React.FC<SavedDrawerProps> = ({
                           <span>{post.author} · {post.role}</span>
                           <button
                             onClick={() => { onOpenWork(post.id); onClose(); }}
-                            className="text-indigo-400 font-semibold flex items-center gap-1 hover:underline"
+                            className="text-indigo-400 font-semibold flex items-center gap-1 hover:underline cursor-pointer"
                           >
                             View <ArrowRight className="w-3 h-3" />
                           </button>
@@ -117,25 +172,25 @@ export const SavedDrawer: React.FC<SavedDrawerProps> = ({
               )}
 
               {/* Market Listings Section */}
-              {savedListings.length > 0 && (
+              {safeListings.length > 0 && (
                 <div>
-                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">
-                    <ShoppingBag className="w-3.5 h-3.5 text-indigo-400" />
-                    <span>Marketplace Listings ({savedListings.length})</span>
+                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-400 mb-3">
+                    <ShoppingBag className="w-3.5 h-3.5" />
+                    <span>Marketplace Listings ({safeListings.length})</span>
                   </div>
                   <div className="space-y-2.5">
-                    {savedListings.map((item) => (
+                    {safeListings.map((item) => (
                       <div
                         key={item.id}
                         className="p-3.5 rounded-xl border border-[#21242c] hover:border-indigo-500/50 bg-[#0f1116] transition-all flex flex-col gap-2 group"
                       >
                         <div className="flex items-start justify-between gap-2">
-                          <span className="text-xs font-bold text-indigo-400 font-mono">
-                            €{item.price.toLocaleString()}
+                          <span className="text-xs font-bold text-amber-400 font-mono">
+                            {item.isFree ? 'FREE' : `${item.currency}${item.price.toLocaleString()}`}
                           </span>
                           <button
                             onClick={() => onToggleListingBookmark(item.id)}
-                            className="text-slate-500 hover:text-rose-400 transition-colors p-1"
+                            className="text-slate-500 hover:text-rose-400 transition-colors p-1 cursor-pointer"
                             title="Remove bookmark"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -143,7 +198,7 @@ export const SavedDrawer: React.FC<SavedDrawerProps> = ({
                         </div>
                         <h5
                           onClick={() => { onOpenListing(item.id); onClose(); }}
-                          className="text-xs font-semibold text-white group-hover:text-indigo-400 cursor-pointer line-clamp-2"
+                          className="text-xs font-semibold text-white group-hover:text-amber-400 cursor-pointer line-clamp-2"
                         >
                           {item.title}
                         </h5>
@@ -151,7 +206,7 @@ export const SavedDrawer: React.FC<SavedDrawerProps> = ({
                           <span>{item.location}</span>
                           <button
                             onClick={() => { onOpenListing(item.id); onClose(); }}
-                            className="text-indigo-400 font-semibold flex items-center gap-1 hover:underline"
+                            className="text-amber-400 font-semibold flex items-center gap-1 hover:underline cursor-pointer"
                           >
                             View <ArrowRight className="w-3 h-3" />
                           </button>

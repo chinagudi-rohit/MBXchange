@@ -62,21 +62,21 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
   const featuredListings = safeListings.slice(0, 3);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 animate-in fade-in">
+    <div className="w-full space-y-8 animate-in fade-in">
       
       {/* Hero Welcome Banner */}
       <div className="bg-gradient-to-r from-[#14171d] via-[#1a1e28] to-[#14171d] border border-[#21242c] rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
-        <div className="relative z-10 max-w-3xl space-y-3">
+        <div className="relative z-10 max-w-4xl space-y-3">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 text-xs font-bold">
             <Sparkles className="w-3.5 h-3.5" />
             <span>Mercedes-Benz Internal Talent & Capability Marketplace</span>
           </div>
 
           <h1 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight">
-            Welcome back, {currentUser.name.split(' ')[0]} 👋
+            Welcome back, {(currentUser?.name || 'Engineer').split(' ')[0]} 👋
           </h1>
           
-          <p className="text-sm sm:text-base text-slate-300 leading-relaxed max-w-2xl">
+          <p className="text-sm sm:text-base text-slate-300 leading-relaxed max-w-3xl">
             Discover ways to contribute, cross-pollinate skills, support peer teams, and participate in trusted campus exchanges across the enterprise.
           </p>
 
@@ -102,7 +102,7 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
       </div>
 
       {/* 4 Action Pillars */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         
         {/* Pillar 1: Need Help */}
         <div 
@@ -264,10 +264,10 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
       )}
 
       {/* Two Column Layout: Work Exchange Gigs & Marketplace/Community Pulse */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12 2xl:grid-cols-12 gap-6">
         
-        {/* Left 7 Cols: Open Opportunities (Work Exchange) */}
-        <div className="lg:col-span-7 space-y-4">
+        {/* Left 7-8 Cols: Open Opportunities (Work Exchange) */}
+        <div className="lg:col-span-7 xl:col-span-8 space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
@@ -278,40 +278,42 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
             </div>
             <button
               onClick={() => onNavigate('work')}
-              className="text-xs text-indigo-400 hover:text-indigo-300 font-bold flex items-center gap-1"
+              className="text-xs text-indigo-400 hover:text-indigo-300 font-bold flex items-center gap-1 cursor-pointer"
             >
               View All ({safeWorkPosts.length}) <ChevronRight className="w-3.5 h-3.5" />
             </button>
           </div>
 
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
             {recentGigs.map((post) => (
               <div
                 key={post.id}
                 onClick={() => onOpenWorkDetail(post.id)}
-                className="bg-[#14171d] hover:bg-[#1a1d26] border border-[#21242c] hover:border-slate-700 rounded-2xl p-5 shadow-xl transition-all cursor-pointer group space-y-3"
+                className="bg-[#14171d] hover:bg-[#1a1d26] border border-[#21242c] hover:border-slate-700 rounded-2xl p-5 shadow-xl transition-all cursor-pointer group flex flex-col justify-between space-y-3"
               >
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2 py-0.5 rounded bg-[#0f1116] border border-[#21242c]">
-                    {post.department}
-                  </span>
-                  {post.matchScore && (
-                    <span className="text-[11px] font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20">
-                      {post.matchScore}% Match
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2 py-0.5 rounded bg-[#0f1116] border border-[#21242c]">
+                      {post.department}
                     </span>
-                  )}
-                </div>
+                    {post.matchScore && (
+                      <span className="text-[11px] font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20">
+                        {post.matchScore}% Match
+                      </span>
+                    )}
+                  </div>
 
-                <h4 className="font-bold text-white text-sm group-hover:text-indigo-400 transition-colors leading-snug">
-                  {post.title}
-                </h4>
+                  <h4 className="font-bold text-white text-sm group-hover:text-indigo-400 transition-colors leading-snug">
+                    {post.title}
+                  </h4>
 
-                <div className="flex flex-wrap items-center gap-1.5">
-                  {post.tags.map((tag) => (
-                    <span key={tag} className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#0f1116] text-slate-300 border border-[#21242c]">
-                      {tag}
-                    </span>
-                  ))}
+                  <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
+                    {post.tags.map((tag) => (
+                      <span key={tag} className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#0f1116] text-slate-300 border border-[#21242c]">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
                 </div>
 
                 <div className="flex items-center justify-between pt-2 border-t border-[#21242c] text-xs text-slate-400">
@@ -319,17 +321,17 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({
                     <div className="w-5 h-5 rounded bg-indigo-500/20 text-indigo-400 font-bold text-[9px] flex items-center justify-center">
                       {post.initials}
                     </div>
-                    <span>{post.author}</span>
+                    <span className="truncate max-w-[120px]">{post.author}</span>
                   </div>
-                  <span className="text-slate-500">{post.duration} · {post.expectedEffortHours}</span>
+                  <span className="text-slate-500 text-[11px]">{post.duration} · {post.expectedEffortHours}</span>
                 </div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Right 5 Cols: Enterprise Pulse & Marketplace Highlights */}
-        <div className="lg:col-span-5 space-y-6">
+        {/* Right 5-4 Cols: Enterprise Pulse & Marketplace Highlights */}
+        <div className="lg:col-span-5 xl:col-span-4 space-y-6">
           
           {/* Trending Across Mercedes-Benz Enterprise Pulse */}
           <div className="bg-[#14171d] border border-[#21242c] rounded-2xl p-5 shadow-xl space-y-4">

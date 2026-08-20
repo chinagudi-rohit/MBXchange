@@ -1,3 +1,5 @@
+export type SystemRole = 'employee' | 'manager' | 'admin';
+
 export type UserRole =
   | 'Backend Developer'
   | 'Frontend Developer'
@@ -7,14 +9,24 @@ export type UserRole =
   | 'QA / Test Engineer'
   | 'Data Scientist'
   | 'AI / ML Engineer'
+  | 'Senior AI / Data Architect'
   | 'Product Manager'
   | 'Project Manager'
   | 'UX / UI Designer'
   | 'Business Analyst'
   | 'Embedded Engineer'
+  | 'Embedded & AUTOSAR Engineer'
   | 'Cloud Architect'
+  | 'Enterprise Cloud Architect'
   | 'Security Engineer'
-  | 'Engineering Manager';
+  | 'Simulation & CAE Engineer'
+  | 'Agile Product & Governance Lead'
+  | 'Lead HiL & Test Bench Architect'
+  | 'Senior Powertrain Controls & Calibration Specialist'
+  | 'Principal Functional Safety & Future Tech Lead'
+  | 'Engineering Manager'
+  | 'Head of Enterprise Platform'
+  | 'System Administrator';
 
 export type MBIDepartmentCode =
   | 'PT-THIA'
@@ -191,6 +203,8 @@ export interface TalentProfile {
   name: string;
   email: string;
   role: UserRole | string;
+  systemRole?: SystemRole;
+  status?: 'active' | 'inactive';
   department: string;
   campus: string;
   avatarUrl?: string;
@@ -209,9 +223,66 @@ export interface TalentProfile {
   peopleHelpedCount: number;
   hoursContributed: number;
   bio?: string;
+  managerId?: string;
+  managerName?: string;
+  directReportIds?: string[];
 }
 
 export interface UserProfile extends TalentProfile {}
+
+export interface UserAccount extends TalentProfile {
+  systemRole: SystemRole;
+  status: 'active' | 'inactive';
+  managerId?: string;
+  managerName?: string;
+  directReportIds?: string[];
+}
+
+export interface DirectMessage {
+  id: string;
+  senderId: string;
+  senderName: string;
+  senderInitials: string;
+  senderRole: string;
+  recipientId: string;
+  recipientName: string;
+  recipientInitials: string;
+  recipientRole: string;
+  text: string;
+  timestamp: number;
+  time: string;
+  read: boolean;
+  contextType?: 'work' | 'market' | 'community' | 'collab' | 'general';
+  contextTitle?: string;
+  contextId?: string | number;
+}
+
+export interface CollaborationRequest {
+  id: string;
+  requesterId: string;
+  requesterName: string;
+  requesterRole: string;
+  requesterDepartment: string;
+  targetTalentId: string;
+  targetTalentName: string;
+  targetDepartment: string;
+  taskTitle: string;
+  estimatedHours: string;
+  dates: string;
+  notes: string;
+  status: 'pending' | 'accepted' | 'declined' | 'completed';
+  timestamp: number;
+  time: string;
+}
+
+export interface UserSavedMap {
+  [userId: string]: {
+    workIds: number[];
+    listingIds: number[];
+    communityIds: number[];
+    carpoolIds?: string[];
+  };
+}
 
 export interface Comment {
   id: string;
@@ -241,6 +312,7 @@ export interface WorkPost {
   voteState: -1 | 0 | 1;
   tags: string[];
   author: string;
+  authorId?: string;
   role: UserRole | string;
   initials: string;
   time: string;
@@ -260,6 +332,7 @@ export interface WorkPost {
 export interface BandwidthOffer {
   id: string;
   author: string;
+  authorId?: string;
   role: string;
   department: string;
   initials: string;
@@ -272,16 +345,18 @@ export interface BandwidthOffer {
 
 export interface ManagerApprovalItem {
   id: string;
+  employeeId?: string;
   employeeName: string;
   employeeRole: string;
   employeeDepartment: string;
+  managerId?: string;
   opportunityId: number;
   opportunityTitle: string;
   targetDepartment: string;
   requestedCommitment: string; // e.g. '8 hours'
   period: string; // e.g. '20–22 Aug'
   currentProject: string; // e.g. 'MyAthlon'
-  aiRecommendation: 'Approve' | 'Review Capacity' | 'Caution';
+  aiRecommendation: 'Approve' | 'Review Capacity' | 'Caution' | 'Approve with Conditions' | 'Review Capacity / Reallocate' | string;
   aiRecommendationReason: string;
   status: 'Pending' | 'Approved' | 'Approved with Conditions' | 'Rejected';
   requestedAt: string;
@@ -316,6 +391,7 @@ export interface MarketListing {
   time: string;
   timestamp: number;
   seller: string;
+  sellerId?: string;
   sellerRole: UserRole | string;
   initials: string;
   description: string;
@@ -356,6 +432,7 @@ export interface CommunityPost {
   title: string;
   description: string;
   author: string;
+  authorId?: string;
   authorRole: UserRole | string;
   initials: string;
   location?: string;
@@ -372,6 +449,7 @@ export interface KnowledgeQuestion {
   title: string;
   details: string;
   author: string;
+  authorId?: string;
   authorRole: string;
   initials: string;
   tags: string[];
@@ -384,7 +462,9 @@ export interface KnowledgeQuestion {
 
 export interface NotificationItem {
   id: string;
-  type: 'manager_approval' | 'match_found' | 'feedback_received' | 'help_offer' | 'reply' | 'market_inquiry' | 'community_reply';
+  recipientId?: string;
+  recipientRole?: 'admin' | 'manager' | 'employee' | 'all';
+  type: 'manager_approval' | 'match_found' | 'feedback_received' | 'help_offer' | 'reply' | 'market_inquiry' | 'community_reply' | 'direct_message' | 'collab_request' | 'admin_alert' | 'system_alert' | string;
   title: string;
   description: string;
   time: string;
@@ -407,8 +487,55 @@ export type MainTab =
   | 'home'
   | 'work'
   | 'people'
+  | 'carpool'
   | 'marketplace'
   | 'community'
   | 'insights'
   | 'manager'
-  | 'myxchange';
+  | 'myxchange'
+  | 'admin';
+
+export interface CarpoolPassenger {
+  id: string;
+  name: string;
+  role?: string;
+  department?: string;
+  initials?: string;
+  pickupLocation?: string;
+  bookedAt?: string;
+  status?: 'confirmed' | 'requested';
+}
+
+export interface CarpoolRide {
+  id: string;
+  driverId: string;
+  driverName: string;
+  driverRole: string;
+  driverDepartment: string;
+  driverInitials: string;
+  driverRating?: number;
+  origin: string;
+  destination: string;
+  campus: string;
+  departureTime: string;
+  returnTime?: string;
+  scheduleType?: 'Daily (Mon–Fri)' | 'Mon, Wed, Fri' | 'Tue, Thu' | 'Flexible' | 'One-Time' | string;
+  daysOfWeek?: string[];
+  vehicleModel: string;
+  vehicleType: 'Electric (EV)' | 'Hybrid (PHEV)' | 'Diesel / Petrol' | string;
+  totalSeats: number;
+  availableSeats: number;
+  passengers?: CarpoolPassenger[];
+  costSharingPerTrip?: string;
+  costPerRide?: string;
+  contributionType?: string;
+  womenOnly?: boolean;
+  notes?: string;
+  routeHighlights?: string[];
+  amenities?: string[];
+  contactPref?: 'chat' | 'teams' | 'call' | string;
+  createdAt?: number;
+  bookmarked?: boolean;
+  status?: 'active' | 'completed' | 'cancelled';
+}
+

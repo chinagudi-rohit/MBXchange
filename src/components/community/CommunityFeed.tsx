@@ -60,7 +60,7 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 animate-in fade-in">
+    <div className="w-full space-y-6 animate-in fade-in">
       
       {/* Header Banner */}
       <div className="bg-[#14171d] border border-[#21242c] rounded-3xl p-6 sm:p-8 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
@@ -137,7 +137,7 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
 
       {/* TAB 1: GUILDS & COMMUNITIES */}
       {activeTab === 'guilds' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5">
           {safeGroups.map((group) => (
             <div
               key={group.id}
@@ -334,11 +334,11 @@ export const CommunityFeed: React.FC<CommunityFeedProps> = ({
 
       {/* TAB 3: CARPOOLS & CAMPUS LIFE */}
       {activeTab === 'notices' && (
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
           {safePosts.map((post) => (
             <div
               key={post.id}
-              className="bg-[#14171d] border border-[#21242c] rounded-2xl p-5 shadow-xl space-y-3"
+              className="bg-[#14171d] border border-[#21242c] rounded-2xl p-5 shadow-xl space-y-3 flex flex-col justify-between"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">

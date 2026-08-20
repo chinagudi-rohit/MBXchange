@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   MainTab, 
   TalentProfile, 
+  UserAccount,
   WorkPost, 
   MarketListing, 
   CommunityPost, 
@@ -11,9 +12,14 @@ import {
   ManagerApprovalItem,
   CapabilityHeatmapItem,
   NotificationItem, 
-  WorkStatus 
+  WorkStatus,
+  DirectMessage,
+  CollaborationRequest,
+  UserSavedMap,
+  CarpoolRide
 } from './types';
 import { 
+  INITIAL_USER_ACCOUNTS,
   INITIAL_TALENT_PROFILES,
   INITIAL_WORK_POSTS, 
   INITIAL_BANDWIDTH_OFFERS,
@@ -23,15 +29,22 @@ import {
   INITIAL_COMMUNITY_POSTS, 
   INITIAL_MANAGER_APPROVALS,
   INITIAL_CAPABILITY_HEATMAP,
-  INITIAL_NOTIFICATIONS 
+  INITIAL_NOTIFICATIONS,
+  INITIAL_DIRECT_MESSAGES,
+  INITIAL_COLLABORATION_REQUESTS,
+  INITIAL_USER_SAVED_MAP,
+  INITIAL_CARPOOL_RIDES
 } from './data/initialData';
 
 // UI Components
 import { Navbar } from './components/Navbar';
+import { Sidebar } from './components/Sidebar';
 import { RoleSelectorModal } from './components/RoleSelectorModal';
 import { NotificationsModal } from './components/NotificationsModal';
 import { SavedDrawer } from './components/SavedDrawer';
 import { ContactDialog } from './components/ContactDialog';
+import { UserProfileDrawer } from './components/UserProfileDrawer';
+import { DirectMessagesDrawer } from './components/DirectMessagesDrawer';
 import { ToastContainer, ToastMessage } from './components/Toast';
 
 // Views
@@ -48,9 +61,12 @@ import { MarketNewModal } from './components/market/MarketNewModal';
 import { CommunityFeed } from './components/community/CommunityFeed';
 import { CommunityNewModal } from './components/community/CommunityNewModal';
 import { AskQuestionModal } from './components/community/AskQuestionModal';
+import { CarpoolView } from './components/carpool/CarpoolView';
+import { OfferRideModal } from './components/carpool/OfferRideModal';
 import { EnterpriseInsightsView } from './components/insights/EnterpriseInsightsModal';
 import { ManagerInboxView } from './components/manager/ManagerInboxModal';
 import { MyXchangeView } from './components/myXchange/MyXchangeModal';
+import { AdminDashboard } from './components/admin/AdminDashboard';
 import { GlobalSearchModal } from './components/search/GlobalSearchModal';
 
 // Storage helper utilities with fallbacks
@@ -90,11 +106,15 @@ export default function App() {
 
   // Modals & Drawers
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isMessagesOpen, setIsMessagesOpen] = useState(false);
+  const [activeMessagePartnerId, setActiveMessagePartnerId] = useState<string | undefined>(undefined);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isSavedDrawerOpen, setIsSavedDrawerOpen] = useState(false);
   const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);
   const [isNewWorkOpen, setIsNewWorkOpen] = useState(false);
   const [isOfferBandwidthOpen, setIsOfferBandwidthOpen] = useState(false);
+  const [isOfferRideOpen, setIsOfferRideOpen] = useState(false);
   const [isNewListingOpen, setIsNewListingOpen] = useState(false);
   const [isNewCommunityOpen, setIsNewCommunityOpen] = useState(false);
   const [isAskQuestionOpen, setIsAskQuestionOpen] = useState(false);
@@ -134,12 +154,41 @@ export default function App() {
   };
 
   // State Management with LocalStorage persistence & safe fallbacks
-  const [currentUser, setCurrentUser] = useState<TalentProfile>(() => {
-    return safeGetObject('mbx_current_user', INITIAL_TALENT_PROFILES[0]);
+  const [userAccounts, setUserAccounts] = useState<UserAccount[]>(() => {
+    const loaded = safeGetArray<UserAccount>('mbx_user_accounts', INITIAL_USER_ACCOUNTS);
+    return loaded.map(u => {
+      const match = INITIAL_USER_ACCOUNTS.find(init => init.id === u.id);
+      return {
+        ...(match || {}),
+        ...u,
+        systemRole: (u.systemRole || match?.systemRole || 'employee')
+      };
+    });
   });
 
-  const [talentProfiles, setTalentProfiles] = useState<TalentProfile[]>(() => {
-    return safeGetArray('mbx_talents', INITIAL_TALENT_PROFILES);
+  const [currentUser, setCurrentUser] = useState<UserAccount>(() => {
+    const saved = safeGetObject<UserAccount | null>('mbx_current_user', null);
+    if (saved && saved.id) {
+      const match = INITIAL_USER_ACCOUNTS.find(init => init.id === saved.id);
+      return {
+        ...(match || INITIAL_USER_ACCOUNTS[0]),
+        ...saved,
+        systemRole: (saved.systemRole || match?.systemRole || 'employee')
+      };
+    }
+    return INITIAL_USER_ACCOUNTS[0];
+  });
+
+  const [directMessages, setDirectMessages] = useState<DirectMessage[]>(() => {
+    return safeGetArray('mbx_direct_messages', INITIAL_DIRECT_MESSAGES);
+  });
+
+  const [collabRequests, setCollabRequests] = useState<CollaborationRequest[]>(() => {
+    return safeGetArray('mbx_collab_requests', INITIAL_COLLABORATION_REQUESTS);
+  });
+
+  const [userSavedMap, setUserSavedMap] = useState<UserSavedMap>(() => {
+    return safeGetObject('mbx_user_saved_map', INITIAL_USER_SAVED_MAP);
   });
 
   const [workPosts, setWorkPosts] = useState<WorkPost[]>(() => {
@@ -170,14 +219,34 @@ export default function App() {
     return safeGetArray('mbx_manager_approvals', INITIAL_MANAGER_APPROVALS);
   });
 
+  const [carpoolRides, setCarpoolRides] = useState<CarpoolRide[]>(() => {
+    return safeGetArray('mbx_carpool_rides', INITIAL_CARPOOL_RIDES);
+  });
+
   const [notifications, setNotifications] = useState<NotificationItem[]>(() => {
     return safeGetArray('mbx_notifications', INITIAL_NOTIFICATIONS);
   });
 
   // Sync to LocalStorage
   useEffect(() => {
+    localStorage.setItem('mbx_user_accounts', JSON.stringify(userAccounts));
+  }, [userAccounts]);
+
+  useEffect(() => {
     localStorage.setItem('mbx_current_user', JSON.stringify(currentUser));
   }, [currentUser]);
+
+  useEffect(() => {
+    localStorage.setItem('mbx_direct_messages', JSON.stringify(directMessages));
+  }, [directMessages]);
+
+  useEffect(() => {
+    localStorage.setItem('mbx_collab_requests', JSON.stringify(collabRequests));
+  }, [collabRequests]);
+
+  useEffect(() => {
+    localStorage.setItem('mbx_user_saved_map', JSON.stringify(userSavedMap));
+  }, [userSavedMap]);
 
   useEffect(() => {
     localStorage.setItem('mbx_work_posts', JSON.stringify(workPosts));
@@ -208,8 +277,47 @@ export default function App() {
   }, [managerApprovals]);
 
   useEffect(() => {
+    localStorage.setItem('mbx_carpool_rides', JSON.stringify(carpoolRides));
+  }, [carpoolRides]);
+
+  useEffect(() => {
     localStorage.setItem('mbx_notifications', JSON.stringify(notifications));
   }, [notifications]);
+
+  // Derived user-specific counts & filtering
+  const userSavedData = userSavedMap[currentUser.id] || { workIds: [], listingIds: [], communityIds: [], carpoolIds: [] };
+  const savedCount = (userSavedData.workIds?.length || 0) + (userSavedData.listingIds?.length || 0) + (userSavedData.communityIds?.length || 0) + (userSavedData.carpoolIds?.length || 0);
+
+  const unreadMessagesCount = useMemo(() => {
+    return directMessages.filter(m => m.recipientId === currentUser.id && !m.read).length;
+  }, [directMessages, currentUser.id]);
+
+  const userNotifications = useMemo(() => {
+    return notifications.filter(n => {
+      if (!n.recipientId && !n.recipientRole) return true;
+      if (n.recipientId === currentUser.id) return true;
+      if (n.recipientRole === 'all') return true;
+      if (n.recipientRole === currentUser.systemRole) return true;
+      if (currentUser.systemRole === 'admin') return true;
+      return false;
+    });
+  }, [notifications, currentUser.id, currentUser.systemRole]);
+
+  const pendingApprovalsCount = useMemo(() => {
+    if (currentUser.systemRole === 'manager') {
+      const directReportIds = currentUser.directReportIds || [];
+      return managerApprovals.filter(a => {
+        if (a.status !== 'Pending') return false;
+        if (a.managerId === currentUser.id) return true;
+        if (a.employeeId && directReportIds.includes(a.employeeId)) return true;
+        return false;
+      }).length;
+    }
+    if (currentUser.systemRole === 'admin') {
+      return managerApprovals.filter(a => a.status === 'Pending').length;
+    }
+    return 0;
+  }, [managerApprovals, currentUser.id, currentUser.systemRole, currentUser.directReportIds]);
 
   // Tab switcher
   const handleTabChange = (tab: MainTab) => {
@@ -240,7 +348,7 @@ export default function App() {
     );
   };
 
-  // Bookmark toggles
+  // Bookmark toggles with UserSavedMap sync
   const handleToggleWorkBookmark = (id: number) => {
     setWorkPosts((prev) =>
       prev.map((p) => {
@@ -254,6 +362,19 @@ export default function App() {
         return { ...p, bookmarked: nextBookmarked };
       })
     );
+
+    setUserSavedMap(prev => {
+      const current = prev[currentUser.id] || { workIds: [], listingIds: [], communityIds: [] };
+      const exists = current.workIds.includes(id);
+      const nextWorkIds = exists ? current.workIds.filter(wid => wid !== id) : [...current.workIds, id];
+      return {
+        ...prev,
+        [currentUser.id]: {
+          ...current,
+          workIds: nextWorkIds
+        }
+      };
+    });
   };
 
   const handleToggleListingBookmark = (id: number) => {
@@ -269,6 +390,122 @@ export default function App() {
         return { ...l, bookmarked: nextBookmarked };
       })
     );
+
+    setUserSavedMap(prev => {
+      const current = prev[currentUser.id] || { workIds: [], listingIds: [], communityIds: [], carpoolIds: [] };
+      const exists = current.listingIds.includes(id);
+      const nextListingIds = exists ? current.listingIds.filter(lid => lid !== id) : [...current.listingIds, id];
+      return {
+        ...prev,
+        [currentUser.id]: {
+          ...current,
+          listingIds: nextListingIds
+        }
+      };
+    });
+  };
+
+  const handleToggleCarpoolBookmark = (id: string) => {
+    setCarpoolRides((prev) =>
+      prev.map((r) => {
+        if (r.id !== id) return r;
+        const nextBookmarked = !r.bookmarked;
+        addToast(
+          'info',
+          nextBookmarked ? 'Ride Saved' : 'Route Removed',
+          `"${r.origin} → ${r.destination}"`
+        );
+        return { ...r, bookmarked: nextBookmarked };
+      })
+    );
+
+    setUserSavedMap(prev => {
+      const current = prev[currentUser.id] || { workIds: [], listingIds: [], communityIds: [], carpoolIds: [] };
+      const carpoolIds = current.carpoolIds || [];
+      const exists = carpoolIds.includes(id);
+      const nextCarpoolIds = exists ? carpoolIds.filter(cid => cid !== id) : [...carpoolIds, id];
+      return {
+        ...prev,
+        [currentUser.id]: {
+          ...current,
+          carpoolIds: nextCarpoolIds
+        }
+      };
+    });
+  };
+
+  // Carpool Actions
+  const handleCreateCarpoolRide = (rideData: Partial<CarpoolRide>) => {
+    const newRide: CarpoolRide = {
+      id: 'ride_' + Date.now(),
+      driverId: currentUser.id,
+      driverName: currentUser.name,
+      driverRole: currentUser.role,
+      driverDepartment: currentUser.department,
+      driverInitials: currentUser.initials,
+      origin: rideData.origin || 'Whitefield',
+      destination: rideData.destination || 'MBRDI Facility',
+      campus: rideData.campus || currentUser.campus,
+      departureTime: rideData.departureTime || '08:30 AM',
+      returnTime: rideData.returnTime,
+      daysOfWeek: rideData.daysOfWeek || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+      totalSeats: rideData.totalSeats || 3,
+      availableSeats: rideData.availableSeats || 3,
+      vehicleModel: rideData.vehicleModel || 'Mercedes-Benz EQA 250+',
+      vehicleType: rideData.vehicleType || 'Electric (EV)',
+      routeHighlights: rideData.routeHighlights || [],
+      amenities: rideData.amenities || ['EV Zero Emissions', 'Climate Control AC'],
+      contributionType: rideData.contributionType || 'Free / Company Eco-Pass',
+      costPerRide: rideData.costPerRide || 'Free',
+      womenOnly: rideData.womenOnly || false,
+      notes: rideData.notes || '',
+      status: 'active',
+      passengers: []
+    };
+    setCarpoolRides(prev => [newRide, ...prev]);
+    setIsOfferRideOpen(false);
+    addToast('success', 'Ride Offered', 'Your carpool listing is live for colleagues.');
+  };
+
+  const handleBookCarpoolSeat = (rideId: string) => {
+    setCarpoolRides(prev => prev.map(ride => {
+      if (ride.id !== rideId) return ride;
+      if (ride.availableSeats <= 0) {
+        addToast('error', 'Ride Full', 'No available seats remain on this route.');
+        return ride;
+      }
+      if (ride.passengers?.some(p => p.id === currentUser.id)) {
+        addToast('info', 'Already Booked', 'You already have a seat reserved on this ride.');
+        return ride;
+      }
+      const newPassenger = {
+        id: currentUser.id,
+        name: currentUser.name,
+        role: currentUser.role,
+        initials: currentUser.initials,
+        pickupLocation: ride.origin,
+        bookedAt: 'Just now'
+      };
+      addToast('success', 'Seat Reserved!', `You're riding with ${ride.driverName} (${ride.origin} → ${ride.destination}).`);
+      return {
+        ...ride,
+        availableSeats: ride.availableSeats - 1,
+        passengers: [...(ride.passengers || []), newPassenger]
+      };
+    }));
+  };
+
+  const handleCancelCarpoolSeat = (rideId: string) => {
+    setCarpoolRides(prev => prev.map(ride => {
+      if (ride.id !== rideId) return ride;
+      const filtered = (ride.passengers || []).filter(p => p.id !== currentUser.id);
+      addToast('info', 'Booking Cancelled', 'Your seat has been released.');
+      return {
+        ...ride,
+        availableSeats: Math.min(ride.totalSeats, ride.availableSeats + 1),
+        passengers: filtered
+      };
+    }));
   };
 
   // Comments / Replies on Work Post
@@ -299,141 +536,200 @@ export default function App() {
     addToast('success', 'Status Updated', `Requirement status changed to "${status}".`);
   };
 
-  // Submit New Work Post (I Need Help)
-  const handleCreateWorkPost = (data: Partial<WorkPost>) => {
-    const newId = Math.max(0, ...workPosts.map(p => p.id)) + 1;
+  // Apply / Offer Help on Work Post
+  const handleApplyForGig = (post: WorkPost) => {
+    setWorkPosts((prev) =>
+      prev.map((p) => {
+        if (p.id !== post.id) return p;
+        return {
+          ...p,
+          hasApplied: true,
+          applicantCount: (p.applicantCount || 0) + 1
+        };
+      })
+    );
 
+    // If manager approval required, generate approval item
+    if (post.managerApprovalRequired) {
+      const newApproval: ManagerApprovalItem = {
+        id: 'app_' + Date.now(),
+        employeeId: currentUser.id,
+        employeeName: currentUser.name,
+        employeeRole: currentUser.role,
+        employeeDepartment: currentUser.department,
+        managerId: currentUser.managerId,
+        opportunityId: post.id,
+        opportunityTitle: post.title,
+        targetDepartment: post.department,
+        requestedCommitment: post.duration || '8 hours',
+        period: 'Upcoming sprint',
+        currentProject: 'Vehicle Electronics & Powertrain Delivery',
+        aiRecommendation: 'Approve',
+        aiRecommendationReason: `${currentUser.name} has 6h available capacity this sprint. Cross-department skill alignment with ${post.department} is high (92%).`,
+        status: 'Pending',
+        requestedAt: 'Just now'
+      };
+
+      setManagerApprovals((prev) => [newApproval, ...prev]);
+
+      // Add notification for manager
+      const newNotification: NotificationItem = {
+        id: 'n_' + Date.now(),
+        recipientId: currentUser.managerId,
+        recipientRole: 'manager',
+        type: 'manager_approval',
+        title: 'New Cross-Department Mobility Request',
+        description: `${currentUser.name} requested approval to support "${post.title}" (${post.department}).`,
+        time: 'Just now',
+        timestamp: Date.now(),
+        read: false,
+        targetTab: 'manager'
+      };
+
+      setNotifications((prev) => [newNotification, ...prev]);
+
+      addToast(
+        'info',
+        'Manager Approval Initiated',
+        `Request sent to your manager ${currentUser.managerName || 'for review'}.`
+      );
+    } else {
+      addToast(
+        'success',
+        'Support Offer Registered',
+        `The author ${post.author} has been notified of your peer availability.`
+      );
+    }
+  };
+
+  // Create Work Post
+  const handleCreateWorkPost = (newPostData: Partial<WorkPost>) => {
+    const newId = Date.now();
     const newPost: WorkPost = {
       id: newId,
-      title: data.title || 'Untitled Requirement',
-      department: data.department || currentUser.department,
+      title: newPostData.title || 'Untitled Opportunity',
+      department: newPostData.department || currentUser.department,
       status: 'Open',
-      urgency: data.urgency || 'Medium',
-      duration: data.duration || '2–3 days (Short Gig)',
-      expectedEffortHours: data.expectedEffortHours || '8–12 hours',
-      managerApprovalRequired: data.managerApprovalRequired ?? true,
+      urgency: newPostData.urgency || 'Medium',
+      duration: newPostData.duration || '1–2 days',
+      expectedEffortHours: newPostData.expectedEffortHours || '8–12 hours',
+      location: newPostData.location || 'Remote / Hybrid',
+      managerApprovalRequired: newPostData.managerApprovalRequired ?? true,
       votes: 1,
       voteState: 1,
-      tags: data.tags || ['Engineering'],
+      tags: newPostData.tags || ['Automotive'],
       author: currentUser.name,
+      authorId: currentUser.id,
       role: currentUser.role,
       initials: currentUser.initials,
-      location: data.location || currentUser.campus,
       time: 'Just now',
       timestamp: Date.now(),
-      description: data.description || '',
-      whyOpportunity: data.whyOpportunity,
-      contactPref: 'reply',
+      description: newPostData.description || '',
+      whyOpportunity: newPostData.whyOpportunity || '',
       comments: [],
-      contacted: false,
-      bookmarked: false,
       matchScore: 92,
-      applicantCount: 0
+      matchReason: 'High domain synergy with engineering skill graph.'
     };
 
     setWorkPosts((prev) => [newPost, ...prev]);
-    setSelectedWorkId(newId);
-    setActiveTab('work');
-    addToast('success', 'Requirement Published', 'Your micro-gig is live on MBXchange and matching relevant colleagues.');
+    setIsNewWorkOpen(false);
+    addToast('success', 'Requirement Published', 'Your engineering requirement is live across departments.');
   };
 
-  // Submit Bandwidth Declaration (I Can Help)
-  const handleCreateBandwidthOffer = (data: Partial<BandwidthOffer>) => {
+  // Create Bandwidth Offer
+  const handleCreateBandwidthOffer = (data: { availableHours: string; skillsOffered: string[]; notes: string }) => {
     const newOffer: BandwidthOffer = {
       id: 'bo_' + Date.now(),
       author: currentUser.name,
+      authorId: currentUser.id,
       role: currentUser.role,
       department: currentUser.department,
       initials: currentUser.initials,
-      availableHours: data.availableHours || '6 hours this month',
-      skillsOffered: data.skillsOffered || currentUser.primarySkills,
-      notes: data.notes || 'Available for architecture reviews and cross-squad pairing.',
+      availableHours: data.availableHours,
+      skillsOffered: data.skillsOffered,
+      notes: data.notes,
       time: 'Just now',
       timestamp: Date.now()
     };
 
     setBandwidthOffers((prev) => [newOffer, ...prev]);
-    addToast('success', 'Bandwidth Registered', 'Your available capacity has been updated across the MBXchange matching pool.');
+    setIsOfferBandwidthOpen(false);
+    addToast('success', 'Bandwidth Registered', 'Your available hours are visible to all squads.');
   };
 
-  // Apply for Micro-Gig (Trigger Manager Approval Workflow)
-  const handleApplyForGig = (post: WorkPost) => {
-    const newApproval: ManagerApprovalItem = {
-      id: 'appr_' + Date.now(),
-      employeeName: currentUser.name,
-      employeeRole: currentUser.role,
-      employeeDepartment: currentUser.department,
-      opportunityId: post.id,
-      currentProject: 'MyAthlon / Fleet Telemetry',
-      opportunityTitle: post.title,
-      targetDepartment: post.department,
-      requestedCommitment: post.expectedEffortHours,
-      period: 'Next 7 Days',
-      requestedAt: 'Today',
-      status: 'Pending',
-      aiRecommendation: 'Approve',
-      aiRecommendationReason: `Requested commitment (${post.expectedEffortHours}) aligns with ${currentUser.name}'s declared bandwidth with zero sprint blockers.`
+  // Create Marketplace Listing
+  const handleCreateListing = (data: Partial<MarketListing>) => {
+    const newListing: MarketListing = {
+      id: Date.now(),
+      title: data.title || 'Marketplace Item',
+      price: data.price || 0,
+      currency: '₹',
+      isFree: data.isFree || false,
+      category: data.category || 'Other',
+      condition: data.condition || 'Used - Excellent',
+      location: data.location || currentUser.campus,
+      time: 'Just now',
+      timestamp: Date.now(),
+      seller: currentUser.name,
+      sellerId: currentUser.id,
+      sellerRole: currentUser.role,
+      initials: currentUser.initials,
+      description: data.description || '',
+      specs: data.specs || {}
     };
 
-    setManagerApprovals((prev) => [newApproval, ...prev]);
-    setWorkPosts((prev) => prev.map(p => p.id === post.id ? { ...p, contacted: true, applicantCount: (p.applicantCount || 0) + 1 } : p));
-    addToast('success', 'Interest Registered', `Manager approval request routed for "${post.title.slice(0, 32)}...".`);
+    setListings((prev) => [newListing, ...prev]);
+    setIsNewListingOpen(false);
+    addToast('success', 'Item Posted', 'Your listing is now active in the internal marketplace.');
   };
 
-  // Manager Approval Actions
-  const handleApproveManager = (id: string, notes?: string) => {
-    setManagerApprovals((prev) => prev.map(a => a.id === id ? { ...a, status: 'Approved', managerNotes: notes } : a));
-    addToast('success', 'Gig Approved', 'Employee is approved to participate in cross-department collaboration.');
+  // Create Community Post
+  const handleCreateCommunityPost = (data: Partial<CommunityPost>) => {
+    const newPost: CommunityPost = {
+      id: Date.now(),
+      type: data.type || 'Notice',
+      title: data.title || 'Community Update',
+      description: data.description || '',
+      author: currentUser.name,
+      authorId: currentUser.id,
+      authorRole: currentUser.role,
+      initials: currentUser.initials,
+      location: currentUser.campus,
+      dateInfo: 'Active today',
+      time: 'Just now',
+      timestamp: Date.now(),
+      repliesCount: 0
+    };
+
+    setCommunityPosts((prev) => [newPost, ...prev]);
+    setIsNewCommunityOpen(false);
+    addToast('success', 'Community Post Shared', 'Your discussion is live.');
   };
 
-  const handleApproveConditions = (id: string, conditions: string) => {
-    setManagerApprovals((prev) => prev.map(a => a.id === id ? { ...a, status: 'Approved with Conditions', managerNotes: conditions } : a));
-    addToast('info', 'Approved with Conditions', 'Conditions recorded and sent to employee.');
+  // Create Knowledge Question
+  const handleCreateQuestion = (data: { title: string; details: string; tags: string[] }) => {
+    const newQuestion: KnowledgeQuestion = {
+      id: 'q_' + Date.now(),
+      title: data.title,
+      details: data.details,
+      author: currentUser.name,
+      authorId: currentUser.id,
+      authorRole: currentUser.role,
+      initials: currentUser.initials,
+      tags: data.tags,
+      votes: 1,
+      time: 'Just now',
+      timestamp: Date.now(),
+      answers: [],
+      hasAcceptedAnswer: false
+    };
+
+    setKnowledgeQuestions((prev) => [newQuestion, ...prev]);
+    setIsAskQuestionOpen(false);
+    addToast('success', 'Question Posted', 'Engineering community guilds notified.');
   };
 
-  const handleRejectManager = (id: string, reason: string) => {
-    setManagerApprovals((prev) => prev.map(a => a.id === id ? { ...a, status: 'Rejected', managerNotes: reason } : a));
-    addToast('error', 'Request Rejected', 'Feedback delivered to employee.');
-  };
-
-  // Request Collaboration from Talent Directory
-  const handleSendCollaborationRequest = (data: {
-    talentId: string;
-    taskTitle: string;
-    estimatedHours: string;
-    dates: string;
-    notes: string;
-  }) => {
-    const target = talentProfiles.find(t => t.id === data.talentId);
-    if (target) {
-      addToast('success', 'Request Sent', `Collaboration proposal sent to ${target.name}.`);
-    }
-  };
-
-  // Community Group Join/Leave
-  const handleToggleJoinGroup = (groupId: string) => {
-    setCommunityGroups((prev) =>
-      prev.map((g) => {
-        if (g.id !== groupId) return g;
-        const nextState = !g.isJoined;
-        addToast('info', nextState ? 'Joined Guild' : 'Left Guild', `${g.name}`);
-        return {
-          ...g,
-          isJoined: nextState,
-          memberCount: g.memberCount + (nextState ? 1 : -1)
-        };
-      })
-    );
-  };
-
-  // Question Upvote
-  const handleUpvoteQuestion = (id: string) => {
-    setKnowledgeQuestions((prev) =>
-      prev.map((q) => (q.id === id ? { ...q, votes: q.votes + 1 } : q))
-    );
-  };
-
-  // Add Answer to Question
+  // Answer Knowledge Question
   const handleAddAnswer = (questionId: string, text: string) => {
     const newAnswer = {
       id: 'ans_' + Date.now(),
@@ -443,159 +739,250 @@ export default function App() {
       time: 'Just now',
       timestamp: Date.now(),
       text,
-      isAcceptedAnswer: false,
-      votes: 1
+      likes: 0
     };
 
     setKnowledgeQuestions((prev) =>
       prev.map((q) => (q.id === questionId ? { ...q, answers: [...q.answers, newAnswer] } : q))
     );
 
-    addToast('success', 'Answer Submitted', 'Your knowledge contribution is now public in the guild graph.');
+    addToast('success', 'Answer Submitted', 'Your technical insight has been posted.');
   };
 
-  // Ask Question Submission
-  const handleCreateQuestion = (data: Partial<KnowledgeQuestion>) => {
-    const newQ: KnowledgeQuestion = {
-      id: 'q_' + Date.now(),
-      title: data.title || 'Untitled Question',
-      details: data.details || '',
-      author: currentUser.name,
-      authorRole: currentUser.role,
-      initials: currentUser.initials,
-      time: 'Just now',
-      timestamp: Date.now(),
-      tags: data.tags || ['DevOps'],
-      votes: 1,
-      hasAcceptedAnswer: false,
-      answers: []
-    };
-
-    setKnowledgeQuestions((prev) => [newQ, ...prev]);
-    setActiveTab('community');
-    addToast('success', 'Question Published', 'Mercedes-Benz engineering guilds have been notified.');
-  };
-
-  // Submit New Marketplace Listing
-  const handleCreateListing = (data: Partial<MarketListing>) => {
-    const newId = Math.max(0, ...listings.map(l => l.id)) + 1;
-
-    const newListing: MarketListing = {
-      id: newId,
-      title: data.title || 'Untitled Item',
-      price: data.price || 0,
-      currency: '€',
-      category: data.category || 'Other',
-      condition: data.condition || 'Used',
-      location: data.location || currentUser.campus,
-      time: 'Just now',
-      timestamp: Date.now(),
-      seller: currentUser.name,
-      sellerRole: currentUser.role,
-      initials: currentUser.initials,
-      description: data.description || '',
-      specs: data.specs,
-      contacted: false,
-      bookmarked: false
-    };
-
-    setListings((prev) => [newListing, ...prev]);
-    setSelectedListingId(newId);
-    setActiveTab('marketplace');
-    addToast('success', 'Item Listed', 'Your listing is live on the Mercedes-Benz Campus Marketplace.');
-  };
-
-  // Submit New Community Notice / Post
-  const handleCreateCommunityPost = (data: Partial<CommunityPost>) => {
-    const newId = Math.max(0, ...communityPosts.map(p => p.id)) + 1;
-
-    const newPost: CommunityPost = {
-      id: newId,
-      type: data.type || 'Notice',
-      title: data.title || 'Untitled Notice',
-      description: data.description || '',
-      location: data.location || currentUser.campus,
-      dateInfo: data.dateInfo,
-      time: 'Just now',
-      timestamp: Date.now(),
-      author: currentUser.name,
-      authorRole: currentUser.role,
-      initials: currentUser.initials,
-      contacted: false,
-      bookmarked: false
-    };
-
-    setCommunityPosts((prev) => [newPost, ...prev]);
-    setActiveTab('community');
-    addToast('success', 'Notice Published', 'Your announcement is live on campus noticeboards.');
-  };
-
-  // Notifications
-  const handleSelectNotification = (item: NotificationItem) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === item.id ? { ...n, read: true } : n))
+  const handleUpvoteQuestion = (questionId: string) => {
+    setKnowledgeQuestions((prev) =>
+      prev.map((q) => (q.id === questionId ? { ...q, votes: q.votes + 1 } : q))
     );
-    setIsNotificationsOpen(false);
+  };
 
-    if (item.targetTab === 'work' && item.targetId) {
-      setActiveTab('work');
-      setSelectedWorkId(item.targetId);
-    } else if (item.targetTab === 'marketplace' && item.targetId) {
-      setActiveTab('marketplace');
-      setSelectedListingId(item.targetId);
-    } else if (item.targetTab) {
-      setActiveTab(item.targetTab);
+  const handleToggleJoinGroup = (groupId: string) => {
+    setCommunityGroups((prev) =>
+      prev.map((g) => {
+        if (g.id !== groupId) return g;
+        const nextJoined = !g.isJoined;
+        addToast('info', nextJoined ? 'Joined Community' : 'Left Community', g.name);
+        return {
+          ...g,
+          isJoined: nextJoined,
+          memberCount: nextJoined ? g.memberCount + 1 : g.memberCount - 1
+        };
+      })
+    );
+  };
+
+  // Direct Messaging Handlers
+  const handleSendDirectMessage = (
+    recipientId: string, 
+    text: string, 
+    contextTitle?: string, 
+    contextType?: 'work' | 'market' | 'community' | 'collab' | 'general'
+  ) => {
+    const recipient = userAccounts.find(u => u.id === recipientId);
+    if (!recipient) return;
+
+    const newMsg: DirectMessage = {
+      id: 'msg_' + Date.now(),
+      senderId: currentUser.id,
+      senderName: currentUser.name,
+      senderInitials: currentUser.initials,
+      senderRole: currentUser.role,
+      recipientId: recipient.id,
+      recipientName: recipient.name,
+      recipientInitials: recipient.initials,
+      recipientRole: recipient.role,
+      text,
+      timestamp: Date.now(),
+      time: 'Just now',
+      read: false,
+      contextTitle,
+      contextType: contextType || 'general'
+    };
+
+    setDirectMessages(prev => [...prev, newMsg]);
+
+    // Send notification to recipient
+    const newNotif: NotificationItem = {
+      id: 'notif_' + Date.now(),
+      recipientId: recipient.id,
+      type: 'direct_message',
+      title: `New Message from ${currentUser.name}`,
+      description: text.slice(0, 60),
+      time: 'Just now',
+      timestamp: Date.now(),
+      read: false
+    };
+
+    setNotifications(prev => [newNotif, ...prev]);
+    addToast('success', 'Message Sent', `Direct message sent to ${recipient.name}.`);
+  };
+
+  const handleMarkConversationRead = (partnerId: string) => {
+    setDirectMessages(prev => prev.map(m => {
+      if (m.senderId === partnerId && m.recipientId === currentUser.id) {
+        return { ...m, read: true };
+      }
+      return m;
+    }));
+  };
+
+  // Collaboration Request Handler
+  const handleSendCollaborationRequest = (data: {
+    targetTalent: TalentProfile;
+    taskTitle: string;
+    estimatedHours: string;
+    dates: string;
+    notes: string;
+  }) => {
+    const newRequest: CollaborationRequest = {
+      id: 'cr_' + Date.now(),
+      requesterId: currentUser.id,
+      requesterName: currentUser.name,
+      requesterRole: currentUser.role,
+      requesterDepartment: currentUser.department,
+      targetTalentId: data.targetTalent.id,
+      targetTalentName: data.targetTalent.name,
+      targetDepartment: data.targetTalent.department,
+      taskTitle: data.taskTitle,
+      estimatedHours: data.estimatedHours,
+      dates: data.dates,
+      notes: data.notes,
+      status: 'pending',
+      timestamp: Date.now(),
+      time: 'Just now'
+    };
+
+    setCollabRequests(prev => [newRequest, ...prev]);
+
+    // Send Notification to Target Talent
+    const newNotif: NotificationItem = {
+      id: 'notif_cr_' + Date.now(),
+      recipientId: data.targetTalent.id,
+      type: 'collab_request',
+      title: 'New Collaboration Request',
+      description: `${currentUser.name} requested your help for "${data.taskTitle}" (${data.estimatedHours}).`,
+      time: 'Just now',
+      timestamp: Date.now(),
+      read: false,
+      targetTab: 'people'
+    };
+
+    setNotifications(prev => [newNotif, ...prev]);
+    setTargetCollaborationTalent(null);
+    addToast(
+      'success',
+      'Collaboration Request Sent',
+      `Proposal sent to ${data.targetTalent.name}.`
+    );
+  };
+
+  const handleUpdateCollabStatus = (requestId: string, status: 'accepted' | 'declined' | 'completed') => {
+    setCollabRequests(prev => prev.map(r => {
+      if (r.id === requestId) {
+        return { ...r, status };
+      }
+      return r;
+    }));
+
+    addToast('success', 'Collaboration Updated', `Engagement marked as "${status}".`);
+  };
+
+  // Manager Approval Actions
+  const handleApproveManager = (id: string, notes?: string) => {
+    setManagerApprovals((prev) =>
+      prev.map((a) => (a.id === id ? { ...a, status: 'Approved', managerNotes: notes } : a))
+    );
+    addToast('success', 'Mobility Approved', 'Employee capacity allocated for cross-department gig.');
+  };
+
+  const handleApproveConditions = (id: string, conditions: string) => {
+    setManagerApprovals((prev) =>
+      prev.map((a) => (a.id === id ? { ...a, status: 'Approved with Conditions', managerNotes: conditions } : a))
+    );
+    addToast('info', 'Approved with Conditions', 'Conditions recorded in mobility log.');
+  };
+
+  const handleRejectManager = (id: string, reason: string) => {
+    setManagerApprovals((prev) =>
+      prev.map((a) => (a.id === id ? { ...a, status: 'Rejected', managerNotes: reason } : a))
+    );
+    addToast('error', 'Request Declined', 'Notification dispatched to squad member.');
+  };
+
+  // Notifications Handlers
+  const handleMarkAllNotificationsRead = () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    addToast('info', 'Notifications Cleared', 'All unread alerts marked as read.');
+  };
+
+  const handleSelectNotification = (item: NotificationItem) => {
+    setNotifications((prev) => prev.map((n) => (n.id === item.id ? { ...n, read: true } : n)));
+    setIsNotificationsOpen(false);
+    if (item.targetTab) {
+      handleTabChange(item.targetTab);
     }
   };
 
-  const handleMarkAllNotificationsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-    addToast('info', 'All caught up', 'Marked all notifications as read.');
-  };
+  // Saved Drawer Items
+  const savedWorkPosts = workPosts.filter((p) => userSavedData.workIds?.includes(p.id) || p.bookmarked);
+  const savedListings = listings.filter((l) => userSavedData.listingIds?.includes(l.id) || l.bookmarked);
+  const savedCommunity = communityPosts.filter((c) => userSavedData.communityIds?.includes(c.id) || c.bookmarked);
 
-  // Saved items
-  const savedWorkPosts = workPosts.filter((p) => p.bookmarked);
-  const savedListings = listings.filter((l) => l.bookmarked);
-  const savedCommunity = communityPosts.filter((c) => c.bookmarked);
-  const totalSavedCount = savedWorkPosts.length + savedListings.length + savedCommunity.length;
-
-  // Selected Detail Models
-  const activeWorkPost = selectedWorkId
-    ? workPosts.find((p) => p.id === selectedWorkId) || null
-    : null;
-
-  const activeListing = selectedListingId
-    ? listings.find((l) => l.id === selectedListingId) || null
-    : null;
-
-  const pendingApprovalsCount = managerApprovals.filter(a => a.status === 'Pending').length;
+  // Active Detail Views
+  const activeWorkPost = workPosts.find((p) => p.id === selectedWorkId);
+  const activeListing = listings.find((l) => l.id === selectedListingId);
 
   return (
-    <div className="min-h-screen bg-[#0c0d10] text-slate-300 flex flex-col font-sans transition-colors selection:bg-indigo-500 selection:text-white">
+    <div className="min-h-screen bg-[#08090c] text-slate-200 flex flex-col font-sans selection:bg-indigo-500/30 selection:text-indigo-200">
       
       {/* Toast Notification Container */}
-      <ToastContainer toasts={toasts} onDismiss={removeToast} />
+      <ToastContainer toasts={toasts} onDismiss={removeToast} onRemoveToast={removeToast} />
 
-      {/* Top Navbar */}
+      {/* Global Navigation Bar */}
       <Navbar
         activeTab={activeTab}
         onTabChange={handleTabChange}
         currentUser={currentUser}
         onOpenRoleModal={() => setIsRoleModalOpen(true)}
+        onOpenProfile={() => setIsProfileOpen(true)}
+        onOpenMessages={() => setIsMessagesOpen(true)}
+        unreadMessagesCount={unreadMessagesCount}
         onOpenNotifications={() => setIsNotificationsOpen(true)}
         onOpenSaved={() => setIsSavedDrawerOpen(true)}
-        notifications={notifications}
-        savedCount={totalSavedCount}
+        notifications={userNotifications}
+        savedCount={savedCount}
         onOpenGlobalSearch={() => setIsGlobalSearchOpen(true)}
         onOpenCreateWork={() => setIsNewWorkOpen(true)}
         onOpenOfferBandwidth={() => setIsOfferBandwidthOpen(true)}
+        onOpenOfferRide={() => setIsOfferRideOpen(true)}
         onOpenCreateListing={() => setIsNewListingOpen(true)}
         onOpenAskQuestion={() => setIsAskQuestionOpen(true)}
         pendingApprovalsCount={pendingApprovalsCount}
       />
 
-      {/* Main Content Body */}
-      <main className="flex-1 pb-16">
+      {/* Main Container with Left Top-to-Down Sidebar and Content */}
+      <div className="flex-1 w-full flex">
+        {/* Left Top-to-Down Sidebar Navigation */}
+        <Sidebar
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+          currentUser={currentUser}
+          pendingApprovalsCount={pendingApprovalsCount}
+          unreadMessagesCount={unreadMessagesCount}
+          unreadNotificationsCount={userNotifications.filter(n => !n.read).length}
+          savedCount={savedCount}
+          onOpenCreateWork={() => setIsNewWorkOpen(true)}
+          onOpenOfferBandwidth={() => setIsOfferBandwidthOpen(true)}
+          onOpenOfferRide={() => setIsOfferRideOpen(true)}
+          onOpenCreateListing={() => setIsNewListingOpen(true)}
+          onOpenAskQuestion={() => setIsAskQuestionOpen(true)}
+          onOpenSaved={() => setIsSavedDrawerOpen(true)}
+          onOpenMessages={() => setIsMessagesOpen(true)}
+          onOpenNotifications={() => setIsNotificationsOpen(true)}
+          onOpenRoleModal={() => setIsRoleModalOpen(true)}
+        />
+
+        {/* Main Content Area */}
+        <main className="flex-1 min-w-0 w-full max-w-[1720px] 2xl:max-w-[1920px] mx-auto px-3 sm:px-6 lg:px-8 xl:px-10 py-6 mb-16 md:mb-0">
         
         {/* 1. HOME DASHBOARD */}
         {activeTab === 'home' && (
@@ -649,7 +1036,7 @@ export default function App() {
         {/* 3. PEOPLE & SKILLS */}
         {activeTab === 'people' && (
           <PeopleSkillsView
-            experts={talentProfiles}
+            experts={userAccounts}
             onRequestCollaboration={(talent) => setTargetCollaborationTalent(talent)}
             currentUser={currentUser}
           />
@@ -663,18 +1050,24 @@ export default function App() {
               onBack={() => setSelectedListingId(null)}
               onToggleBookmark={handleToggleListingBookmark}
               onContactSeller={(listing) => {
-                setContactDialog({
-                  isOpen: true,
-                  targetTitle: listing.title,
-                  recipientName: listing.seller,
-                  recipientRole: listing.sellerRole,
-                  recipientInitials: listing.initials,
-                  contextType: 'market',
-                  onSuccessCallback: () => {
-                    setListings(prev => prev.map(l => l.id === listing.id ? { ...l, contacted: true } : l));
-                    addToast('success', 'Inquiry Sent', `Seller ${listing.seller} contacted.`);
-                  }
-                });
+                const sellerUser = userAccounts.find(u => u.name === listing.seller || u.id === listing.sellerId);
+                if (sellerUser) {
+                  setActiveMessagePartnerId(sellerUser.id);
+                  setIsMessagesOpen(true);
+                } else {
+                  setContactDialog({
+                    isOpen: true,
+                    targetTitle: listing.title,
+                    recipientName: listing.seller,
+                    recipientRole: listing.sellerRole,
+                    recipientInitials: listing.initials,
+                    contextType: 'market',
+                    onSuccessCallback: () => {
+                      setListings(prev => prev.map(l => l.id === listing.id ? { ...l, contacted: true } : l));
+                      addToast('success', 'Inquiry Sent', `Seller ${listing.seller} contacted.`);
+                    }
+                  });
+                }
               }}
               currentUser={currentUser}
             />
@@ -685,18 +1078,24 @@ export default function App() {
               onOpenNewListing={() => setIsNewListingOpen(true)}
               onToggleBookmark={handleToggleListingBookmark}
               onContactSeller={(listing) => {
-                setContactDialog({
-                  isOpen: true,
-                  targetTitle: listing.title,
-                  recipientName: listing.seller,
-                  recipientRole: listing.sellerRole,
-                  recipientInitials: listing.initials,
-                  contextType: 'market',
-                  onSuccessCallback: () => {
-                    setListings(prev => prev.map(l => l.id === listing.id ? { ...l, contacted: true } : l));
-                    addToast('success', 'Inquiry Sent', `Seller ${listing.seller} contacted.`);
-                  }
-                });
+                const sellerUser = userAccounts.find(u => u.name === listing.seller || u.id === listing.sellerId);
+                if (sellerUser) {
+                  setActiveMessagePartnerId(sellerUser.id);
+                  setIsMessagesOpen(true);
+                } else {
+                  setContactDialog({
+                    isOpen: true,
+                    targetTitle: listing.title,
+                    recipientName: listing.seller,
+                    recipientRole: listing.sellerRole,
+                    recipientInitials: listing.initials,
+                    contextType: 'market',
+                    onSuccessCallback: () => {
+                      setListings(prev => prev.map(l => l.id === listing.id ? { ...l, contacted: true } : l));
+                      addToast('success', 'Inquiry Sent', `Seller ${listing.seller} contacted.`);
+                    }
+                  });
+                }
               }}
               currentUser={currentUser}
             />
@@ -715,29 +1114,67 @@ export default function App() {
             onOpenAskQuestion={() => setIsAskQuestionOpen(true)}
             onOpenNewPost={() => setIsNewCommunityOpen(true)}
             onContactPost={(post) => {
-              setContactDialog({
-                isOpen: true,
-                targetTitle: post.title,
-                recipientName: post.author,
-                recipientRole: post.authorRole,
-                recipientInitials: post.initials,
-                contextType: 'community',
-                onSuccessCallback: () => {
-                  setCommunityPosts(prev => prev.map(p => p.id === post.id ? { ...p, contacted: true } : p));
-                  addToast('success', 'Message Sent', `Connected with ${post.author}.`);
-                }
-              });
+              const authorUser = userAccounts.find(u => u.name === post.author || u.id === post.authorId);
+              if (authorUser) {
+                setActiveMessagePartnerId(authorUser.id);
+                setIsMessagesOpen(true);
+              } else {
+                setContactDialog({
+                  isOpen: true,
+                  targetTitle: post.title,
+                  recipientName: post.author,
+                  recipientRole: post.authorRole,
+                  recipientInitials: post.initials,
+                  contextType: 'community',
+                  onSuccessCallback: () => {
+                    setCommunityPosts(prev => prev.map(p => p.id === post.id ? { ...p, contacted: true } : p));
+                    addToast('success', 'Message Sent', `Connected with ${post.author}.`);
+                  }
+                });
+              }
             }}
             currentUser={currentUser}
           />
         )}
 
-        {/* 6. ENTERPRISE INSIGHTS & HEATMAP */}
+        {/* 6. CARPOOL & RIDES */}
+        {activeTab === 'carpool' && (
+          <CarpoolView
+            rides={carpoolRides}
+            onOfferRide={() => setIsOfferRideOpen(true)}
+            onBookSeat={handleBookCarpoolSeat}
+            onCancelBooking={handleCancelCarpoolSeat}
+            onContactDriver={(ride) => {
+              const driverUser = userAccounts.find(u => u.id === ride.driverId || u.name === ride.driverName);
+              if (driverUser) {
+                setActiveMessagePartnerId(driverUser.id);
+                setIsMessagesOpen(true);
+              } else {
+                setContactDialog({
+                  isOpen: true,
+                  targetTitle: `Carpool: ${ride.origin} → ${ride.destination}`,
+                  recipientName: ride.driverName,
+                  recipientRole: ride.driverRole,
+                  recipientInitials: ride.driverInitials,
+                  contextType: 'community',
+                  onSuccessCallback: () => {
+                    addToast('success', 'Message Sent', `Connected with driver ${ride.driverName}.`);
+                  }
+                });
+              }
+            }}
+            onToggleBookmark={handleToggleCarpoolBookmark}
+            savedRideIds={userSavedData.carpoolIds || []}
+            currentUser={currentUser}
+          />
+        )}
+
+        {/* 7. ENTERPRISE INSIGHTS & HEATMAP */}
         {activeTab === 'insights' && (
           <EnterpriseInsightsView />
         )}
 
-        {/* 7. MANAGER INBOX */}
+        {/* 8. MANAGER INBOX */}
         {activeTab === 'manager' && (
           <ManagerInboxView
             approvals={managerApprovals}
@@ -745,6 +1182,11 @@ export default function App() {
             onApproveWithConditions={handleApproveConditions}
             onReject={handleRejectManager}
             currentUser={currentUser}
+            allUsers={userAccounts}
+            onOpenMessageWith={(userId) => {
+              setActiveMessagePartnerId(userId);
+              setIsMessagesOpen(true);
+            }}
           />
         )}
 
@@ -758,16 +1200,38 @@ export default function App() {
                 currentAvailabilityHoursThisWeek: hours,
                 typicalAvailability: text
               }));
+              setUserAccounts(prev => prev.map(u => u.id === currentUser.id ? {
+                ...u,
+                currentAvailabilityHoursThisWeek: hours,
+                typicalAvailability: text
+              } : u));
               addToast('success', 'Bandwidth Updated', `Your declared availability is now "${text}".`);
             }}
           />
         )}
 
-      </main>
+        {/* 9. ADMIN GOVERNANCE CONSOLE */}
+        {activeTab === 'admin' && (
+          <AdminDashboard
+            currentUser={currentUser}
+            users={userAccounts}
+            onUpdateUsers={(updated) => setUserAccounts(updated)}
+            onSelectUserForSession={(user) => {
+              setCurrentUser(user);
+              addToast('success', 'Session Switched', `Now operating as ${user.name} (${user.systemRole}).`);
+            }}
+            collabRequests={collabRequests}
+            workPosts={workPosts}
+            managerApprovals={managerApprovals}
+          />
+        )}
+
+        </main>
+      </div>
 
       {/* Corporate Footer */}
       <footer className="border-t border-[#21242c] py-6 bg-[#0c0d10] text-slate-500 text-xs mt-auto">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="w-full max-w-[1720px] 2xl:max-w-[1920px] mx-auto px-3 sm:px-6 lg:px-8 xl:px-10 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <div className="w-5 h-5 rounded bg-indigo-600 shadow-sm text-white font-black text-[10px] flex items-center justify-center">
               MB
@@ -781,7 +1245,7 @@ export default function App() {
               onClick={() => setIsRoleModalOpen(true)}
               className="text-indigo-400 hover:text-indigo-300 font-medium cursor-pointer"
             >
-              Active Persona: {currentUser.name} ({currentUser.role})
+              Active Persona: {currentUser.name} ({(currentUser.systemRole || 'employee').toUpperCase()})
             </button>
             <span>·</span>
             <span>Campus: {currentUser.campus}</span>
@@ -798,7 +1262,7 @@ export default function App() {
       <GlobalSearchModal
         isOpen={isGlobalSearchOpen}
         onClose={() => setIsGlobalSearchOpen(false)}
-        experts={talentProfiles}
+        experts={userAccounts}
         workPosts={workPosts}
         listings={listings}
         communities={communityGroups}
@@ -836,16 +1300,52 @@ export default function App() {
         currentUser={currentUser}
       />
 
+      {/* User Profile Drawer */}
+      <UserProfileDrawer
+        isOpen={isProfileOpen}
+        onClose={() => setIsProfileOpen(false)}
+        currentUser={currentUser}
+        onUpdateCurrentUser={(updated) => {
+          setCurrentUser(prev => ({ ...prev, ...updated }));
+          setUserAccounts(prev => prev.map(u => u.id === currentUser.id ? { ...u, ...updated } : u));
+          addToast('success', 'Profile Updated', 'Your profile details have been saved.');
+        }}
+        collabRequests={collabRequests}
+        onUpdateCollabStatus={handleUpdateCollabStatus}
+        workPosts={workPosts}
+        marketListings={listings}
+        bandwidthOffers={bandwidthOffers}
+        directMessages={directMessages}
+        onOpenMessageWith={(userId) => {
+          setActiveMessagePartnerId(userId);
+          setIsProfileOpen(false);
+          setIsMessagesOpen(true);
+        }}
+      />
+
+      {/* Direct Messages Drawer */}
+      <DirectMessagesDrawer
+        isOpen={isMessagesOpen}
+        onClose={() => { setIsMessagesOpen(false); setActiveMessagePartnerId(undefined); }}
+        currentUser={currentUser}
+        allUsers={userAccounts}
+        messages={directMessages}
+        onSendMessage={handleSendDirectMessage}
+        onMarkConversationRead={handleMarkConversationRead}
+        selectedUserId={activeMessagePartnerId}
+      />
+
       {/* Role / Persona Switcher Modal */}
       <RoleSelectorModal
         isModal={true}
         isOpen={isRoleModalOpen}
         onClose={() => setIsRoleModalOpen(false)}
         currentUser={currentUser}
+        allUsers={userAccounts}
         onSelectTalent={(talent) => {
           setCurrentUser(talent);
           setIsRoleModalOpen(false);
-          addToast('success', 'Profile Switched', `Logged in as ${talent.name} (${talent.role}).`);
+          addToast('success', 'Profile Switched', `Logged in as ${talent.name} (${talent.role} · ${(talent.systemRole || 'employee').toUpperCase()}).`);
         }}
       />
 
@@ -853,7 +1353,7 @@ export default function App() {
       <NotificationsModal
         isOpen={isNotificationsOpen}
         onClose={() => setIsNotificationsOpen(false)}
-        notifications={notifications}
+        notifications={userNotifications}
         onMarkAllRead={handleMarkAllNotificationsRead}
         onSelectNotification={handleSelectNotification}
       />
@@ -865,11 +1365,22 @@ export default function App() {
         savedWorkPosts={savedWorkPosts}
         savedListings={savedListings}
         savedCommunityPosts={savedCommunity}
+        savedCarpoolRides={carpoolRides.filter((r) => userSavedData.carpoolIds?.includes(r.id) || r.bookmarked)}
         onOpenWork={(id) => { setSelectedWorkId(id); setActiveTab('work'); setIsSavedDrawerOpen(false); }}
         onOpenListing={(id) => { setSelectedListingId(id); setActiveTab('marketplace'); setIsSavedDrawerOpen(false); }}
         onOpenCommunity={(id) => { setActiveTab('community'); setIsSavedDrawerOpen(false); }}
+        onOpenCarpool={(id) => { setActiveTab('carpool'); setIsSavedDrawerOpen(false); }}
         onToggleWorkBookmark={handleToggleWorkBookmark}
         onToggleListingBookmark={handleToggleListingBookmark}
+        onToggleCarpoolBookmark={handleToggleCarpoolBookmark}
+      />
+
+      {/* Offer Ride Modal (Carpool) */}
+      <OfferRideModal
+        isOpen={isOfferRideOpen}
+        onClose={() => setIsOfferRideOpen(false)}
+        onSubmit={handleCreateCarpoolRide}
+        currentUser={currentUser}
       />
 
       {/* Work Requirement Modal (I Need Help) */}
