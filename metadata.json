@@ -1,0 +1,6 @@
+{
+  "name": "MBXchange",
+  "description": "The Mercedes-Benz internal marketplace for people, skills, cross-department work exchange, and community.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
