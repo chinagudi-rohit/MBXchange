@@ -1,0 +1,27 @@
+# Ingress for AKS. Works with:
+#  - AKS Application Routing add-on (webapprouting.kubernetes.azure.com), or
+#  - nginx ingress controller (class: nginx).
+# Replace host with your DNS name; add TLS via cert-manager or Azure-managed certs.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: mbxchange
+  namespace: mbxchange
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "2m"
+spec:
+  ingressClassName: webapprouting.kubernetes.azure.com
+  rules:
+    - host: mbxchange.example.internal
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: mbxchange
+                port:
+                  number: 80
+  # tls:
+  #   - hosts: [mbxchange.example.internal]
+  #     secretName: mbxchange-tls

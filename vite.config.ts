@@ -12,11 +12,18 @@ export default defineConfig(() => {
       },
     },
     server: {
-      // HMR is disabled in AI Studio via DISABLE_HMR env var.
-      // Do not modifyâfile watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',
-      // Disable file watching when DISABLE_HMR is true to save CPU during agent edits.
-      watch: process.env.DISABLE_HMR === 'true' ? null : {},
+      // The embedded PGlite database lives in .data/ — never let its writes
+      // trigger an HMR reload (that would remount the app mid-interaction).
+      watch: process.env.DISABLE_HMR === 'true'
+        ? null
+        : { ignored: ['**/.data/**', '**/dist/**', '**/dist-server/**'] },
+      proxy: {
+        '/api': {
+          target: 'http://localhost:8787',
+          changeOrigin: true,
+        },
+      },
     },
   };
 });

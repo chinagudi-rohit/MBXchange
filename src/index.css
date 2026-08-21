@@ -1,25 +1,290 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ── MBXchange tokens · Claude Amber palette + glassmorphism ────────────
+   Base colours from the Claude Amber theme (21st.dev/@serafimcloud).
+   Semantic accents (success/warning/danger/info) are derived to sit on the
+   same warm scale while staying distinguishable from the terracotta primary. */
+:root {
+  --page: #faf9f5;
+  /* Chrome surfaces (sidebar, header, drawers, modals) — translucent so
+     content visibly blurs underneath them while scrolling. */
+  --surface: rgba(250, 249, 245, 0.72);
+  /* Content surfaces (cards) — near-solid so data stays crisp. */
+  --surface-solid: rgba(255, 255, 255, 0.97);
+  /* Overlay surfaces (modals, drawers) — opaque: nothing behind them may
+     compete with the text they carry. */
+  --surface-overlay: #ffffff;
+  --surface-2: rgba(201, 100, 66, 0.07);
+  --line: #dad9d4;
+  --line-strong: #b4b2a7;
+  --ink: oklch(0.191 0.002 106.586);
+  --ink-2: oklch(0.344 0.027 95.723);
+  --ink-3: oklch(0.534 0.008 97.45);
+
+  --primary: #c96442;
+  --primary-strong: #b05730;
+  --primary-soft: rgba(201, 100, 66, 0.12);
+  --on-primary: #ffffff;
+
+  --accent-green: #5c7c3a;
+  --accent-green-soft: rgba(92, 124, 58, 0.13);
+  --accent-amber: #a06a12;
+  --accent-amber-soft: rgba(160, 106, 18, 0.13);
+  --accent-red: #a8281c;
+  --accent-red-soft: rgba(168, 40, 28, 0.10);
+  --accent-blue: #3b6ea5;
+  --accent-blue-soft: rgba(59, 110, 165, 0.11);
+  --accent-violet: #7256c9;
+  --accent-violet-soft: rgba(114, 86, 201, 0.12);
+
+  --glass-border: rgba(255, 255, 255, 0.70);
+  --shadow-card: 0 2px 16px -4px rgba(45, 30, 20, 0.10), 0 0 0 1px var(--glass-border), inset 0 1px 0 rgba(255,255,255,0.8);
+  --shadow-pop: 0 24px 48px -12px rgba(45, 30, 20, 0.26), 0 0 0 1px var(--glass-border);
+
+  /* Backdrop tints — Claude Amber palette only (primary #c96442,
+     secondary #e9e6dc, muted #ede9de, chart-3 #ded8c4). No off-palette hues. */
+}
+
+.dark {
+  --page: #262624;
+  --surface: rgba(38, 38, 36, 0.70);
+  --surface-solid: rgba(44, 44, 43, 0.97);
+  --surface-overlay: #2c2c2b;
+  --surface-2: rgba(250, 249, 245, 0.055);
+  --line: #3e3e38;
+  --line-strong: #52514a;
+  --ink: #faf9f5;
+  --ink-2: oklch(0.861 0.010 99.0);
+  --ink-3: oklch(0.700 0.014 99.066);
+
+  --primary: #d97757;
+  --primary-strong: #e89173;
+  --primary-soft: rgba(217, 119, 87, 0.15);
+  --on-primary: #1f1e1d;
+
+  --accent-green: #a3c77a;
+  --accent-green-soft: rgba(163, 199, 122, 0.15);
+  --accent-amber: #e0a95f;
+  --accent-amber-soft: rgba(224, 169, 95, 0.15);
+  --accent-red: #ef4444;
+  --accent-red-soft: rgba(239, 68, 68, 0.15);
+  --accent-blue: #7fb0e0;
+  --accent-blue-soft: rgba(127, 176, 224, 0.15);
+  --accent-violet: #9c87f5;
+  --accent-violet-soft: rgba(156, 135, 245, 0.17);
+
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --shadow-card: 0 2px 16px -4px rgba(0, 0, 0, 0.5), 0 0 0 1px var(--glass-border), inset 0 1px 0 rgba(255,255,255,0.045);
+  --shadow-pop: 0 24px 56px -12px rgba(0, 0, 0, 0.72), 0 0 0 1px var(--line-strong);
+
+  /* Dark backdrop tints — Claude Amber dark tokens only
+     (primary #d97757, accent #1a1915, muted #1b1b19, sidebar #1f1e1d). */
+}
+
+@theme inline {
+  --font-sans: 'Outfit', ui-sans-serif, system-ui, -apple-system, sans-serif;
+
+  --color-page: var(--page);
+  --color-surface: var(--surface);
+  --color-surface-solid: var(--surface-solid);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-primary: var(--primary);
+  --color-primary-strong: var(--primary-strong);
+  --color-primary-soft: var(--primary-soft);
+  --color-on-primary: var(--on-primary);
+  --color-green: var(--accent-green);
+  --color-green-soft: var(--accent-green-soft);
+  --color-amber: var(--accent-amber);
+  --color-amber-soft: var(--accent-amber-soft);
+  --color-red: var(--accent-red);
+  --color-red-soft: var(--accent-red-soft);
+  --color-blue: var(--accent-blue);
+  --color-blue-soft: var(--accent-blue-soft);
+  --color-violet: var(--accent-violet);
+  --color-violet-soft: var(--accent-violet-soft);
+
+  --shadow-card: var(--shadow-card);
+  --shadow-pop: var(--shadow-pop);
+}
+
 @layer base {
+  html {
+    font-family: var(--font-sans);
+    scroll-behavior: smooth;
+  }
   body {
-    background-color: #0c0d10;
-    color: #cbd5e1;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    background-color: var(--page);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection {
+    background: var(--primary-soft);
+    color: var(--primary-strong);
+  }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: var(--line-strong);
+    border-radius: 9999px;
+    border: 3px solid transparent;
+    background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-thumb:hover { background: var(--ink-3); background-clip: padding-box; }
+
+  button, [role="button"] { cursor: pointer; }
+  :focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+}
+
+@layer components {
+  /* Flat Claude Amber ground — no decorative gradient. The glass effect
+     comes from content blurring beneath the sticky chrome, not from a
+     colourful backdrop. */
+  .bg-mesh {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background: var(--page);
   }
 
-  /* Custom sleek scrollbars */
-  ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+  /* CHROME glass — sidebar, header, drawers, modals, sticky filter bars.
+     Content scrolls underneath and blurs, which is where the effect shows. */
+  .glass {
+    background: var(--surface);
+    -webkit-backdrop-filter: blur(26px) saturate(1.7);
+    backdrop-filter: blur(26px) saturate(1.7);
   }
-  ::-webkit-scrollbar-track {
-    background: #0c0d10;
+
+  /* CONTENT panel — cards and inputs. Near-solid: keeps dense data legible
+     while still picking up a hint of the backdrop. */
+  .panel {
+    background: var(--surface-solid);
+    -webkit-backdrop-filter: blur(8px) saturate(1.1);
+    backdrop-filter: blur(8px) saturate(1.1);
   }
-  ::-webkit-scrollbar-thumb {
-    background: #21242c;
-    border-radius: 9999px;
+
+  /* OVERLAY panel — modals and drawers. Fully opaque so nothing behind them
+     shows through the text they carry. The scrim supplies the depth instead. */
+  .panel-overlay {
+    background: var(--surface-overlay);
   }
-  ::-webkit-scrollbar-thumb:hover {
-    background: #333846;
+
+  /* In-view sticky toolbars park just under the 4rem top bar and frost
+     whatever scrolls beneath them (reference: Dashboard Drafts scroll UX) */
+  .sticky-bar {
+    position: sticky;
+    top: 4rem;
+    z-index: 20;
+    background: var(--surface);
+    -webkit-backdrop-filter: blur(26px) saturate(1.7);
+    backdrop-filter: blur(26px) saturate(1.7);
+    border-radius: 1rem;
+    box-shadow: var(--shadow-card);
   }
+
+  /* Scroll-reveal: content flows in as it enters the viewport */
+  .reveal {
+    opacity: 0;
+    transform: translateY(22px);
+    transition: opacity 640ms cubic-bezier(0.16, 1, 0.3, 1),
+                transform 640ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .reveal.is-visible {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* Children of a revealed block cascade in, so a section assembles itself
+     rather than snapping in as one slab (reference: Dashboard Drafts). */
+  .reveal-stagger > * {
+    opacity: 0;
+    transform: translateY(14px);
+    transition: opacity 560ms cubic-bezier(0.16, 1, 0.3, 1),
+                transform 560ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .reveal-stagger.is-visible > * {
+    opacity: 1;
+    transform: none;
+  }
+  .reveal-stagger.is-visible > *:nth-child(1) { transition-delay: 40ms; }
+  .reveal-stagger.is-visible > *:nth-child(2) { transition-delay: 90ms; }
+  .reveal-stagger.is-visible > *:nth-child(3) { transition-delay: 140ms; }
+  .reveal-stagger.is-visible > *:nth-child(4) { transition-delay: 190ms; }
+  .reveal-stagger.is-visible > *:nth-child(5) { transition-delay: 240ms; }
+  .reveal-stagger.is-visible > *:nth-child(n+6) { transition-delay: 290ms; }
+
+  /* Bars/lines draw themselves once their row is on screen */
+  .draw-x {
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 900ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .is-visible .draw-x { transform: scaleX(1); }
+
+  /* Loading skeleton — content-shaped placeholders instead of a spinner */
+  .skeleton {
+    position: relative;
+    overflow: hidden;
+    background: var(--surface-2);
+    border-radius: 0.5rem;
+  }
+  .skeleton::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in srgb, var(--ink-3) 12%, transparent),
+      transparent
+    );
+    animation: shimmer 1.4s infinite;
+  }
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes pop-in {
+  from { opacity: 0; transform: scale(0.97) translateY(6px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes grow-x {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}
+
+.anim-fade-up { animation: fade-up 340ms cubic-bezier(0.2, 0.8, 0.3, 1) both; }
+.anim-fade-in { animation: fade-in 200ms ease-out both; }
+.anim-pop-in { animation: pop-in 220ms cubic-bezier(0.2, 0.8, 0.3, 1) both; }
+.anim-grow-x { transform-origin: left; animation: grow-x 620ms cubic-bezier(0.2, 0.8, 0.3, 1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .anim-fade-up, .anim-fade-in, .anim-pop-in, .anim-grow-x { animation: none; }
+  .reveal, .reveal-stagger > * { opacity: 1; transform: none; transition: none; }
+  .draw-x { transform: none; transition: none; }
+  .skeleton::after { animation: none; }
+  * { transition-duration: 0.01ms !important; }
 }

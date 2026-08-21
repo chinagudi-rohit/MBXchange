@@ -1,0 +1,1250 @@
+import { Router } from 'express';
+import bcrypt from 'bcryptjs';
+import { q, one, newId } from './db.ts';
+import {
+  requireAuth, requireRole, requireRealAdmin, signToken,
+  getUserById, generateTempPassword, PUBLIC_USER_FIELDS, type AuthedRequest
+} from './auth.ts';
+import { computeRecommendation, parseHoursRange } from './rules.ts';
+
+export const api = Router();
+
+const WORK_STATUSES = ['Open', 'In Progress', 'Completed', 'Cancelled'];
+
+async function audit(actorId: string | null, action: string, subject: string, detail: object = {}) {
+  await q(`INSERT INTO audit_log (id, actor_id, action, subject, detail) VALUES ($1,$2,$3,$4,$5)`,
+    [newId('aud'), actorId, action, subject, JSON.stringify(detail)]);
+}
+
+async function notify(recipientId: string | null, recipientRole: string | null, type: string,
+  title: string, description: string, targetTab?: string, targetId?: string) {
+  await q(
+    `INSERT INTO notifications (id, recipient_id, recipient_role, type, title, description, target_tab, target_id)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+    [newId('n'), recipientId, recipientRole, type, title, description, targetTab || null, targetId || null]
+  );
+}
+
+/** Hours an applicant already has committed via pending/approved applications. */
+async function committedHours(applicantId: string, excludeAppId?: string): Promise<number> {
+  const { rows } = await q(
+    `SELECT commitment FROM applications
+     WHERE applicant_id = $1 AND status IN ('pending','approved') AND ($2::text IS NULL OR id <> $2)`,
+    [applicantId, excludeAppId || null]
+  );
+  return rows.reduce((sum, r) => sum + parseHoursRange(r.commitment || '')[1], 0);
+}
+
+async function recommendFor(applicant: any, post: any, excludeAppId?: string) {
+  const committed = await committedHours(applicant.id, excludeAppId);
+  return computeRecommendation({
+    applicantName: applicant.name,
+    availableHoursWeek: applicant.available_hours_week ?? applicant.availableHoursWeek ?? 0,
+    typicalAvailability: applicant.typical_availability ?? applicant.typicalAvailability ?? '',
+    committedHours: committed,
+    effortMin: post.effort_min,
+    effortMax: post.effort_max,
+    effortText: post.effort_hours,
+    postTitle: post.title,
+    postDepartment: post.department,
+    applicantSkills: applicant.primary_skills ?? applicant.primarySkills ?? [],
+    postTags: post.tags || []
+  });
+}
+
+// ============================== AUTH ==============================
+
+api.post('/auth/login', async (req, res) => {
+  const { email, password } = req.body || {};
+  if (!email || !password) return res.status(400).json({ error: 'Email and password are required' });
+  const row = await one(`SELECT * FROM users WHERE lower(email) = lower($1)`, [String(email).trim()]);
+  if (!row || row.status !== 'active') return res.status(401).json({ error: 'Invalid credentials' });
+  const ok = await bcrypt.compare(String(password), row.password_hash);
+  if (!ok) {
+    await audit(row.id, 'login_failed', row.email);
+    return res.status(401).json({ error: 'Invalid credentials' });
+  }
+  await audit(row.id, 'login', row.email);
+  const token = signToken({ sub: row.id });
+  const user = await getUserById(row.id);
+  res.json({ token, user });
+});
+
+api.post('/auth/change-password', requireAuth(), async (req, res) => {
+  const { user, realUser } = req as AuthedRequest;
+  if (user.id !== realUser.id) return res.status(403).json({ error: 'Cannot change password while impersonating' });
+  const { currentPassword, newPassword } = req.body || {};
+  if (!newPassword || String(newPassword).length < 8) {
+    return res.status(400).json({ error: 'New password must be at least 8 characters' });
+  }
+  const row = await one(`SELECT password_hash FROM users WHERE id = $1`, [user.id]);
+  const ok = await bcrypt.compare(String(currentPassword || ''), row.password_hash);
+  if (!ok) return res.status(401).json({ error: 'Current password is incorrect' });
+  const hash = await bcrypt.hash(String(newPassword), 10);
+  await q(`UPDATE users SET password_hash = $1, must_change_password = FALSE, updated_at = now() WHERE id = $2`, [hash, user.id]);
+  await audit(user.id, 'password_changed', user.email);
+  res.json({ ok: true });
+});
+
+api.post('/auth/impersonate', requireAuth(), requireRealAdmin(), async (req, res) => {
+  const { realUser } = req as AuthedRequest;
+  const { userId } = req.body || {};
+  const target = await getUserById(userId);
+  if (!target) return res.status(404).json({ error: 'User not found' });
+  await audit(realUser.id, 'impersonate_start', target.email, { targetId: target.id });
+  const token = signToken({ sub: realUser.id, actAs: target.id });
+  res.json({ token, user: target, impersonating: true });
+});
+
+api.post('/auth/stop-impersonation', requireAuth(), async (req, res) => {
+  const { realUser } = req as AuthedRequest;
+  await audit(realUser.id, 'impersonate_stop', realUser.email);
+  const token = signToken({ sub: realUser.id });
+  res.json({ token, user: realUser });
+});
+
+api.get('/me', requireAuth(), async (req, res) => {
+  const { user, realUser, auth } = req as AuthedRequest;
+  res.json({ user, impersonating: !!auth.actAs, realUser: auth.actAs ? { id: realUser.id, name: realUser.name } : undefined });
+});
+
+api.patch('/me', requireAuth(), async (req, res) => {
+  const { user } = req as AuthedRequest;
+  const {
+    bio, typicalAvailability, availableHoursWeek, primarySkills, interests,
+    availableFor, campus, specialisation
+  } = req.body || {};
+  await q(
+    `UPDATE users SET
+      bio = COALESCE($1, bio),
+      typical_availability = COALESCE($2, typical_availability),
+      available_hours_week = COALESCE($3, available_hours_week),
+      primary_skills = COALESCE($4, primary_skills),
+      interests = COALESCE($5, interests),
+      available_for = COALESCE($6, available_for),
+      campus = COALESCE($7, campus),
+      specialisation = COALESCE($8, specialisation),
+      updated_at = now()
+     WHERE id = $9`,
+    [
+      bio ?? null, typicalAvailability ?? null,
+      availableHoursWeek != null ? Number(availableHoursWeek) : null,
+      primarySkills ? JSON.stringify(primarySkills) : null,
+      interests ? JSON.stringify(interests) : null,
+      availableFor ? JSON.stringify(availableFor) : null,
+      campus ?? null, specialisation ?? null, user.id
+    ]
+  );
+  res.json({ user: await getUserById(user.id) });
+});
+
+// ============================== USERS ==============================
+
+api.get('/users', requireAuth(), async (_req, res) => {
+  const { rows } = await q(`SELECT ${PUBLIC_USER_FIELDS} FROM users WHERE status = 'active' ORDER BY name`);
+  res.json({ users: rows });
+});
+
+api.post('/users', requireAuth(), requireRealAdmin(), async (req, res) => {
+  const { realUser } = req as AuthedRequest;
+  const { name, email, role, systemRole, department, campus, managerId, typicalAvailability, availableHoursWeek, primarySkills } = req.body || {};
+  if (!name || !email || !department) return res.status(400).json({ error: 'name, email and department are required' });
+  const existing = await one(`SELECT id FROM users WHERE lower(email) = lower($1)`, [email]);
+  if (existing) return res.status(409).json({ error: 'A user with this email already exists' });
+  if (managerId) {
+    const mgr = await getUserById(managerId);
+    if (!mgr) return res.status(400).json({ error: 'Selected manager does not exist' });
+  }
+  const tempPassword = generateTempPassword();
+  const hash = await bcrypt.hash(tempPassword, 10);
+  const id = newId('usr');
+  const initials = String(name).split(/\s+/).map((p: string) => p[0]).join('').slice(0, 2).toUpperCase();
+  await q(
+    `INSERT INTO users (id, email, name, initials, role, system_role, department, campus,
+      typical_availability, available_hours_week, primary_skills, manager_id, password_hash, must_change_password)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,TRUE)`,
+    [
+      id, email, name, initials, role || 'Employee', systemRole || 'employee', department, campus || '',
+      typicalAvailability || '', Number(availableHoursWeek) || 0,
+      JSON.stringify(primarySkills || []), managerId || null, hash
+    ]
+  );
+  await audit(realUser.id, 'user_created', email, { id, systemRole: systemRole || 'employee' });
+  res.status(201).json({ user: await getUserById(id), tempPassword });
+});
+
+api.patch('/users/:id', requireAuth(), requireRealAdmin(), async (req, res) => {
+  const { realUser } = req as AuthedRequest;
+  const target = await getUserById(req.params.id);
+  if (!target) return res.status(404).json({ error: 'User not found' });
+  const { role, systemRole, department, campus, managerId, status } = req.body || {};
+  await q(
+    `UPDATE users SET
+      role = COALESCE($1, role), system_role = COALESCE($2, system_role),
+      department = COALESCE($3, department), campus = COALESCE($4, campus),
+      manager_id = COALESCE($5, manager_id), status = COALESCE($6, status), updated_at = now()
+     WHERE id = $7`,
+    [role ?? null, systemRole ?? null, department ?? null, campus ?? null, managerId ?? null, status ?? null, req.params.id]
+  );
+  await audit(realUser.id, 'user_updated', target.email, req.body);
+  res.json({ user: await getUserById(req.params.id) });
+});
+
+api.post('/users/:id/reset-password', requireAuth(), requireRealAdmin(), async (req, res) => {
+  const { realUser } = req as AuthedRequest;
+  const target = await getUserById(req.params.id);
+  if (!target) return res.status(404).json({ error: 'User not found' });
+  const tempPassword = generateTempPassword();
+  const hash = await bcrypt.hash(tempPassword, 10);
+  await q(`UPDATE users SET password_hash = $1, must_change_password = TRUE, updated_at = now() WHERE id = $2`, [hash, req.params.id]);
+  await audit(realUser.id, 'password_reset', target.email);
+  res.json({ tempPassword });
+});
+
+// ============================== WORK POSTS ==============================
+
+const POST_SELECT = `
+  p.id, p.title, p.department, p.team, p.status, p.urgency, p.duration,
+  p.effort_hours AS "effortHours", p.effort_min AS "effortMin", p.effort_max AS "effortMax",
+  p.location, p.approval_required AS "approvalRequired", p.seats, p.tags,
+  p.author_id AS "authorId", p.author_name AS "authorName", p.author_role AS "authorRole",
+  p.author_initials AS "authorInitials", p.description, p.why_opportunity AS "whyOpportunity",
+  p.edited_at AS "editedAt", p.created_at AS "createdAt",
+  (SELECT COUNT(*)::int FROM applications a WHERE a.post_id = p.id AND a.status = 'approved') AS "seatsFilled",
+  (SELECT COUNT(*)::int FROM work_comments c WHERE c.post_id = p.id) AS "commentCount"
+`;
+
+api.get('/work-posts', requireAuth(), async (req, res) => {
+  const { user } = req as AuthedRequest;
+  const { rows } = await q(`SELECT ${POST_SELECT} FROM work_posts p ORDER BY p.created_at DESC`);
+  const { rows: mine } = await q(
+    `SELECT id, post_id AS "postId", status FROM applications WHERE applicant_id = $1 AND status NOT IN ('withdrawn')`,
+    [user.id]
+  );
+  const mineByPost = new Map(mine.map((a: any) => [a.postId, a]));
+  res.json({ posts: rows.map((p: any) => ({ ...p, myApplication: mineByPost.get(p.id) || null })) });
+});
+
+api.post('/work-posts', requireAuth(), async (req, res) => {
+  const { user } = req as AuthedRequest;
+  const b = req.body || {};
+  if (!b.title || !b.description) return res.status(400).json({ error: 'Title and description are required' });
+  const id = newId('wp');
+  const [effMin, effMax] = parseHoursRange(b.effortHours || '');
+  await q(
+    `INSERT INTO work_posts (id, title, department, team, status, urgency, duration, effort_hours,
+      effort_min, effort_max, location, approval_required, seats, tags, author_id, author_name, author_role,
+      author_initials, description, why_opportunity)
+     VALUES ($1,$2,$3,$4,'Open',$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)`,
+    [
+      id, b.title, b.department || user.department, b.team || '', b.urgency || 'Medium',
+      b.duration || '', b.effortHours || '', effMin, effMax, b.location || 'Remote / Hybrid',
+      b.approvalRequired ?? true, Math.max(1, Number(b.seats) || 1), JSON.stringify(b.tags || []),
+      user.id, user.name, user.role, user.initials, b.description, b.whyOpportunity || ''
+    ]
+  );
+  const post = await one(`SELECT ${POST_SELECT} FROM work_posts p WHERE p.id = $1`, [id]);
+  res.status(201).json({ post });
+});
+
+api.get('/work-posts/:id', requireAuth(), async (req, res) => {
+  const { user } = req as AuthedRequest;
+  const post = await one(`SELECT ${POST_SELECT} FROM work_posts p WHERE p.id = $1`, [req.params.id]);
+  if (!post) return res.status(404).json({ error: 'Post not found' });
+  const { rows: comments } = await q(
+    `SELECT c.id, c.text, c.created_at AS "createdAt", u.name AS "authorName", u.role AS "authorRole", u.initials AS "authorInitials"
+     FROM work_comments c JOIN users u ON u.id = c.author_id WHERE c.post_id = $1 ORDER BY c.created_at`,
+    [req.params.id]
+  );
+  const isPrivileged = user.id === post.authorId || user.systemRole !== 'employee';
+  let applications: any[] = [];
+  if (isPrivileged) {
+    const { rows } = await q(
+      `SELECT a.id, a.status, a.commitment, a.note, a.ai_recommendation AS "aiRecommendation",
+        a.created_at AS "createdAt", u.name AS "applicantName", u.initials AS "applicantInitials", u.department
+       FROM applications a JOIN users u ON u.id = a.applicant_id WHERE a.post_id = $1 ORDER BY a.created_at DESC`,
+      [req.params.id]
+    );
+    applications = rows;
+  }
+  const myApp = await one(
+    `SELECT id, status, note, commitment FROM applications WHERE post_id = $1 AND applicant_id = $2 AND status <> 'withdrawn'`,
+    [req.params.id, user.id]
+  );
+  res.json({ post, comments, applications, myApplication: myApp || null });
+});
+
+api.patch('/work-posts/:id', requireAuth(), async (req, res) => {
+  const { user } = req as AuthedRequest;
+  const post = await one(`SELECT * FROM work_posts WHERE id = $1`, [req.params.id]);
+  if (!post) return res.status(404).json({ error: 'Post not found' });
+  if (post.author_id !== user.id && user.systemRole !== 'admin') {
+    return res.status(403).json({ error: 'Only the author can update this post' });
+  }
+  const b = req.body || {};
+  if (b.status && !WORK_STATUSES.includes(b.status)) {
+    return res.status(400).json({ error: `Status must be one of ${WORK_STATUSES.join(', ')}` });
+  }
+  const [effMin, effMax] = b.effortHours ? parseHoursRange(b.effortHours) : [post.effort_min, post.effort_max];
+  await q(
+    `UPDATE work_posts SET
+      title = COALESCE($1, title), description = COALESCE($2, description),
+      why_opportunity = COALESCE($3, why_opportunity), urgency = COALESCE($4, urgency),
+      duration = COALESCE($5, duration), effort_hours = COALESCE($6, effort_hours),
+      effort_min = $7, effort_max = $8, location = COALESCE($9, location),
+      seats = COALESCE($10, seats), tags = COALESCE($11, tags), status = COALESCE($12, status),
+      edited_at = CASE WHEN $13 THEN now() ELSE edited_at END
+     WHERE id = $14`,
+    [
+      b.title ?? null, b.description ?? null, b.whyOpportunity ?? null, b.urgency ?? null,
+      b.duration ?? null, b.effortHours ?? null, effMin, effMax, b.location ?? null,
+      b.seats != null ? Math.max(1, Number(b.seats)) : null, b.tags ? JSON.stringify(b.tags) : null,
+      b.status ?? null,
+      !!(b.title || b.description || b.effortHours || b.seats), req.params.id
+    ]
+  );
+  const updated = await one(`SELECT ${POST_SELECT} FROM work_posts p WHERE p.id = $1`, [req.params.id]);
+  res.json({ post: updated });
+});
+
+api.post('/work-posts/:id/comments', requireAuth(), async (req, res) => {
+  const { user } = req as AuthedRequest;
+  const { text } = req.body || {};
+  if (!text) return res.status(400).json({ error: 'Comment text required' });
+  const post = await one(`SELECT id, title, author_id FROM work_posts WHERE id = $1`, [req.params.id]);
+  if (!post) return res.status(404).json({ error: 'Post not found' });
+  const id = newId('c');
+  await q(`INSERT INTO work_comments (id, post_id, author_id, text) VALUES ($1,$2,$3,$4)`, [id, req.params.id, user.id, text]);
+  if (post.author_id && post.author_id !== user.id) {
+    await notify(post.author_id, null, 'reply', `New reply on "${post.title.slice(0, 50)}"`, `${user.name}: ${String(text).slice(0, 80)}`, 'work', post.id);
+  }
+  res.status(201).json({ ok: true });
+});
+
+// ---- Apply (self + optional colleagues; each routed to their own manager) ----
+
+api.post('/work-posts/:id/apply', requireAuth(), async (req, res) => {
+  const { user } = req as AuthedRequest;
+  const post = await one(`SELECT * FROM work_posts WHERE id = $1`, [req.params.id]);
+  if (!post) return res.status(404).json({ error: 'Post not found' });
+  if (post.status !== 'Open') return res.status(400).json({ error: 'This opportunity is not open for applications' });
+
+  const { note = '', includeSelf = true, colleagues = [], unregistered = [] } = req.body || {};
+  const memberIds: string[] = [];
+  if (includeSelf) memberIds.push(user.id);
+  for (const cid of colleagues) if (cid && cid !== user.id) memberIds.push(cid);
+  if (memberIds.length === 0 && unregistered.length === 0) {
+    return res.status(400).json({ error: 'At least one applicant is required' });
+  }
+
+  const groupId = newId('grp');
+  const results: any[] = [];
+
+  for (const memberId of memberIds) {
+    const member = await one(`SELECT * FROM users WHERE id = $1 AND status = 'active'`, [memberId]);
+    if (!member) { results.push({ userId: memberId, error: 'User not found' }); continue; }
+    const dup = await one(`SELECT id FROM applications WHERE post_id = $1 AND applicant_id = $2 AND status <> 'withdrawn'`, [post.id, memberId]);
+    if (dup) { results.push({ userId: memberId, error: `${member.name} has already applied` }); continue; }
+
+    const appId = newId('app');
+    const needsApproval = post.approval_required;
+    const managerRegistered = !!member.manager_id;
+
+    if (!needsApproval) {
+      const rec = await recommendFor(member, post);
+      await q(
+        `INSERT INTO applications (id, post_id, group_id, applicant_id, submitted_by, manager_id, note, commitment, status, ai_recommendation, ai_reason, decided_at)
+         VALUES ($1,$2,$3,$4,$5,NULL,$6,$7,'approved',$8,$9, now())`,
+        [appId, post.id, groupId, memberId, user.id, note, post.effort_hours, rec.verdict, rec.reason]
+      );
+      if (post.author_id && post.author_id !== memberId) {
+        await notify(post.author_id, null, 'help_offer', 'Support Offer Received', `${member.name} offered to support "${post.title.slice(0, 50)}".`, 'work', post.id);
+      }
+      results.push({ userId: memberId, applicationId: appId, status: 'approved' });
+      continue;
+    }
+
+    if (managerRegistered) {
+      const rec = await recommendFor(member, post);
+      await q(
+        `INSERT INTO applications (id, post_id, group_id, applicant_id, submitted_by, manager_id, note, commitment, status, ai_recommendation, ai_reason)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'pending',$9,$10)`,
+        [appId, post.id, groupId, memberId, user.id, member.manager_id, note, post.effort_hours, rec.verdict, rec.reason]
+      );
+      const submittedText = memberId === user.id
+        ? `${member.name} requested approval to support`
+        : `${user.name} nominated ${member.name} for`;
+      await notify(member.manager_id, null, 'manager_approval', `Approval Needed: ${member.name}`,
+        `${submittedText} "${post.title.slice(0, 60)}" (${post.effort_hours || post.duration}).`, 'manager', appId);
+      if (memberId !== user.id) {
+        await notify(memberId, null, 'collab_request', 'You have been nominated',
+          `${user.name} added you to an application for "${post.title.slice(0, 60)}". Your manager's approval was requested.`, 'work', post.id);
+      }
+      results.push({ userId: memberId, applicationId: appId, status: 'pending' });
+    } else {
+      // Manager not registered → application waits; admin gets a registration request
+      await q(
+        `INSERT INTO applications (id, post_id, group_id, applicant_id, submitted_by, manager_id, note, commitment, status)
+         VALUES ($1,$2,$3,$4,$5,NULL,$6,$7,'awaiting_registration')`,
+        [appId, post.id, groupId, memberId, user.id, note, post.effort_hours]
+      );
+      const regId = newId('reg');
+      await q(
+        `INSERT INTO registration_requests (id, requested_by, subject_name, subject_email, subject_kind,
+          subject_role, subject_department, for_user_id, related_application_id, related_post_id, note, status)
+         VALUES ($1,$2,$3,$4,'manager','','',$5,$6,$7,$8,'pending')`,
+        [
+          regId, user.id, `Manager of ${member.name}`, '', memberId, appId, post.id,
+          `${member.name} (${member.department}) applied to "${post.title.slice(0, 60)}" but has no registered manager. Register their manager to route the approval.`
+        ]
+      );
+      await notify(null, 'admin', 'registration_request', `Registration Needed: manager of ${member.name}`,
+        `An application to "${post.title.slice(0, 50)}" is waiting until ${member.name}'s manager is registered.`, 'admin', regId);
+      results.push({ userId: memberId, applicationId: appId, status: 'awaiting_registration' });
+    }
+  }
+
+  // Colleagues who are not registered on the portal at all → admin registration queue
+  for (const person of unregistered) {
+    if (!person?.name) continue;
+    const regId = newId('reg');
+    await q(
+      `INSERT INTO registration_requests (id, requested_by, subject_name, subject_email, subject_kind,
+        subject_role, subject_department, related_post_id, note, status)
+       VALUES ($1,$2,$3,$4,'employee',$5,$6,$7,$8,'pending')`,
+      [
+        regId, user.id, person.name, person.email || '', person.role || '', person.department || '',
+        post.id,
+        `${user.name} wants to include ${person.name} in an application for "${post.title.slice(0, 60)}", but they are not registered on MBXchange.`
+      ]
+    );
+    await notify(null, 'admin', 'registration_request', `Registration Needed: ${person.name}`,
+      `${user.name} requested an account for ${person.name} to join "${post.title.slice(0, 50)}".`, 'admin', regId);
+    results.push({ name: person.name, status: 'registration_requested' });
+  }
+
+  res.status(201).json({ groupId, results });
+});
+
+// ============================== APPLICATIONS ==============================
+
+const APP_SELECT = `
+  a.id, a.post_id AS "postId", a.group_id AS "groupId", a.applicant_id AS "applicantId",
+  a.submitted_by AS "submittedBy", a.manager_id AS "managerId", a.note, a.commitment, a.status,
+  a.ai_recommendation AS "aiRecommendation", a.ai_reason AS "aiReason", a.manager_notes AS "managerNotes",
+  a.edited_at AS "editedAt", a.decided_at AS "decidedAt", a.created_at AS "createdAt",
+  p.title AS "postTitle", p.department AS "postDepartment", p.status AS "postStatus",
+  p.effort_hours AS "postEffort", p.duration AS "postDuration",
+  ap.name AS "applicantName", ap.initials AS "applicantInitials", ap.department AS "applicantDepartment",
+  ap.role AS "applicantRole", ap.available_hours_week AS "applicantAvailableHours",
+  ap.typical_availability AS "applicantTypicalAvailability",
+  sb.name AS "submittedByName",
+  mg.name AS "managerName"
+`;
+const APP_JOINS = `
+  FROM applications a
+  JOIN work_posts p ON p.id = a.post_id
+  JOIN users ap ON ap.id = a.applicant_id
+  JOIN users sb ON sb.id = a.submitted_by
+  LEFT JOIN users mg ON mg.id = a.manager_id
+`;
+
+api.patch('/applications/:id', requireAuth(), async (req, res) => {
+  const { user } = req as AuthedRequest;
+  const app = await one(`SELECT * FROM applications WHERE id = $1`, [req.params.id]);
+  if (!app) return res.status(404).json({ error: 'Application not found' });
+  if (app.applicant_id !== user.id && app.submitted_by !== user.id) {
+    return res.status(403).json({ error: 'Not your application' });
+  }
+  if (!['pending', 'awaiting_registration'].includes(app.status)) {
+    return res.status(400).json({ error: 'Only pending applications can be edited' });
+  }
+  const { note, commitment } = req.body || {};
+  await q(
+    `UPDATE applications SET note = COALESCE($1, note), commitment = COALESCE($2, commitment), edited_at = now() WHERE id = $3`,
+    [note ?? null, commitment ?? null, req.params.id]
+  );
+  if (app.manager_id) {
+    const applicant = await one(`SELECT name FROM users WHERE id = $1`, [app.applicant_id]);
+    await notify(app.manager_id, null, 'manager_approval', `Request Edited: ${applicant?.name}`,
+      `A pending approval request was edited by the applicant. Review the updated details.`, 'manager', app.id);
+  }
+  const updated = await one(`SELECT ${APP_SELECT} ${APP_JOINS} WHERE a.id = $1`, [req.params.id]);
+  res.json({ application: updated });
+});
+
+api.post('/applications/:id/withdraw', requireAuth(), async (req, res) => {
+  const { user } = req as AuthedRequest;
+  const app = await one(`SELECT * FROM applications WHERE id = $1`, [req.params.id]);
+  if (!app) return res.status(404).json({ error: 'Application not found' });
+  if (app.applicant_id !== user.id && app.submitted_by !== user.id) {
+    return res.status(403).json({ error: 'Not your application' });
+  }
+  if (!['pending', 'awaiting_registration'].includes(app.status)) {
+    return res.status(400).json({ error: 'Only pending applications can be withdrawn' });
+  }
+  await q(`UPDATE applications SET status = 'withdrawn', decided_at = now() WHERE id = $1`, [req.params.id]);
+  await q(`UPDATE registration_requests SET status = 'dismissed' WHERE related_application_id = $1 AND status = 'pending'`, [req.params.id]);
+  if (app.manager_id) {
+    await notify(app.manager_id, null, 'manager_approval', 'Request Withdrawn',
+      `${user.name} withdrew a pending approval request.`, 'manager');
+  }
+  res.json({ ok: true });
+});
+
+// ============================== APPROVALS (manager inbox) ==============================
+
+api.get('/approvals', requireAuth(), requireRole('manager', 'admin'), async (req, res) => {
+  const { user } = req as AuthedRequest;
+  const where = user.systemRole === 'admin' ? '' : `WHERE a.manager_id = $1`;
+  const params = user.systemRole === 'admin' ? [] : [user.id];
+  const { rows } = await q(`SELECT ${APP_SELECT} ${APP_JOINS} ${where} ORDER BY (a.status = 'pending') DESC, a.created_at DESC`, params);
+  res.json({ approvals: rows });
+});
+
+api.post('/approvals/:id/decision', requireAuth(), requireRole('manager', 'admin'), async (req, res) => {
+  const { user } = req as AuthedRequest;
+  const { decision, notes = '' } = req.body || {};
+  if (!['approved', 'rejected'].includes(decision)) {
+    return res.status(400).json({ error: 'decision must be approved or rejected' });
+  }
+  const app = await one(`SELECT * FROM applications WHERE id = $1`, [req.params.id]);
+  if (!app) return res.status(404).json({ error: 'Approval not found' });
+  if (user.systemRole !== 'admin' && app.manager_id !== user.id) {
+    return res.status(403).json({ error: 'This request is routed to a different manager' });
+  }
+  if (app.status !== 'pending') return res.status(400).json({ error: 'This request has already been decided' });
+
+  await q(`UPDATE applications SET status = $1, manager_notes = $2, decided_at = now() WHERE id = $3`, [decision, notes, req.params.id]);
+  const post = await one(`SELECT id, title, author_id, seats FROM work_posts WHERE id = $1`, [app.post_id]);
+  const applicant = await one(`SELECT id, name FROM users WHERE id = $1`, [app.applicant_id]);
+  await audit(user.id, `application_${decision}`, `${applicant?.name} → ${post?.title}`, { applicationId: app.id, notes });
+  await notify(app.applicant_id, null, 'manager_approval',
+    decision === 'approved' ? 'Request Approved ✓' : 'Request Declined',
+    `${user.name} ${decision} your request for "${post?.title?.slice(0, 60)}"${notes ? ` — ${String(notes).slice(0, 80)}` : ''}.`,
+    'requests', app.id);
+  if (decision === 'approved' && post?.author_id) {
+    await notify(post.author_id, null, 'help_offer', 'Seat Confirmed',
+      `${applicant?.name} was approved to support "${post.title.slice(0, 60)}".`, 'work', post.id);
+  }
+  const updated = await one(`SELECT ${APP_SELECT} ${APP_JOINS} WHERE a.id = $1`, [req.params.id]);
+  res.json({ application: updated });
+});
+
+// ============================== MY REQUESTS (centralized hub) ==============================
+
+api.get('/requests/mine', requireAuth(), async (req, res) => {
+  const { user } = req as AuthedRequest;
+  const { rows: applications } = await q(
+    `SELECT ${APP_SELECT} ${APP_JOINS} WHERE a.applicant_id = $1 OR a.submitted_by = $1 ORDER BY a.created_at DESC`,
+    [user.id]
+  );
+  const { rows: collabSent } = await q(
+    `SELECT c.*, t.name AS "targetName", t.initials AS "targetInitials", t.department AS "targetDepartment",
+       r.name AS "requesterName", r.initials AS "requesterInitials", r.department AS "requesterDepartment"
+     FROM collab_requests c JOIN users t ON t.id = c.target_id JOIN users r ON r.id = c.requester_id
+     WHERE c.requester_id = $1 ORDER BY c.created_at DESC`,
+    [user.id]
+  );
+  const { rows: collabReceived } = await q(
+    `SELECT c.*, t.name AS "targetName", t.initials AS "targetInitials", t.department AS "targetDepartment",
+       r.name AS "requesterName", r.initials AS "requesterInitials", r.department AS "requesterDepartment"
+     FROM collab_requests c JOIN users t ON t.id = c.target_id JOIN users r ON r.id = c.requester_id
+     WHERE c.target_id = $1 ORDER BY c.created_at DESC`,
+    [user.id]
+  );
+  const { rows: bookings } = await q(
+    `SELECT b.id, b.trip_id AS "tripId", b.days, b.created_at AS "createdAt",
+       t.origin, t.destination, t.departure_time AS "departureTime", t.direction, t.status AS "tripStatus",
+       d.name AS "driverName"
+     FROM carpool_bookings b JOIN carpool_trips t ON t.id = b.trip_id JOIN users d ON d.id = t.driver_id
+     WHERE b.rider_id = $1 ORDER BY b.created_at DESC`,
+    [user.id]
+  );
+  const { rows: regRequests } = await q(
+    `SELECT id, subject_name AS "subjectName", subject_kind AS "subjectKind", status, note,
+       created_at AS "createdAt"
+     FROM registration_requests WHERE requested_by = $1 OR for_user_id = $1 ORDER BY created_at DESC`,
+    [user.id]
+  );
+  res.json({ applications, collabSent, collabReceived, bookings, regRequests });
+});
+
+// ============================== COLLABORATION REQUESTS ==============================
+
+api.post('/collab-requests', requireAuth(), async (req, res) => {
+  const { user } = req as AuthedRequest;
+  const { targetId, taskTitle, estimatedHours = '', dates = '', notes = '' } = req.body || {};
+  if (!targetId || !taskTitle) return res.status(400).json({ error: 'targetId and taskTitle are required' });
+  const target = await getUserById(targetId);
+  if (!target) return res.status(404).json({ error: 'Target user not found' });
+  const id = newId('cr');
+  await q(
+    `INSERT INTO collab_requests (id, requester_id, target_id, task_title, estimated_hours, dates, notes)
+     VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+    [id, user.id, targetId, taskTitle, estimatedHours, dates, notes]
+  );
+  await notify(targetId, null, 'collab_request', 'New Collaboration Request',
+    `${user.name} requested your help: "${String(taskTitle).slice(0, 60)}" (${estimatedHours || 'effort TBD'}).`, 'requests', id);
+  res.status(201).json({ ok: true, id });
+});
+
+api.patch('/collab-requests/:id', requireAuth(), async (req, res) => {
+  const { user } = req as AuthedRequest;
+  const cr = await one(`SELECT * FROM collab_requests WHERE id = $1`, [req.params.id]);
+  if (!cr) return res.status(404).json({ error: 'Request not found' });
+  if (cr.requester_id !== user.id) return res.status(403).json({ error: 'Not your request' });
+  if (cr.status !== 'pending') return res.status(400).json({ error: 'Only pending requests can be edited' });
+  const { taskTitle, estimatedHours, dates, notes } = req.body || {};
+  await q(
+    `UPDATE collab_requests SET task_title = COALESCE($1, task_title), estimated_hours = COALESCE($2, estimated_hours),
+      dates = COALESCE($3, dates), notes = COALESCE($4, notes), edited_at = now() WHERE id = $5`,
+    [taskTitle ?? null, estimatedHours ?? null, dates ?? null, notes ?? null, req.params.id]
+  );
+  await notify(cr.target_id, null, 'collab_request', 'Collaboration Request Updated',
+    `${user.name} edited their pending request "${(taskTitle || cr.task_title).slice(0, 60)}".`, 'requests', cr.id);
+  res.json({ ok: true });
+});
+
+api.post('/collab-requests/:id/respond', requireAuth(), async (req, res) => {
+  const { user } = req as AuthedRequest;
+  const { action } = req.body || {};
+  const cr = await one(`SELECT * FROM collab_requests WHERE id = $1`, [req.params.id]);
+  if (!cr) return res.status(404).json({ error: 'Request not found' });
+  const allowed: Record<string, { who: string; from: string[] }> = {
+    accepted: { who: 'target', from: ['pending'] },
+    declined: { who: 'target', from: ['pending'] },
+    completed: { who: 'either', from: ['accepted'] },
+    withdrawn: { who: 'requester', from: ['pending'] }
+  };
+  const rule = allowed[action];
+  if (!rule) return res.status(400).json({ error: 'Invalid action' });
+  const isTarget = cr.target_id === user.id;
+  const isRequester = cr.requester_id === user.id;
+  if (rule.who === 'target' && !isTarget) return res.status(403).json({ error: 'Only the recipient can do this' });
+  if (rule.who === 'requester' && !isRequester) return res.status(403).json({ error: 'Only the requester can do this' });
+  if (rule.who === 'either' && !isTarget && !isRequester) return res.status(403).json({ error: 'Not your request' });
+  if (!rule.from.includes(cr.status)) return res.status(400).json({ error: `Cannot ${action} a ${cr.status} request` });
+  await q(`UPDATE collab_requests SET status = $1 WHERE id = $2`, [action, req.params.id]);
+  const other = isTarget ? cr.requester_id : cr.target_id;
+  await notify(other, null, 'collab_request', `Collaboration ${action}`,
+    `${user.name} marked "${cr.task_title.slice(0, 60)}" as ${action}.`, 'requests', cr.id);
+  res.json({ ok: true });
+});
+
+// ============================== BANDWIDTH ==============================
+
+api.get('/bandwidth-offers', requireAuth(), async (_req, res) => {
+  const { rows } = await q(
+    `SELECT b.id, b.available_hours AS "availableHours", b.skills, b.notes, b.created_at AS "createdAt",
+       u.id AS "authorId", u.name AS "authorName", u.role AS "authorRole", u.department, u.initials
+     FROM bandwidth_offers b JOIN users u ON u.id = b.author_id ORDER BY b.created_at DESC`
+  );
+  res.json({ offers: rows });
+});
+
+api.post('/bandwidth-offers', requireAuth(), async (req, res) => {
+  const { user } = req as AuthedRequest;
+  const { availableHours, skills = [], notes = '' } = req.body || {};
+  if (!availableHours) return res.status(400).json({ error: 'availableHours is required' });
+  await q(
+    `INSERT INTO bandwidth_offers (id, author_id, available_hours, skills, notes) VALUES ($1,$2,$3,$4,$5)`,
+    [newId('bo'), user.id, availableHours, JSON.stringify(skills), notes]
+  );
+  res.status(201).json({ ok: true });
+});
+
+// ============================== MARKETPLACE ==============================
+
+api.get('/listings', requireAuth(), async (_req, res) => {
+  const { rows } = await q(
+    `SELECT id, listing_type AS "listingType", title, price, currency, is_free AS "isFree", category,
+       condition, location, seller_id AS "sellerId", seller_name AS "sellerName", seller_role AS "sellerRole",
+       seller_initials AS "sellerInitials", description, specs, sold, event_date AS "eventDate",
+       ticket_quantity AS "ticketQuantity", created_at AS "createdAt"
+     FROM listings ORDER BY created_at DESC`
+  );
+  res.json({ listings: rows });
+});
+
+api.post('/listings', requireAuth(), async (req, res) => {
+  const { user } = req as AuthedRequest;
+  const b = req.body || {};
+  if (!b.title) return res.status(400).json({ error: 'Title is required' });
+  const id = newId('lst');
+  await q(
+    `INSERT INTO listings (id, listing_type, title, price, currency, is_free, category, condition,
+      location, seller_id, seller_name, seller_role, seller_initials, description, specs, event_date, ticket_quantity)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`,
+    [
+      id, b.listingType || 'Sell', b.title, Number(b.price) || 0, b.currency || '₹', !!b.isFree,
+      b.category || 'Other', b.condition || 'Used', b.location || user.campus, user.id, user.name,
+      user.role, user.initials, b.description || '', JSON.stringify(b.specs || {}),
+      b.eventDate || null, b.ticketQuantity || null
+    ]
+  );
+  res.status(201).json({ ok: true, id });
+});
+
+api.patch('/listings/:id', requireAuth(), async (req, res) => {
+  const { user } = req as AuthedRequest;
+  const l = await one(`SELECT * FROM listings WHERE id = $1`, [req.params.id]);
+  if (!l) return res.status(404).json({ error: 'Listing not found' });
+  if (l.seller_id !== user.id && user.systemRole !== 'admin') return res.status(403).json({ error: 'Not your listing' });
+  const b = req.body || {};
+  await q(
+    `UPDATE listings SET title = COALESCE($1, title), price = COALESCE($2, price),
+      description = COALESCE($3, description), sold = COALESCE($4, sold) WHERE id = $5`,
+    [b.title ?? null, b.price != null ? Number(b.price) : null, b.description ?? null, b.sold ?? null, req.params.id]
+  );
+  res.json({ ok: true });
+});
+
+// ============================== COMMUNITY ==============================
+
+api.get('/community', requireAuth(), async (req, res) => {
+  const { user } = req as AuthedRequest;
+  const { rows: groups } = await q(
+    `SELECT g.id, g.name, g.category, g.icon, g.description, g.member_count AS "memberCount",
+       g.active_discussions AS "activeDiscussions", g.tags,
+       EXISTS(SELECT 1 FROM group_members m WHERE m.group_id = g.id AND m.user_id = $1) AS "isJoined"
+     FROM community_groups g ORDER BY g.member_count DESC`,
+    [user.id]
+  );
+  const { rows: posts } = await q(
+    `SELECT id, type, group_name AS "groupName", title, description, author_id AS "authorId",
+       author_name AS "authorName", author_role AS "authorRole", author_initials AS "authorInitials",
+       location, date_info AS "dateInfo", created_at AS "createdAt"
+     FROM community_posts ORDER BY created_at DESC`
+  );
+  const { rows: questions } = await q(
+    `SELECT qq.id, qq.title, qq.details, qq.author_id AS "authorId", qq.author_name AS "authorName",
+       qq.author_role AS "authorRole", qq.author_initials AS "authorInitials", qq.tags, qq.votes,
+       qq.has_accepted AS "hasAccepted", qq.created_at AS "createdAt",
+       (SELECT COUNT(*)::int FROM answers an WHERE an.question_id = qq.id) AS "answerCount"
+     FROM questions qq ORDER BY qq.created_at DESC`
+  );
+  res.json({ groups, posts, questions });
+});
+
+api.get('/community/questions/:id', requireAuth(), async (req, res) => {
+  const question = await one(
+    `SELECT id, title, details, author_name AS "authorName", author_role AS "authorRole",
+       author_initials AS "authorInitials", tags, votes, has_accepted AS "hasAccepted", created_at AS "createdAt"
+     FROM questions WHERE id = $1`, [req.params.id]);
+  if (!question) return res.status(404).json({ error: 'Question not found' });
+  const { rows: answers } = await q(
+    `SELECT id, author_name AS "authorName", author_role AS "authorRole", author_initials AS "authorInitials",
+       text, accepted, likes, created_at AS "createdAt"
+     FROM answers WHERE question_id = $1 ORDER BY accepted DESC, likes DESC`, [req.params.id]);
+  res.json({ question, answers });
+});
+
+api.post('/community/groups/:id/toggle-join', requireAuth(), async (req, res) => {
+  const { user } = req as AuthedRequest;
+  const g = await one(`SELECT id FROM community_groups WHERE id = $1`, [req.params.id]);
+  if (!g) return res.status(404).json({ error: 'Group not found' });
+  const existing = await one(`SELECT 1 AS x FROM group_members WHERE group_id = $1 AND user_id = $2`, [req.params.id, user.id]);
+  if (existing) {
+    await q(`DELETE FROM group_members WHERE group_id = $1 AND user_id = $2`, [req.params.id, user.id]);
+    await q(`UPDATE community_groups SET member_count = GREATEST(0, member_count - 1) WHERE id = $1`, [req.params.id]);
+    res.json({ joined: false });
+  } else {
+    await q(`INSERT INTO group_members (group_id, user_id) VALUES ($1,$2)`, [req.params.id, user.id]);
+    await q(`UPDATE community_groups SET member_count = member_count + 1 WHERE id = $1`, [req.params.id]);
+    res.json({ joined: true });
+  }
+});
+
+api.post('/community/posts', requireAuth(), async (req, res) => {
+  const { user } = req as AuthedRequest;
+  const { type = 'Notice', title, description = '', location = '', dateInfo = '' } = req.body || {};
+  if (!title) return res.status(400).json({ error: 'Title is required' });
+  await q(
+    `INSERT INTO community_posts (id, type, title, description, author_id, author_name, author_role, author_initials, location, date_info)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+    [newId('cp'), type, title, description, user.id, user.name, user.role, user.initials, location || user.campus, dateInfo]
+  );
+  res.status(201).json({ ok: true });
+});
+
+api.post('/community/questions', requireAuth(), async (req, res) => {
+  const { user } = req as AuthedRequest;
+  const { title, details = '', tags = [] } = req.body || {};
+  if (!title) return res.status(400).json({ error: 'Title is required' });
+  await q(
+    `INSERT INTO questions (id, title, details, author_id, author_name, author_role, author_initials, tags, votes)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,1)`,
+    [newId('kq'), title, details, user.id, user.name, user.role, user.initials, JSON.stringify(tags)]
+  );
+  res.status(201).json({ ok: true });
+});
+
+api.post('/community/questions/:id/answers', requireAuth(), async (req, res) => {
+  const { user } = req as AuthedRequest;
+  const { text } = req.body || {};
+  if (!text) return res.status(400).json({ error: 'Answer text required' });
+  const question = await one(`SELECT id, title, author_id FROM questions WHERE id = $1`, [req.params.id]);
+  if (!question) return res.status(404).json({ error: 'Question not found' });
+  await q(
+    `INSERT INTO answers (id, question_id, author_id, author_name, author_role, author_initials, text)
+     VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+    [newId('ans'), req.params.id, user.id, user.name, user.role, user.initials, text]
+  );
+  if (question.author_id && question.author_id !== user.id) {
+    await notify(question.author_id, null, 'community_reply', 'New Answer on Your Question',
+      `${user.name} answered "${question.title.slice(0, 60)}".`, 'beyond');
+  }
+  res.status(201).json({ ok: true });
+});
+
+api.post('/community/questions/:id/vote', requireAuth(), async (req, res) => {
+  await q(`UPDATE questions SET votes = votes + 1 WHERE id = $1`, [req.params.id]);
+  res.json({ ok: true });
+});
+
+// ============================== CARPOOL ==============================
+
+api.get('/carpool/trips', requireAuth(), async (req, res) => {
+  const { user } = req as AuthedRequest;
+  const { rows } = await q(
+    `SELECT t.id, t.driver_id AS "driverId", t.direction, t.origin, t.destination, t.campus,
+       t.departure_time AS "departureTime", t.days, t.vehicle_model AS "vehicleModel",
+       t.vehicle_type AS "vehicleType", t.seats_total AS "seatsTotal", t.cost_per_ride AS "costPerRide",
+       t.women_only AS "womenOnly", t.notes, t.amenities, t.status, t.created_at AS "createdAt",
+       d.name AS "driverName", d.role AS "driverRole", d.department AS "driverDepartment", d.initials AS "driverInitials",
+       (SELECT COUNT(*)::int FROM carpool_bookings b WHERE b.trip_id = t.id) AS "seatsBooked",
+       EXISTS(SELECT 1 FROM carpool_bookings b WHERE b.trip_id = t.id AND b.rider_id = $1) AS "iAmBooked"
+     FROM carpool_trips t JOIN users d ON d.id = t.driver_id
+     WHERE t.status <> 'cancelled' ORDER BY t.created_at DESC`,
+    [user.id]
+  );
+  const { rows: riders } = await q(
+    `SELECT b.trip_id AS "tripId", u.name, u.initials, u.department FROM carpool_bookings b JOIN users u ON u.id = b.rider_id`
+  );
+  const ridersByTrip = new Map<string, any[]>();
+  for (const r of riders) {
+    if (!ridersByTrip.has(r.tripId)) ridersByTrip.set(r.tripId, []);
+    ridersByTrip.get(r.tripId)!.push(r);
+  }
+  res.json({ trips: rows.map((t: any) => ({ ...t, riders: ridersByTrip.get(t.id) || [] })) });
+});
+
+api.post('/carpool/trips', requireAuth(), async (req, res) => {
+  const { user } = req as AuthedRequest;
+  const b = req.body || {};
+  if (!b.origin || !b.destination) return res.status(400).json({ error: 'Origin and destination are required' });
+  const created: string[] = [];
+  const trips = Array.isArray(b.trips) && b.trips.length
+    ? b.trips
+    : [{ direction: b.direction || 'to_office', origin: b.origin, destination: b.destination, departureTime: b.departureTime }];
+  for (const t of trips) {
+    const id = newId('trip');
+    await q(
+      `INSERT INTO carpool_trips (id, driver_id, direction, origin, destination, campus, departure_time,
+        days, vehicle_model, vehicle_type, seats_total, cost_per_ride, women_only, notes, amenities)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
+      [
+        id, user.id, t.direction === 'from_office' ? 'from_office' : 'to_office',
+        t.origin || b.origin, t.destination || b.destination, b.campus || user.campus,
+        t.departureTime || '08:30 AM', JSON.stringify(b.days || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']),
+        b.vehicleModel || '', b.vehicleType || 'Electric (EV)', Math.max(1, Number(b.seatsTotal) || 3),
+        b.costPerRide || 'Free', !!b.womenOnly, b.notes || '', JSON.stringify(b.amenities || [])
+      ]
+    );
+    created.push(id);
+  }
+  res.status(201).json({ ok: true, tripIds: created });
+});
+
+api.patch('/carpool/trips/:id', requireAuth(), async (req, res) => {
+  const { user } = req as AuthedRequest;
+  const t = await one(`SELECT * FROM carpool_trips WHERE id = $1`, [req.params.id]);
+  if (!t) return res.status(404).json({ error: 'Trip not found' });
+  if (t.driver_id !== user.id && user.systemRole !== 'admin') return res.status(403).json({ error: 'Not your trip' });
+  const { status, departureTime, days, seatsTotal, notes } = req.body || {};
+  await q(
+    `UPDATE carpool_trips SET status = COALESCE($1, status), departure_time = COALESCE($2, departure_time),
+      days = COALESCE($3, days), seats_total = COALESCE($4, seats_total), notes = COALESCE($5, notes) WHERE id = $6`,
+    [status ?? null, departureTime ?? null, days ? JSON.stringify(days) : null,
+      seatsTotal != null ? Number(seatsTotal) : null, notes ?? null, req.params.id]
+  );
+  res.json({ ok: true });
+});
+
+api.post('/carpool/trips/:id/book', requireAuth(), async (req, res) => {
+  const { user } = req as AuthedRequest;
+  const t = await one(
+    `SELECT t.*, (SELECT COUNT(*)::int FROM carpool_bookings b WHERE b.trip_id = t.id) AS booked
+     FROM carpool_trips t WHERE t.id = $1`, [req.params.id]);
+  if (!t) return res.status(404).json({ error: 'Trip not found' });
+  if (t.status !== 'active') return res.status(400).json({ error: 'Trip is not active' });
+  if (t.driver_id === user.id) return res.status(400).json({ error: 'You are the driver of this trip' });
+  if (t.booked >= t.seats_total) return res.status(400).json({ error: 'No seats left on this trip' });
+  const dup = await one(`SELECT id FROM carpool_bookings WHERE trip_id = $1 AND rider_id = $2`, [req.params.id, user.id]);
+  if (dup) return res.status(400).json({ error: 'You already booked this trip' });
+  const days = Array.isArray(req.body?.days) ? req.body.days : [];
+  await q(`INSERT INTO carpool_bookings (id, trip_id, rider_id, days) VALUES ($1,$2,$3,$4)`,
+    [newId('cb'), req.params.id, user.id, JSON.stringify(days)]);
+  await notify(t.driver_id, null, 'help_offer', 'New Carpool Booking',
+    `${user.name} booked a seat: ${t.origin} → ${t.destination} (${t.departure_time}).`, 'beyond');
+  res.status(201).json({ ok: true });
+});
+
+api.post('/carpool/trips/:id/cancel-booking', requireAuth(), async (req, res) => {
+  const { user } = req as AuthedRequest;
+  await q(`DELETE FROM carpool_bookings WHERE trip_id = $1 AND rider_id = $2`, [req.params.id, user.id]);
+  res.json({ ok: true });
+});
+
+// ============================== MESSAGES ==============================
+
+api.get('/messages', requireAuth(), async (req, res) => {
+  const { user } = req as AuthedRequest;
+  const { rows } = await q(
+    `SELECT m.id, m.sender_id AS "senderId", m.recipient_id AS "recipientId", m.text,
+       m.context_type AS "contextType", m.context_title AS "contextTitle", m.read, m.created_at AS "createdAt"
+     FROM messages m WHERE m.sender_id = $1 OR m.recipient_id = $1 ORDER BY m.created_at`,
+    [user.id]
+  );
+  res.json({ messages: rows });
+});
+
+api.post('/messages', requireAuth(), async (req, res) => {
+  const { user } = req as AuthedRequest;
+  const { recipientId, text, contextType = 'general', contextTitle = '' } = req.body || {};
+  if (!recipientId || !text) return res.status(400).json({ error: 'recipientId and text are required' });
+  const recipient = await getUserById(recipientId);
+  if (!recipient) return res.status(404).json({ error: 'Recipient not found' });
+  await q(
+    `INSERT INTO messages (id, sender_id, recipient_id, text, context_type, context_title)
+     VALUES ($1,$2,$3,$4,$5,$6)`,
+    [newId('msg'), user.id, recipientId, text, contextType, contextTitle]
+  );
+  res.status(201).json({ ok: true });
+});
+
+api.post('/messages/read', requireAuth(), async (req, res) => {
+  const { user } = req as AuthedRequest;
+  const { partnerId } = req.body || {};
+  await q(`UPDATE messages SET read = TRUE WHERE sender_id = $1 AND recipient_id = $2`, [partnerId, user.id]);
+  res.json({ ok: true });
+});
+
+// ============================== NOTIFICATIONS ==============================
+
+api.get('/notifications', requireAuth(), async (req, res) => {
+  const { user } = req as AuthedRequest;
+  const { rows } = await q(
+    `SELECT n.id, n.type, n.title, n.description, n.target_tab AS "targetTab", n.target_id AS "targetId",
+       CASE WHEN n.recipient_id = $1 THEN n.read ELSE COALESCE(nc.read, FALSE) END AS read,
+       n.created_at AS "createdAt"
+     FROM notifications n
+     LEFT JOIN notification_clears nc ON nc.notification_id = n.id AND nc.user_id = $1
+     WHERE (n.recipient_id = $1 OR (n.recipient_id IS NULL AND (n.recipient_role = 'all' OR n.recipient_role = $2)))
+       AND COALESCE(nc.cleared, FALSE) = FALSE
+     ORDER BY n.created_at DESC LIMIT 100`,
+    [user.id, user.systemRole]
+  );
+  res.json({ notifications: rows });
+});
+
+api.post('/notifications/:id/read', requireAuth(), async (req, res) => {
+  const { user } = req as AuthedRequest;
+  await q(`UPDATE notifications SET read = TRUE WHERE id = $1 AND recipient_id = $2`, [req.params.id, user.id]);
+  await q(
+    `INSERT INTO notification_clears (notification_id, user_id, read) VALUES ($1,$2,TRUE)
+     ON CONFLICT (notification_id, user_id) DO UPDATE SET read = TRUE`,
+    [req.params.id, user.id]
+  );
+  res.json({ ok: true });
+});
+
+api.post('/notifications/read-all', requireAuth(), async (req, res) => {
+  const { user } = req as AuthedRequest;
+  await q(`UPDATE notifications SET read = TRUE WHERE recipient_id = $1`, [user.id]);
+  await q(
+    `INSERT INTO notification_clears (notification_id, user_id, read)
+     SELECT n.id, $1, TRUE FROM notifications n
+     WHERE n.recipient_id IS NULL AND (n.recipient_role = 'all' OR n.recipient_role = $2)
+     ON CONFLICT (notification_id, user_id) DO UPDATE SET read = TRUE`,
+    [user.id, user.systemRole]
+  );
+  res.json({ ok: true });
+});
+
+// Clear ALL notifications for the current user (per-person clear)
+api.delete('/notifications', requireAuth(), async (req, res) => {
+  const { user } = req as AuthedRequest;
+  await q(`DELETE FROM notifications WHERE recipient_id = $1`, [user.id]);
+  await q(
+    `INSERT INTO notification_clears (notification_id, user_id, read, cleared)
+     SELECT n.id, $1, TRUE, TRUE FROM notifications n
+     WHERE n.recipient_id IS NULL AND (n.recipient_role = 'all' OR n.recipient_role = $2)
+     ON CONFLICT (notification_id, user_id) DO UPDATE SET cleared = TRUE, read = TRUE`,
+    [user.id, user.systemRole]
+  );
+  res.json({ ok: true });
+});
+
+// ============================== SAVED ==============================
+
+api.get('/saved', requireAuth(), async (req, res) => {
+  const { user } = req as AuthedRequest;
+  const { rows } = await q(`SELECT item_type AS "itemType", item_id AS "itemId" FROM saved_items WHERE user_id = $1`, [user.id]);
+  res.json({ saved: rows });
+});
+
+api.post('/saved/toggle', requireAuth(), async (req, res) => {
+  const { user } = req as AuthedRequest;
+  const { itemType, itemId } = req.body || {};
+  if (!['work', 'listing', 'community', 'carpool'].includes(itemType) || !itemId) {
+    return res.status(400).json({ error: 'Invalid itemType or itemId' });
+  }
+  const existing = await one(
+    `SELECT 1 AS x FROM saved_items WHERE user_id = $1 AND item_type = $2 AND item_id = $3`,
+    [user.id, itemType, String(itemId)]
+  );
+  if (existing) {
+    await q(`DELETE FROM saved_items WHERE user_id = $1 AND item_type = $2 AND item_id = $3`, [user.id, itemType, String(itemId)]);
+    res.json({ saved: false });
+  } else {
+    await q(`INSERT INTO saved_items (user_id, item_type, item_id) VALUES ($1,$2,$3)`, [user.id, itemType, String(itemId)]);
+    res.json({ saved: true });
+  }
+});
+
+// ============================== ADMIN ==============================
+
+api.get('/admin/registration-requests', requireAuth(), requireRealAdmin(), async (_req, res) => {
+  const { rows } = await q(
+    `SELECT r.id, r.subject_name AS "subjectName", r.subject_email AS "subjectEmail",
+       r.subject_kind AS "subjectKind", r.subject_role AS "subjectRole", r.subject_department AS "subjectDepartment",
+       r.for_user_id AS "forUserId", r.related_application_id AS "relatedApplicationId",
+       r.related_post_id AS "relatedPostId", r.note, r.status, r.created_at AS "createdAt",
+       rb.name AS "requestedByName", fu.name AS "forUserName", fu.department AS "forUserDepartment",
+       p.title AS "postTitle"
+     FROM registration_requests r
+     JOIN users rb ON rb.id = r.requested_by
+     LEFT JOIN users fu ON fu.id = r.for_user_id
+     LEFT JOIN work_posts p ON p.id = r.related_post_id
+     ORDER BY (r.status = 'pending') DESC, r.created_at DESC`
+  );
+  res.json({ requests: rows });
+});
+
+api.post('/admin/registration-requests/:id/complete', requireAuth(), requireRealAdmin(), async (req, res) => {
+  const { realUser } = req as AuthedRequest;
+  const reg = await one(`SELECT * FROM registration_requests WHERE id = $1`, [req.params.id]);
+  if (!reg) return res.status(404).json({ error: 'Registration request not found' });
+  if (reg.status !== 'pending') return res.status(400).json({ error: 'Request already handled' });
+
+  const { name, email, role, systemRole, department, campus, managerId } = req.body || {};
+  if (!name || !email || !department) return res.status(400).json({ error: 'name, email and department are required' });
+  const existing = await one(`SELECT id FROM users WHERE lower(email) = lower($1)`, [email]);
+  if (existing) return res.status(409).json({ error: 'A user with this email already exists' });
+
+  const tempPassword = generateTempPassword();
+  const hash = await bcrypt.hash(tempPassword, 10);
+  const newUserId = newId('usr');
+  const initials = String(name).split(/\s+/).map((p: string) => p[0]).join('').slice(0, 2).toUpperCase();
+  const effectiveSystemRole = systemRole || (reg.subject_kind === 'manager' ? 'manager' : 'employee');
+  await q(
+    `INSERT INTO users (id, email, name, initials, role, system_role, department, campus, manager_id, password_hash, must_change_password)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,TRUE)`,
+    [newUserId, email, name, initials, role || 'Employee', effectiveSystemRole, department, campus || '', managerId || null, hash]
+  );
+
+  if (reg.subject_kind === 'manager' && reg.for_user_id) {
+    // Link the new manager to the waiting employee and release any waiting applications
+    await q(`UPDATE users SET manager_id = $1, updated_at = now() WHERE id = $2`, [newUserId, reg.for_user_id]);
+    const { rows: waiting } = await q(
+      `SELECT a.*, p.title, p.department AS post_department, p.tags, p.effort_min, p.effort_max, p.effort_hours
+       FROM applications a JOIN work_posts p ON p.id = a.post_id
+       WHERE a.applicant_id = $1 AND a.status = 'awaiting_registration'`,
+      [reg.for_user_id]
+    );
+    for (const app of waiting) {
+      const applicant = await one(`SELECT * FROM users WHERE id = $1`, [app.applicant_id]);
+      const rec = await recommendFor(applicant, {
+        title: app.title, department: app.post_department, tags: app.tags,
+        effort_min: app.effort_min, effort_max: app.effort_max, effort_hours: app.effort_hours
+      }, app.id);
+      await q(
+        `UPDATE applications SET manager_id = $1, status = 'pending', ai_recommendation = $2, ai_reason = $3 WHERE id = $4`,
+        [newUserId, rec.verdict, rec.reason, app.id]
+      );
+      await notify(newUserId, null, 'manager_approval', `Approval Needed: ${applicant.name}`,
+        `${applicant.name} requested approval to support "${String(app.title).slice(0, 60)}".`, 'manager', app.id);
+      await notify(app.applicant_id, null, 'manager_approval', 'Your request is moving',
+        `Your manager ${name} is now registered — your request for "${String(app.title).slice(0, 50)}" has been routed for approval.`, 'requests', app.id);
+    }
+  }
+
+  if (reg.subject_kind === 'employee' && reg.related_post_id) {
+    // Create the application for the newly registered employee
+    const post = await one(`SELECT * FROM work_posts WHERE id = $1`, [reg.related_post_id]);
+    if (post && post.status === 'Open') {
+      const applicant = await one(`SELECT * FROM users WHERE id = $1`, [newUserId]);
+      const appId = newId('app');
+      if (managerId) {
+        const rec = await recommendFor(applicant, post);
+        await q(
+          `INSERT INTO applications (id, post_id, group_id, applicant_id, submitted_by, manager_id, note, commitment, status, ai_recommendation, ai_reason)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'pending',$9,$10)`,
+          [appId, post.id, newId('grp'), newUserId, reg.requested_by, managerId, `Included via nomination by request ${reg.id}`, post.effort_hours, rec.verdict, rec.reason]
+        );
+        await notify(managerId, null, 'manager_approval', `Approval Needed: ${name}`,
+          `${name} was nominated for "${post.title.slice(0, 60)}".`, 'manager', appId);
+      } else {
+        await q(
+          `INSERT INTO applications (id, post_id, group_id, applicant_id, submitted_by, manager_id, note, commitment, status)
+           VALUES ($1,$2,$3,$4,$5,NULL,$6,$7,'awaiting_registration')`,
+          [appId, post.id, newId('grp'), newUserId, reg.requested_by, 'Awaiting manager assignment', post.effort_hours]
+        );
+      }
+    }
+  }
+
+  await q(
+    `UPDATE registration_requests SET status = 'completed', created_user_id = $1, completed_at = now() WHERE id = $2`,
+    [newUserId, req.params.id]
+  );
+  await notify(reg.requested_by, null, 'registration_request', 'Registration Completed',
+    `${name} is now registered on MBXchange. Related requests have been routed.`, 'requests');
+  await audit(realUser.id, 'registration_completed', email, { regId: reg.id, newUserId });
+  res.json({ user: await getUserById(newUserId), tempPassword });
+});
+
+api.post('/admin/registration-requests/:id/dismiss', requireAuth(), requireRealAdmin(), async (req, res) => {
+  const { realUser } = req as AuthedRequest;
+  await q(`UPDATE registration_requests SET status = 'dismissed' WHERE id = $1 AND status = 'pending'`, [req.params.id]);
+  await audit(realUser.id, 'registration_dismissed', req.params.id);
+  res.json({ ok: true });
+});
+
+// ============================== RECOMMENDATIONS ==============================
+
+/** Tokenise a skill/specialisation string for loose matching ("AI / ML" → ai, ml). */
+function tokenise(values: string[]): string[] {
+  return values
+    .flatMap((v) => String(v).toLowerCase().split(/[^a-z0-9+#.]+/i))
+    .map((t) => t.trim())
+    .filter((t) => t.length > 1 && !['and', 'the', 'for', 'with'].includes(t));
+}
+
+api.get('/recommendations', requireAuth(), async (req, res) => {
+  const { user } = req as AuthedRequest;
+  const me = await one(`SELECT * FROM users WHERE id = $1`, [user.id]);
+  const stack: string[] = [
+    ...(me.primary_skills || []),
+    ...(me.interests || []),
+    ...(me.specialisation ? [me.specialisation] : [])
+  ];
+  const tokens = new Set(tokenise(stack));
+
+  const { rows: posts } = await q(
+    `SELECT ${POST_SELECT} FROM work_posts p
+     WHERE p.status = 'Open' AND ($1::text IS NULL OR p.author_id IS DISTINCT FROM $1)
+     ORDER BY p.created_at DESC`,
+    [user.id]
+  );
+  const { rows: mine } = await q(
+    `SELECT post_id AS "postId" FROM applications WHERE applicant_id = $1 AND status <> 'withdrawn'`,
+    [user.id]
+  );
+  const appliedTo = new Set(mine.map((m: any) => m.postId));
+
+  const scored = posts
+    .filter((p: any) => !appliedTo.has(p.id) && p.seatsFilled < p.seats)
+    .map((p: any) => {
+      const postTokens = tokenise([...(p.tags || []), p.title, p.department]);
+      const matched = (p.tags || []).filter((t: string) =>
+        tokenise([t]).some((tok) => tokens.has(tok))
+      );
+      const tokenHits = postTokens.filter((t) => tokens.has(t)).length;
+      const sameDept = p.department === me.department;
+      // Skill overlap dominates; a small nudge for own-department context.
+      const score = matched.length * 10 + tokenHits * 2 + (sameDept ? 1 : 0);
+      return { ...p, matchedSkills: matched, score };
+    })
+    .sort((a: any, b: any) => b.score - a.score || +new Date(b.createdAt) - +new Date(a.createdAt));
+
+  res.json({
+    recommendations: scored.slice(0, 12),
+    stackConfigured: tokens.size > 0,
+    stack: { specialisation: me.specialisation || '', skills: me.primary_skills || [] }
+  });
+});
+
+// ============================== INSIGHTS (all roles) ==============================
+
+api.get('/insights', requireAuth(), async (_req, res) => {
+  const { rows: heatmap } = await q(
+    `SELECT skill, demand_score AS "demandScore", supply_score AS "supplyScore",
+       requests_count AS "requestsCount", experts_count AS "expertsCount", status
+     FROM capability_heatmap ORDER BY (demand_score - supply_score) DESC`
+  );
+  const { rows: departmentLoad } = await q(
+    `SELECT department,
+       COUNT(*)::int AS posts,
+       COUNT(*) FILTER (WHERE status = 'Open')::int AS open
+     FROM work_posts GROUP BY department ORDER BY posts DESC`
+  );
+  const { rows: topDemand } = await q(
+    `SELECT t.tag AS skill, COUNT(*)::int AS mentions
+     FROM work_posts p, jsonb_array_elements_text(p.tags) AS t(tag)
+     WHERE p.status IN ('Open','In Progress')
+     GROUP BY t.tag ORDER BY mentions DESC LIMIT 8`
+  );
+  res.json({ heatmap, departmentLoad, topDemand });
+});
+
+api.get('/admin/overview', requireAuth(), requireRole('manager', 'admin'), async (_req, res) => {
+  const counts = async (sql: string) => {
+    const r = await one<{ n: string }>(sql);
+    return parseInt(r?.n || '0', 10);
+  };
+  const stats = {
+    users: await counts(`SELECT COUNT(*)::text AS n FROM users WHERE status = 'active'`),
+    openPosts: await counts(`SELECT COUNT(*)::text AS n FROM work_posts WHERE status = 'Open'`),
+    pendingApprovals: await counts(`SELECT COUNT(*)::text AS n FROM applications WHERE status = 'pending'`),
+    awaitingRegistration: await counts(`SELECT COUNT(*)::text AS n FROM registration_requests WHERE status = 'pending'`),
+    approvedThisMonth: await counts(`SELECT COUNT(*)::text AS n FROM applications WHERE status = 'approved'`),
+    activeTrips: await counts(`SELECT COUNT(*)::text AS n FROM carpool_trips WHERE status = 'active'`),
+    activeListings: await counts(`SELECT COUNT(*)::text AS n FROM listings WHERE sold = FALSE`)
+  };
+  const { rows: departmentLoad } = await q(
+    `SELECT department, COUNT(*)::int AS posts FROM work_posts GROUP BY department ORDER BY posts DESC`
+  );
+  const { rows: auditTail } = await q(
+    `SELECT a.action, a.subject, a.created_at AS "createdAt", u.name AS "actorName"
+     FROM audit_log a LEFT JOIN users u ON u.id = a.actor_id ORDER BY a.created_at DESC LIMIT 20`
+  );
+  res.json({ stats, departmentLoad, auditTail });
+});
+
+// Lightweight polling endpoint: unread counts only
+api.get('/sync', requireAuth(), async (req, res) => {
+  const { user } = req as AuthedRequest;
+  const unreadNotifications = await one<{ n: string }>(
+    `SELECT COUNT(*)::text AS n FROM notifications n
+     LEFT JOIN notification_clears nc ON nc.notification_id = n.id AND nc.user_id = $1
+     WHERE (n.recipient_id = $1 OR (n.recipient_id IS NULL AND (n.recipient_role = 'all' OR n.recipient_role = $2)))
+       AND COALESCE(nc.cleared, FALSE) = FALSE
+       AND (CASE WHEN n.recipient_id = $1 THEN n.read ELSE COALESCE(nc.read, FALSE) END) = FALSE`,
+    [user.id, user.systemRole]
+  );
+  const unreadMessages = await one<{ n: string }>(
+    `SELECT COUNT(*)::text AS n FROM messages WHERE recipient_id = $1 AND read = FALSE`, [user.id]);
+  const pendingApprovals = user.systemRole === 'employee'
+    ? { n: '0' }
+    : user.systemRole === 'admin'
+      ? await one<{ n: string }>(`SELECT COUNT(*)::text AS n FROM applications WHERE status = 'pending'`)
+      : await one<{ n: string }>(`SELECT COUNT(*)::text AS n FROM applications WHERE status = 'pending' AND manager_id = $1`, [user.id]);
+  res.json({
+    unreadNotifications: parseInt(unreadNotifications?.n || '0', 10),
+    unreadMessages: parseInt(unreadMessages?.n || '0', 10),
+    pendingApprovals: parseInt(pendingApprovals?.n || '0', 10)
+  });
+});

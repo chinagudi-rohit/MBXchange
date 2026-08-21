@@ -1,8 +1,11 @@
 node_modules/
 build/
 dist/
+dist-server/
+.data/
 coverage/
 .DS_Store
 *.log
 .env*
 !.env.example
+k8s/01-secrets.yaml

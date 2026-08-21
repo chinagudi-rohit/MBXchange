@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mbxchange
+  namespace: mbxchange
+  labels:
+    app: mbxchange
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: mbxchange
+  template:
+    metadata:
+      labels:
+        app: mbxchange
+    spec:
+      securityContext:
+        runAsNonRoot: true
+      containers:
+        - name: mbxchange
+          # Replace with your registry, e.g. <acr-name>.azurecr.io/mbxchange:v2.0.0
+          image: mbxchange:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          env:
+            - name: API_PORT
+              value: "8080"
+            - name: NODE_ENV
+              value: production
+            # Uncomment when using Azure Database for PostgreSQL (TLS required):
+            # - name: PGSSL
+            #   value: require
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: mbxchange-secrets
+                  key: DATABASE_URL
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: mbxchange-secrets
+                  key: JWT_SECRET
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            capabilities:
+              drop: ["ALL"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mbxchange
+  namespace: mbxchange
+spec:
+  selector:
+    app: mbxchange
+  ports:
+    - port: 80
+      targetPort: 8080
+  type: ClusterIP

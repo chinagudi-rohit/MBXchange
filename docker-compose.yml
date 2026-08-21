@@ -1,0 +1,32 @@
+# Production-like local stack: app container + PostgreSQL.
+#   docker compose up --build
+# App: http://localhost:8080  ·  DB data persists in the pgdata volume.
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: mbxchange
+      POSTGRES_USER: mbx
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mbx-local-dev-password}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mbx -d mbxchange"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://mbx:${POSTGRES_PASSWORD:-mbx-local-dev-password}@db:5432/mbxchange
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      API_PORT: "8080"
+    ports:
+      - "8080:8080"
+
+volumes:
+  pgdata:

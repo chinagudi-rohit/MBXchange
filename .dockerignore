@@ -1,0 +1,10 @@
+node_modules
+dist
+dist-server
+.data
+.git
+.env
+*.log
+k8s
+docs
+README.md
