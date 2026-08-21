@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import { api, setToken, getToken, type User, type WorkPost, type Notification, type Message } from './api';
+import { api, setToken, getToken, ApiError, type User, type WorkPost, type Notification, type Message } from './api';
 
 export type MainTab = 'home' | 'work' | 'people' | 'requests' | 'insights' | 'beyond' | 'manager' | 'admin';
 
@@ -161,8 +161,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         setImpersonating(!!me.impersonating);
         setRealUserName(me.realUser?.name);
         await bootstrap();
-      } catch {
-        setToken(null);
+      } catch (err) {
+        // Only a genuine "your session is invalid" response should sign the
+        // user out. A network blip or the dev server mid-restart must not
+        // silently wipe an otherwise-valid token — that would permanently
+        // log the user out on their next refresh for no reason of their own.
+        if (err instanceof ApiError && err.status === 401) {
+          setToken(null);
+        }
       } finally {
         setBooting(false);
       }

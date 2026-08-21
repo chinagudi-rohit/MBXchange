@@ -328,11 +328,14 @@ api.post('/work-posts/:id/apply', requireAuth(), async (req, res) => {
   const post = await one(`SELECT * FROM work_posts WHERE id = $1`, [req.params.id]);
   if (!post) return res.status(404).json({ error: 'Post not found' });
   if (post.status !== 'Open') return res.status(400).json({ error: 'This opportunity is not open for applications' });
+  if (post.author_id === user.id) {
+    return res.status(400).json({ error: 'You cannot apply to a requirement you posted yourself' });
+  }
 
   const { note = '', includeSelf = true, colleagues = [], unregistered = [] } = req.body || {};
   const memberIds: string[] = [];
   if (includeSelf) memberIds.push(user.id);
-  for (const cid of colleagues) if (cid && cid !== user.id) memberIds.push(cid);
+  for (const cid of colleagues) if (cid && cid !== user.id && cid !== post.author_id) memberIds.push(cid);
   if (memberIds.length === 0 && unregistered.length === 0) {
     return res.status(400).json({ error: 'At least one applicant is required' });
   }
@@ -507,6 +510,9 @@ api.post('/approvals/:id/decision', requireAuth(), requireRole('manager', 'admin
   const { decision, notes = '' } = req.body || {};
   if (!['approved', 'rejected'].includes(decision)) {
     return res.status(400).json({ error: 'decision must be approved or rejected' });
+  }
+  if (decision === 'rejected' && !String(notes).trim()) {
+    return res.status(400).json({ error: 'A reason is required to decline a request' });
   }
   const app = await one(`SELECT * FROM applications WHERE id = $1`, [req.params.id]);
   if (!app) return res.status(404).json({ error: 'Approval not found' });

@@ -429,7 +429,9 @@ function WorkDetail({ postId, onBack }: { postId: string; onBack: () => void }) 
 
         <div className="mt-4 flex items-center justify-between flex-wrap gap-3 p-3.5 rounded-xl bg-surface-2">
           <SeatsIndicator total={post.seats} filled={post.seatsFilled} />
-          {myApp ? (
+          {isAuthor ? (
+            <span className="text-xs font-semibold text-ink-3">You posted this requirement</span>
+          ) : myApp ? (
             <StatusBadge status={myApp.status} />
           ) : post.status === 'Open' && openSeats > 0 ? (
             <Button onClick={() => setApplyOpen(true)}>

@@ -249,7 +249,8 @@ function Carpool() {
       days: form.days, vehicleModel: form.vehicleModel, vehicleType: form.vehicleType,
       seatsTotal: form.seatsTotal, costPerRide: form.costPerRide, notes: form.notes, womenOnly: form.womenOnly
     });
-    s.toast('success', `${tripsPayload.length === 2 ? 'Both trips' : 'Trip'} published`, 'Each direction is bookable independently.');
+    s.toast('success', `${tripsPayload.length === 2 ? 'Both trips' : 'Trip'} published`,
+      tripsPayload.length === 2 ? 'Each direction is bookable independently.' : 'Colleagues can book this ride.');
     setOfferOpen(false);
     load();
   };
