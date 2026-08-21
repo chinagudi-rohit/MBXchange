@@ -18,26 +18,32 @@
      compete with the text they carry. */
   --surface-overlay: #ffffff;
   --surface-2: rgba(201, 100, 66, 0.07);
-  --line: #dad9d4;
-  --line-strong: #b4b2a7;
+  /* Borders were 1.41:1 against card — below the 3:1 non-text minimum */
+  --line: #c9c7c0;
+  --line-strong: #a8a69c;
   --ink: oklch(0.191 0.002 106.586);
   --ink-2: oklch(0.344 0.027 95.723);
-  --ink-3: oklch(0.534 0.008 97.45);
+  --ink-3: oklch(0.470 0.008 97.45);
 
-  --primary: #c96442;
-  --primary-strong: #b05730;
+  /* --primary stays the brand fill (buttons, active nav). --primary-text is
+     the darkened variant for any primary-coloured TEXT: the brand hue at
+     3.9:1 cannot legally carry 12-14px copy. */
+  --primary: #b55635;      /* white text: 4.83:1 (was #c96442 at 3.90) */
+  --primary-strong: #9e4429;
+  --primary-text: #a5482c;
   --primary-soft: rgba(201, 100, 66, 0.12);
   --on-primary: #ffffff;
 
-  --accent-green: #5c7c3a;
+  --accent-green: #4d6830;
   --accent-green-soft: rgba(92, 124, 58, 0.13);
-  --accent-amber: #a06a12;
+  --accent-amber: #8a5a0c;
   --accent-amber-soft: rgba(160, 106, 18, 0.13);
   --accent-red: #a8281c;
+  --on-red: #ffffff;
   --accent-red-soft: rgba(168, 40, 28, 0.10);
-  --accent-blue: #3b6ea5;
+  --accent-blue: #2f5b8a;
   --accent-blue-soft: rgba(59, 110, 165, 0.11);
-  --accent-violet: #7256c9;
+  --accent-violet: #5f45b0;
   --accent-violet-soft: rgba(114, 86, 201, 0.12);
 
   --glass-border: rgba(255, 255, 255, 0.70);
@@ -54,14 +60,15 @@
   --surface-solid: rgba(44, 44, 43, 0.97);
   --surface-overlay: #2c2c2b;
   --surface-2: rgba(250, 249, 245, 0.055);
-  --line: #3e3e38;
-  --line-strong: #52514a;
+  --line: #4a4a43;
+  --line-strong: #63615a;
   --ink: #faf9f5;
   --ink-2: oklch(0.861 0.010 99.0);
   --ink-3: oklch(0.700 0.014 99.066);
 
   --primary: #d97757;
   --primary-strong: #e89173;
+  --primary-text: #ef9d80;
   --primary-soft: rgba(217, 119, 87, 0.15);
   --on-primary: #1f1e1d;
 
@@ -69,7 +76,8 @@
   --accent-green-soft: rgba(163, 199, 122, 0.15);
   --accent-amber: #e0a95f;
   --accent-amber-soft: rgba(224, 169, 95, 0.15);
-  --accent-red: #ef4444;
+  --accent-red: #fb8c8c;   /* on red-soft over card: 5.30:1 (was 3.20) */
+  --on-red: #2c2c2b;       /* dark red fill is light — badge text must invert */
   --accent-red-soft: rgba(239, 68, 68, 0.15);
   --accent-blue: #7fb0e0;
   --accent-blue-soft: rgba(127, 176, 224, 0.15);
@@ -87,6 +95,33 @@
 @theme inline {
   --font-sans: 'Outfit', ui-sans-serif, system-ui, -apple-system, sans-serif;
 
+  /* ── Type scale — six steps, no in-between sizes ──────────────────────
+     12 · 14 · 16 · 20 · 28 · 40. Anything smaller than 12px is banned:
+     it cannot hold weight or colour and it fails contrast at small sizes. */
+  --text-xs: 0.75rem;      /* 12 — metadata, chips, captions */
+  --text-xs--line-height: 1.25rem;
+  --text-sm: 0.875rem;     /* 14 — body, list rows */
+  --text-sm--line-height: 1.375rem;
+  --text-base: 1rem;       /* 16 — card titles */
+  --text-base--line-height: 1.5rem;
+  --text-lg: 1.25rem;      /* remapped to 20 so stray text-lg stays on scale */
+  --text-lg--line-height: 1.75rem;
+  --text-xl: 1.25rem;      /* 20 — section headings */
+  --text-xl--line-height: 1.75rem;
+  --text-2xl: 1.75rem;     /* 28 — view titles */
+  --text-2xl--line-height: 2.125rem;
+  --text-3xl: 2.5rem;      /* 40 — display */
+  --text-3xl--line-height: 2.75rem;
+  --text-4xl: 2.5rem;
+  --text-4xl--line-height: 2.75rem;
+
+  /* ── Spacing rhythm ──────────────────────────────────────────────────
+     Deliberately an order of magnitude between levels so the page reads
+     as composed sections rather than one undifferentiated column. */
+  --spacing-section: 3.5rem;   /* 56 — between major sections */
+  --spacing-block: 1.5rem;     /* 24 — heading to its content */
+  --spacing-gutter: 2.5rem;    /* 40 — page edge */
+
   --color-page: var(--page);
   --color-surface: var(--surface);
   --color-surface-solid: var(--surface-solid);
@@ -98,6 +133,7 @@
   --color-ink-3: var(--ink-3);
   --color-primary: var(--primary);
   --color-primary-strong: var(--primary-strong);
+  --color-primary-text: var(--primary-text);
   --color-primary-soft: var(--primary-soft);
   --color-on-primary: var(--on-primary);
   --color-green: var(--accent-green);
@@ -106,6 +142,7 @@
   --color-amber-soft: var(--accent-amber-soft);
   --color-red: var(--accent-red);
   --color-red-soft: var(--accent-red-soft);
+  --color-on-red: var(--on-red);
   --color-blue: var(--accent-blue);
   --color-blue-soft: var(--accent-blue-soft);
   --color-violet: var(--accent-violet);

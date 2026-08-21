@@ -217,9 +217,9 @@ function ApplyModal({ open, onClose, post }: { open: boolean; onClose: () => voi
           <label htmlFor="apply-self" className="flex-1 min-w-0 cursor-pointer">
             <span className="flex items-center gap-2">
               <Avatar initials={s.user?.initials || '?'} size="sm" />
-              <span className="text-sm font-bold text-ink">Myself — {s.user?.name}</span>
+              <span className="text-sm font-semibold text-ink">Myself — {s.user?.name}</span>
             </span>
-            <span className="block text-[11px] text-ink-2 mt-1">
+            <span className="block text-xs text-ink-2 mt-1">
               {post.approvalRequired
                 ? selfManager
                   ? `Approval will be requested from ${selfManager}.`
@@ -232,7 +232,7 @@ function ApplyModal({ open, onClose, post }: { open: boolean; onClose: () => voi
 
         {/* Colleagues */}
         <div>
-          <p className="text-xs font-bold text-ink-2 mb-2 flex items-center gap-1.5">
+          <p className="text-xs font-medium text-ink-2 mb-2 flex items-center gap-1.5">
             <UserPlus className="w-3.5 h-3.5" /> Add colleagues to this application
           </p>
           {colleagues.length > 0 && (
@@ -245,8 +245,8 @@ function ApplyModal({ open, onClose, post }: { open: boolean; onClose: () => voi
                   <div key={cid} className="flex items-center gap-2.5 p-2.5 rounded-xl bg-surface-2">
                     <Avatar initials={u.initials} size="sm" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-bold text-ink truncate">{u.name} <span className="font-medium text-ink-3">· {u.department}</span></p>
-                      <p className={`text-[10px] ${mgr ? 'text-ink-3' : 'text-violet font-semibold'}`}>
+                      <p className="text-xs font-medium text-ink truncate">{u.name} <span className="font-medium text-ink-3">· {u.department}</span></p>
+                      <p className={`text-xs ${mgr ? 'text-ink-3' : 'text-violet font-semibold'}`}>
                         {mgr ? `Approval → ${mgr}` : 'No registered manager — admin registration will be requested'}
                       </p>
                     </div>
@@ -274,15 +274,15 @@ function ApplyModal({ open, onClose, post }: { open: boolean; onClose: () => voi
                   >
                     <Avatar initials={u.initials} size="sm" />
                     <span className="min-w-0">
-                      <span className="block text-xs font-bold text-ink truncate">{u.name}</span>
-                      <span className="block text-[10px] text-ink-3">{u.role} · {u.department}</span>
+                      <span className="block text-xs font-semibold text-ink truncate">{u.name}</span>
+                      <span className="block text-xs text-ink-3">{u.role} · {u.department}</span>
                     </span>
                   </button>
                 ))}
               </div>
             )}
           </div>
-          <p className="text-[11px] text-ink-3 mt-1.5">
+          <p className="text-xs text-ink-3 mt-1.5">
             Each added colleague's request is routed to <b>their own manager</b> for approval.
           </p>
         </div>
@@ -290,12 +290,12 @@ function ApplyModal({ open, onClose, post }: { open: boolean; onClose: () => voi
         {/* Unregistered colleague */}
         <div>
           {!showUnregForm ? (
-            <button onClick={() => setShowUnregForm(true)} className="text-xs font-bold text-primary hover:underline underline-offset-2">
+            <button onClick={() => setShowUnregForm(true)} className="text-xs font-medium text-ink-2 hover:text-ink hover:underline underline-offset-2">
               + Colleague not on MBXchange yet?
             </button>
           ) : (
             <div className="p-3.5 rounded-xl border border-violet/40 bg-violet-soft/40 space-y-3">
-              <p className="text-xs font-bold text-violet flex items-center gap-1.5">
+              <p className="text-xs font-medium text-violet flex items-center gap-1.5">
                 <AlertCircle className="w-3.5 h-3.5" /> Unregistered colleague — the admin will be asked to create their account first
               </p>
               <div className="grid sm:grid-cols-2 gap-3">
@@ -324,7 +324,7 @@ function ApplyModal({ open, onClose, post }: { open: boolean; onClose: () => voi
             <div className="mt-2 space-y-1.5">
               {unregistered.map((p, i) => (
                 <div key={i} className="flex items-center gap-2 text-xs px-3 py-2 rounded-xl bg-violet-soft/40">
-                  <span className="font-bold text-ink flex-1 truncate">{p.name} · {p.department}</span>
+                  <span className="font-semibold text-ink flex-1 truncate">{p.name} · {p.department}</span>
                   <Chip>Registration will be requested</Chip>
                   <button onClick={() => setUnregistered(unregistered.filter((_, j) => j !== i))}
                     aria-label={`Remove ${p.name}`} className="p-1 text-ink-3 hover:text-red">
@@ -399,7 +399,7 @@ function WorkDetail({ postId, onBack }: { postId: string; onBack: () => void }) 
               <Chip tone="primary">{post.department}</Chip>
               {post.editedAt && <Chip>edited</Chip>}
             </div>
-            <h1 className="text-xl font-extrabold text-ink leading-snug">{post.title}</h1>
+            <h1 className="text-xl font-semibold text-ink leading-snug">{post.title}</h1>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-xs text-ink-2">
               <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {post.duration || '—'} · {post.effortHours || 'effort TBD'}</span>
               <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {post.location}</span>
@@ -444,12 +444,12 @@ function WorkDetail({ postId, onBack }: { postId: string; onBack: () => void }) 
 
         <div className="mt-5 space-y-4">
           <div>
-            <h3 className="text-xs font-bold uppercase tracking-wide text-ink-3 mb-1.5">Description</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-3 mb-1.5">Description</h3>
             <p className="text-sm text-ink-2 leading-relaxed whitespace-pre-line">{post.description}</p>
           </div>
           {post.whyOpportunity && (
             <div>
-              <h3 className="text-xs font-bold uppercase tracking-wide text-ink-3 mb-1.5">Why it's a great opportunity</h3>
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-3 mb-1.5">Why it's a great opportunity</h3>
               <p className="text-sm text-ink-2 leading-relaxed whitespace-pre-line">{post.whyOpportunity}</p>
             </div>
           )}
@@ -461,8 +461,8 @@ function WorkDetail({ postId, onBack }: { postId: string; onBack: () => void }) 
           <div className="flex items-center gap-2.5 pt-3 border-t border-line">
             <Avatar initials={post.authorInitials} size="md" name={post.authorName} />
             <div>
-              <p className="text-xs font-bold text-ink">{post.authorName}</p>
-              <p className="text-[11px] text-ink-3">{post.authorRole} · {timeAgo(post.createdAt)}</p>
+              <p className="text-xs font-medium text-ink">{post.authorName}</p>
+              <p className="text-xs text-ink-3">{post.authorRole} · {timeAgo(post.createdAt)}</p>
             </div>
           </div>
         </div>
@@ -471,14 +471,14 @@ function WorkDetail({ postId, onBack }: { postId: string; onBack: () => void }) 
       {/* Applications (author / manager / admin) */}
       {data.applications?.length > 0 && (
         <Card className="p-5 mt-4">
-          <h3 className="text-sm font-bold text-ink mb-3">Applications ({data.applications.length})</h3>
+          <h3 className="text-sm font-semibold text-ink mb-3">Applications ({data.applications.length})</h3>
           <div className="space-y-2">
             {data.applications.map((a: any) => (
               <div key={a.id} className="flex items-center gap-3 p-3 rounded-xl bg-surface-2">
                 <Avatar initials={a.applicantInitials} size="sm" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-bold text-ink truncate">{a.applicantName} · {a.department}</p>
-                  <p className="text-[10px] text-ink-3">{timeAgo(a.createdAt)}{a.note ? ` — ${a.note.slice(0, 60)}` : ''}</p>
+                  <p className="text-xs font-medium text-ink truncate">{a.applicantName} · {a.department}</p>
+                  <p className="text-xs text-ink-3">{timeAgo(a.createdAt)}{a.note ? ` — ${a.note.slice(0, 60)}` : ''}</p>
                 </div>
                 <StatusBadge status={a.status} />
               </div>
@@ -489,7 +489,7 @@ function WorkDetail({ postId, onBack }: { postId: string; onBack: () => void }) 
 
       {/* Comments */}
       <Card className="p-5 mt-4">
-        <h3 className="text-sm font-bold text-ink mb-3 flex items-center gap-1.5">
+        <h3 className="text-sm font-semibold text-ink mb-3 flex items-center gap-1.5">
           <MessageSquare className="w-4 h-4 text-ink-3" /> Discussion ({data.comments.length})
         </h3>
         <div className="space-y-3">
@@ -497,7 +497,7 @@ function WorkDetail({ postId, onBack }: { postId: string; onBack: () => void }) 
             <div key={c.id} className="flex gap-2.5">
               <Avatar initials={c.authorInitials} size="sm" />
               <div className="flex-1 min-w-0 bg-surface-2 rounded-xl px-3.5 py-2.5">
-                <p className="text-[11px] font-bold text-ink">{c.authorName} <span className="font-medium text-ink-3">· {c.authorRole} · {timeAgo(c.createdAt)}</span></p>
+                <p className="text-xs font-medium text-ink">{c.authorName} <span className="font-medium text-ink-3">· {c.authorRole} · {timeAgo(c.createdAt)}</span></p>
                 <p className="text-xs text-ink-2 mt-1 leading-relaxed">{c.text}</p>
               </div>
             </div>
@@ -575,7 +575,7 @@ export function WorkExchange() {
     <div className="anim-fade-up">
       <div className="flex flex-wrap items-end justify-between gap-3 mb-5">
         <div>
-          <h1 className="text-xl font-extrabold text-ink">Work Exchange</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-ink">Work Exchange</h1>
           <p className="text-xs text-ink-2 mt-0.5">Cross-department requirements, micro-gigs and bandwidth sharing</p>
         </div>
         <div className="flex gap-2">
@@ -593,7 +593,7 @@ export function WorkExchange() {
           <button
             key={sec}
             onClick={() => setSection(sec)}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
               section === sec ? 'bg-primary text-on-primary' : 'text-ink-2 hover:text-ink'
             }`}
           >
@@ -636,16 +636,16 @@ export function WorkExchange() {
                 const openSeats = p.seats - p.seatsFilled;
                 return (
                   <Reveal key={p.id} delay={(i % 2) * 70}>
-                    <Card className="p-5 h-full flex flex-col" onClick={() => s.setOpenWorkId(p.id)}>
+                    <Card className="p-7 h-full flex flex-col" onClick={() => s.setOpenWorkId(p.id)}>
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <div className="flex flex-wrap gap-1.5 mb-2">
-                            <Chip tone="primary">{p.department}</Chip>
+                            <Chip>{p.department}</Chip>
                             <StatusBadge status={p.status} />
                             <UrgencyBadge urgency={p.urgency} />
                             {p.editedAt && <Chip>edited</Chip>}
                           </div>
-                          <h3 className="text-base font-bold text-ink leading-snug">{p.title}</h3>
+                          <h3 className="text-base font-semibold text-ink leading-snug">{p.title}</h3>
                         </div>
                         <SaveButton saved={s.isSaved('work', p.id)} onToggle={async () => {
                           const now = await s.toggleSaved('work', p.id);
@@ -667,10 +667,10 @@ export function WorkExchange() {
                           }
                         ].map((f) => (
                           <div key={f.label} className="min-w-0">
-                            <dt className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-ink-3">
+                            <dt className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-ink-3">
                               {f.icon} {f.label}
                             </dt>
-                            <dd className="text-[11.5px] font-semibold text-ink-2 mt-0.5 truncate" title={f.value}>
+                            <dd className="text-xs font-semibold text-ink-2 mt-0.5 truncate" title={f.value}>
                               {f.value}
                             </dd>
                           </div>
@@ -684,7 +684,7 @@ export function WorkExchange() {
 
                       <div className="flex items-center justify-between gap-3 mt-auto pt-4">
                         <SeatsIndicator total={p.seats} filled={p.seatsFilled} />
-                        <span className="text-[11px] text-ink-3">
+                        <span className="text-xs text-ink-3">
                           {p.commentCount > 0 && <>{p.commentCount} {p.commentCount === 1 ? 'reply' : 'replies'} · </>}
                           {openSeats === 0 ? 'filled' : `${openSeats} open`}
                         </span>
@@ -694,13 +694,13 @@ export function WorkExchange() {
                         <span className="flex items-center gap-2 min-w-0">
                           <Avatar initials={p.authorInitials} size="sm" name={p.authorName} />
                           <span className="min-w-0">
-                            <span className="block text-[11.5px] font-bold text-ink truncate">{p.authorName}</span>
-                            <span className="block text-[10px] text-ink-3 truncate">{p.authorRole} · {timeAgo(p.createdAt)}</span>
+                            <span className="block text-xs font-semibold text-ink truncate">{p.authorName}</span>
+                            <span className="block text-xs text-ink-3 truncate">{p.authorRole} · {timeAgo(p.createdAt)}</span>
                           </span>
                         </span>
                         {p.myApplication
                           ? <StatusBadge status={p.myApplication.status} />
-                          : <span className="text-xs font-bold text-primary shrink-0">View &amp; Apply →</span>}
+                          : <span className="text-xs font-semibold text-primary-text shrink-0">View &amp; Apply →</span>}
                       </div>
                     </Card>
                   </Reveal>
@@ -713,12 +713,12 @@ export function WorkExchange() {
         <div className="grid lg:grid-cols-2 gap-4">
           {offers.map((o, i) => (
             <Reveal key={o.id} delay={(i % 2) * 70}>
-            <Card className="p-5 h-full">
+            <Card className="p-7 h-full">
               <div className="flex items-center gap-2.5 mb-3">
                 <Avatar initials={o.initials} name={o.authorName} />
                 <div className="min-w-0">
-                  <p className="text-sm font-bold text-ink truncate">{o.authorName}</p>
-                  <p className="text-[11px] text-ink-3">{o.authorRole} · {o.department}</p>
+                  <p className="text-sm font-normal text-ink truncate">{o.authorName}</p>
+                  <p className="text-xs text-ink-3">{o.authorRole} · {o.department}</p>
                 </div>
                 <span className="ml-auto shrink-0"><Chip tone="primary">{o.availableHours}</Chip></span>
               </div>

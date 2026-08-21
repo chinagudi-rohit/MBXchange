@@ -40,13 +40,13 @@ export function LoginScreen() {
       <aside className="hidden lg:flex flex-col justify-between p-10 xl:p-14 bg-black text-white">
         <div className="flex items-center gap-3">
           <MercedesStar className="w-11 h-11" />
-          <span className="text-lg font-extrabold tracking-tight">
+          <span className="text-lg font-semibold tracking-tight">
             MB<span className="text-[#d97757]">X</span>change
           </span>
         </div>
 
         <div className="max-w-md">
-          <h2 className="text-3xl xl:text-4xl font-extrabold leading-tight">
+          <h2 className="text-3xl xl:text-4xl font-semibold leading-tight">
             Projects beyond your day-to-day work.
           </h2>
           <p className="text-sm text-white/70 mt-4 leading-relaxed">
@@ -67,7 +67,7 @@ export function LoginScreen() {
           </ul>
         </div>
 
-        <p className="text-[11px] text-white/45">
+        <p className="text-xs text-white/45">
           Mercedes-Benz internal platform · Access provisioned by your administrator
         </p>
       </aside>
@@ -83,16 +83,16 @@ export function LoginScreen() {
             <MercedesStar className="w-[82%] h-[82%]" />
           </span>
           <div className="leading-tight">
-            <p className="text-xl font-extrabold text-ink tracking-tight">
-              MB<span className="text-primary">X</span>change
+            <p className="text-xl font-medium text-ink tracking-tight">
+              MB<span className="text-primary-text">X</span>change
             </p>
-            <p className="text-[11px] text-ink-3 font-medium">Mercedes-Benz · Cross-Department Project Exchange</p>
+            <p className="text-xs text-ink-3 font-medium">Mercedes-Benz · Cross-Department Project Exchange</p>
           </div>
         </div>
 
         <div className="panel rounded-2xl shadow-card p-6">
-          <h1 className="hidden lg:block text-xl font-extrabold text-ink mb-1">Welcome back</h1>
-          <h1 className="lg:hidden text-base font-bold text-ink mb-1">Sign in</h1>
+          <h1 className="hidden lg:block text-xl font-semibold text-ink mb-1">Welcome back</h1>
+          <h1 className="lg:hidden text-base font-semibold text-ink mb-1">Sign in</h1>
           <p className="text-xs text-ink-2 mb-5">
             Accounts are created by your MBXchange administrator.
           </p>
@@ -136,7 +136,7 @@ export function LoginScreen() {
         <div className="mt-4 panel rounded-2xl shadow-card overflow-hidden">
           <button
             onClick={() => setDemoOpen((v) => !v)}
-            className="w-full flex items-center justify-between px-5 py-3.5 text-xs font-bold text-ink-2 hover:bg-surface-2"
+            className="w-full flex items-center justify-between px-5 py-3.5 text-xs font-semibold text-ink-2 hover:bg-surface-2"
             aria-expanded={demoOpen}
           >
             <span>Demo seed accounts (pilot environment)</span>
@@ -151,10 +151,10 @@ export function LoginScreen() {
                   className="w-full text-left px-3 py-2 rounded-xl hover:bg-surface-2 transition-colors"
                 >
                   <span className="block text-xs font-semibold text-ink">{a.label}</span>
-                  <span className="block text-[10px] text-ink-3">{a.email}</span>
+                  <span className="block text-xs text-ink-3">{a.email}</span>
                 </button>
               ))}
-              <p className="px-3 pt-1.5 text-[10px] text-ink-3">
+              <p className="px-3 pt-1.5 text-xs text-ink-3">
                 Seeded for testing — remove before production rollout.
               </p>
             </div>

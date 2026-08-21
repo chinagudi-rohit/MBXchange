@@ -41,8 +41,8 @@ function LogoMark({ size = 'md' }: { size?: 'md' | 'lg' }) {
 /** Wordmark with the pivotal X tinted to match the logo box. */
 function WordMark() {
   return (
-    <span className="text-sm font-extrabold text-ink tracking-tight">
-      MB<span className="text-primary">X</span>change
+    <span className="text-sm font-semibold text-ink tracking-tight">
+      MB<span className="text-primary-text">X</span>change
     </span>
   );
 }
@@ -116,7 +116,7 @@ function Shell() {
                       : 'text-ink-2 hover:bg-surface-2 hover:text-ink'
                   }`
                 : `relative flex items-center gap-3 pl-3.5 pr-3 py-2.5 rounded-xl text-sm font-semibold transition-colors duration-200 ${
-                    active ? 'bg-primary-soft text-primary' : 'text-ink-2 hover:bg-surface-2 hover:text-ink'
+                    active ? 'bg-primary-soft text-primary-text' : 'text-ink-2 hover:bg-surface-2 hover:text-ink'
                   }`
             }
           >
@@ -127,11 +127,11 @@ function Shell() {
             {!mini && <span className="flex-1 text-left truncate">{n.label}</span>}
             {!!n.badge && (
               mini ? (
-                <span className="absolute -top-0.5 -right-0.5 min-w-4.5 h-4.5 px-1 rounded-full bg-red text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-(--surface-solid)">
+                <span className="absolute -top-0.5 -right-0.5 min-w-4.5 h-4.5 px-1 rounded-full bg-red text-on-red text-xs font-semibold flex items-center justify-center ring-2 ring-(--surface-solid)">
                   {n.badge}
                 </span>
               ) : (
-                <span className="min-w-5 h-5 px-1 rounded-full bg-primary text-on-primary text-[10px] font-bold flex items-center justify-center">
+                <span className="min-w-5 h-5 px-1 rounded-full bg-primary text-on-primary text-xs font-semibold flex items-center justify-center">
                   {n.badge}
                 </span>
               )
@@ -148,7 +148,7 @@ function Shell() {
 
       {/* Impersonation banner */}
       {s.impersonating && (
-        <div className="sticky top-0 z-40 glass border-b border-line text-amber text-xs font-bold px-4 py-2 flex items-center justify-center gap-3">
+        <div className="sticky top-0 z-40 glass border-b border-line text-amber text-xs font-semibold px-4 py-2 flex items-center justify-center gap-3">
           <span>Viewing as {s.user.name} — actions are audit-logged</span>
           <button onClick={() => s.stopImpersonating()} className="underline underline-offset-2 hover:opacity-80">
             Return to admin
@@ -181,14 +181,14 @@ function Shell() {
               <LogoMark />
               <span className="hidden sm:block text-left leading-tight">
                 <span className="block"><WordMark /></span>
-                <span className="block text-[10px] text-ink-3 font-medium">{TAGLINE}</span>
+                <span className="hidden xl:block text-xs text-ink-3 font-medium">{TAGLINE}</span>
               </span>
             </button>
           </div>
 
           {/* Centre: search — absolutely centred on the viewport, independent
               of how wide the left/right clusters are */}
-          <div className="hidden lg:flex absolute left-1/2 -translate-x-1/2 w-full max-w-lg justify-center pointer-events-none">
+          <div className="hidden lg:flex absolute left-1/2 -translate-x-1/2 w-full max-w-md xl:max-w-lg justify-center pointer-events-none">
             <button
               onClick={() => setSearchOpen(true)}
               className="pointer-events-auto w-full flex items-center gap-2.5 px-4 py-2.5 rounded-2xl
@@ -196,7 +196,7 @@ function Shell() {
             >
               <Search className="w-4 h-4 shrink-0" />
               <span className="flex-1 text-left truncate">Search opportunities, people, listings…</span>
-              <kbd className="text-[10px] font-semibold border border-line-strong rounded-md px-1.5 py-0.5 shrink-0">⌘K</kbd>
+              <kbd className="text-xs font-semibold border border-line-strong rounded-md px-1.5 py-0.5 shrink-0">⌘K</kbd>
             </button>
           </div>
 
@@ -224,7 +224,7 @@ function Shell() {
             >
               <Bookmark className="w-4.5 h-4.5" />
               {s.saved.length > 0 && (
-                <span className="absolute top-0.5 right-0.5 min-w-4 h-4 px-0.5 rounded-full bg-primary text-on-primary text-[9px] font-bold flex items-center justify-center">
+                <span className="absolute top-0.5 right-0.5 min-w-4 h-4 px-0.5 rounded-full bg-primary text-on-primary text-xs font-semibold flex items-center justify-center">
                   {s.saved.length}
                 </span>
               )}
@@ -236,7 +236,7 @@ function Shell() {
             >
               <MessageSquare className="w-4.5 h-4.5" />
               {s.counts.unreadMessages > 0 && (
-                <span className="absolute top-0.5 right-0.5 min-w-4 h-4 px-0.5 rounded-full bg-red text-white text-[9px] font-bold flex items-center justify-center">
+                <span className="absolute top-0.5 right-0.5 min-w-4 h-4 px-0.5 rounded-full bg-red text-on-red text-xs font-semibold flex items-center justify-center">
                   {s.counts.unreadMessages}
                 </span>
               )}
@@ -248,7 +248,7 @@ function Shell() {
             >
               <Bell className="w-4.5 h-4.5" />
               {s.counts.unreadNotifications > 0 && (
-                <span className="absolute top-0.5 right-0.5 min-w-4 h-4 px-0.5 rounded-full bg-red text-white text-[9px] font-bold flex items-center justify-center">
+                <span className="absolute top-0.5 right-0.5 min-w-4 h-4 px-0.5 rounded-full bg-red text-on-red text-xs font-semibold flex items-center justify-center">
                   {s.counts.unreadNotifications}
                 </span>
               )}
@@ -268,9 +268,9 @@ function Shell() {
                   <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} />
                   <div className="absolute right-0 top-full mt-2 z-50 w-60 panel-overlay rounded-2xl shadow-pop p-2 anim-pop-in">
                     <div className="px-3 py-2.5 border-b border-line mb-1">
-                      <p className="text-sm font-bold text-ink truncate">{s.user.name}</p>
-                      <p className="text-[11px] text-ink-2 truncate">{s.user.role} · {s.user.department}</p>
-                      <p className="text-[10px] text-ink-3 mt-0.5 uppercase font-bold tracking-wide">{s.user.systemRole}</p>
+                      <p className="text-sm font-normal text-ink truncate">{s.user.name}</p>
+                      <p className="text-xs text-ink-2 truncate">{s.user.role} · {s.user.department}</p>
+                      <p className="text-xs text-ink-3 mt-0.5 uppercase font-semibold tracking-wide">{s.user.systemRole}</p>
                     </div>
                     <button
                       onClick={() => { s.setProfileOpen(true); setUserMenuOpen(false); }}
@@ -314,17 +314,17 @@ function Shell() {
               title={`Weekly bandwidth: ${s.user.availableHoursWeek}h`}
               className="mt-5 w-11 h-11 rounded-2xl bg-surface-2 flex flex-col items-center justify-center hover:bg-primary-soft transition-colors"
             >
-              <span className="text-sm font-extrabold text-primary leading-none">{s.user.availableHoursWeek}</span>
-              <span className="text-[9px] text-ink-3 font-bold">hrs</span>
+              <span className="text-sm font-semibold text-ink leading-none">{s.user.availableHoursWeek}</span>
+              <span className="text-xs text-ink-3 font-bold">hrs</span>
             </button>
           ) : (
             <div className="mt-5 mx-1 p-3.5 rounded-2xl bg-surface-2">
-              <p className="text-[11px] font-bold text-ink-2 mb-1">Weekly bandwidth</p>
-              <p className="text-lg font-extrabold text-primary">{s.user.availableHoursWeek}h</p>
-              <p className="text-[10px] text-ink-3">{s.user.typicalAvailability || 'declared availability'}</p>
+              <p className="text-xs font-medium text-ink-2 mb-1">Weekly bandwidth</p>
+              <p className="text-xl font-semibold text-ink">{s.user.availableHoursWeek}h</p>
+              <p className="text-xs text-ink-3">{s.user.typicalAvailability || 'declared availability'}</p>
               <button
                 onClick={() => s.setProfileOpen(true)}
-                className="mt-2 text-[11px] font-bold text-primary hover:underline underline-offset-2"
+                className="mt-2 text-xs font-medium text-ink-2 hover:text-ink hover:underline underline-offset-2"
               >
                 Update →
               </button>
@@ -352,7 +352,7 @@ function Shell() {
         )}
 
         {/* Main content — fluid: fills the viewport at any width, no side gutters */}
-        <main className="flex-1 min-w-0 w-full px-3 sm:px-4 lg:px-5 py-5 sm:py-6">
+        <main className="flex-1 min-w-0 w-full px-4 sm:px-6 lg:px-10 2xl:px-12 py-8 sm:py-10">
           {s.tab === 'home' && <HomeDashboard />}
           {s.tab === 'work' && <WorkExchange />}
           {s.tab === 'people' && <PeopleView />}

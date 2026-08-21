@@ -47,7 +47,7 @@ export function PeopleView() {
   return (
     <div className="anim-fade-up">
       <div className="mb-5">
-        <h1 className="text-xl font-extrabold text-ink">People & Skills</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-ink">People & Skills</h1>
         <p className="text-xs text-ink-2 mt-0.5">Verified colleagues across all PT-TH departments, with declared bandwidth</p>
       </div>
 
@@ -72,15 +72,15 @@ export function PeopleView() {
         <div className="grid md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
           {people.map((u, i) => (
             <Reveal key={u.id} delay={(i % 4) * 60}>
-            <Card className="p-5 h-full flex flex-col">
+            <Card className="p-7 h-full flex flex-col">
               <div className="flex items-start gap-3">
                 <Avatar initials={u.initials} size="lg" name={u.name} />
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-bold text-ink truncate">{u.name}</p>
-                  <p className="text-[11px] text-ink-2 truncate">{u.role}</p>
+                  <p className="text-sm font-normal text-ink truncate">{u.name}</p>
+                  <p className="text-xs text-ink-2 truncate">{u.role}</p>
                   <div className="flex items-center gap-1.5 mt-1">
-                    <Chip tone="primary">{u.department}</Chip>
-                    <span className="flex items-center gap-0.5 text-[11px] font-bold text-amber">
+                    <Chip>{u.department}</Chip>
+                    <span className="flex items-center gap-0.5 text-xs font-semibold text-amber">
                       <Star className="w-3 h-3 fill-current" /> {Number(u.contributionScore).toFixed(2)}
                     </span>
                   </div>
@@ -90,7 +90,7 @@ export function PeopleView() {
                 {u.primarySkills.slice(0, 4).map((sk) => <Chip key={sk}>{sk}</Chip>)}
                 {u.primarySkills.length > 4 && <Chip>+{u.primarySkills.length - 4}</Chip>}
               </div>
-              <p className="text-[11px] text-ink-3 mt-3">
+              <p className="text-xs text-ink-3 mt-3">
                 Bandwidth: <b className="text-ink-2">{u.typicalAvailability || `${u.availableHoursWeek}h/week`}</b>
                 {' '}· {u.collaborationsCount} gigs · {u.hoursContributed}h contributed
               </p>
@@ -138,7 +138,7 @@ export function PeopleView() {
               placeholder="What you need help with and any constraints…" />
           </Field>
           {target && (
-            <p className="text-[11px] text-ink-3 bg-surface-2 rounded-xl px-3 py-2.5">
+            <p className="text-xs text-ink-3 bg-surface-2 rounded-xl px-3 py-2.5">
               {target.name} can accept or decline. You can edit or withdraw the request while it's pending — see <b>My Requests</b>.
             </p>
           )}

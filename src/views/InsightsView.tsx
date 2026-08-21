@@ -52,9 +52,9 @@ export function InsightsView() {
   const maxMentions = Math.max(1, ...(data.topDemand || []).map((d: any) => d.mentions));
 
   return (
-    <div className="anim-fade-up space-y-6">
+    <div className="anim-fade-up space-y-14">
       <div>
-        <h1 className="text-xl font-extrabold text-ink">Capability Insights</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-ink">Capability Insights</h1>
         <p className="text-xs text-ink-2 mt-0.5">
           Where the organisation needs skills, where it has spare capacity — open to everyone
         </p>
@@ -62,20 +62,20 @@ export function InsightsView() {
 
       {/* Personal upskilling callout */}
       {upskill.length > 0 && (
-        <Card className="p-5">
+        <Card className="p-7">
           <div className="flex items-start gap-3.5">
             <span className="w-10 h-10 rounded-2xl bg-amber-soft text-amber flex items-center justify-center shrink-0">
               <Lightbulb className="w-5 h-5" />
             </span>
             <div className="min-w-0">
-              <p className="text-sm font-bold text-ink">Upskilling opportunities for you</p>
+              <p className="text-sm font-normal text-ink">Upskilling opportunities for you</p>
               <p className="text-xs text-ink-2 mt-0.5 leading-relaxed">
                 These capabilities are in high demand across departments but short on available experts.
                 Building them makes you a strong match for cross-department requests.
               </p>
               <div className="flex flex-wrap gap-1.5 mt-3">
                 {upskill.map((u) => (
-                  <span key={u.skill} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-soft text-amber text-[11px] font-bold">
+                  <span key={u.skill} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-soft text-amber text-xs font-bold">
                     <Flame className="w-3 h-3" /> {u.skill}
                     <span className="font-medium opacity-80">· {u.requestsCount} requests / {u.expertsCount} experts</span>
                   </span>
@@ -89,7 +89,7 @@ export function InsightsView() {
       {/* Heatmap */}
       <section>
         <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-          <h2 className="text-sm font-bold text-ink">Demand vs supply by capability</h2>
+          <h2 className="text-sm font-semibold text-ink">Demand vs supply by capability</h2>
           <div className="flex gap-1.5 panel rounded-xl p-1 shadow-card">
             {([
               ['all', `All capabilities (${heatmap.length})`],
@@ -98,7 +98,7 @@ export function InsightsView() {
             ] as const).map(([v, label]) => (
               <button
                 key={v} onClick={() => setFilter(v)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
                   filter === v ? 'bg-primary text-on-primary' : 'text-ink-2 hover:text-ink'
                 }`}
               >{label}</button>
@@ -115,32 +115,32 @@ export function InsightsView() {
               return (
                 <Reveal key={h.skill} className="p-4 sm:px-5 flex flex-wrap items-center gap-x-4 gap-y-3">
                   <div className="min-w-44 flex-1">
-                    <p className="text-sm font-bold text-ink">{h.skill}</p>
-                    <p className="text-[11px] text-ink-3 mt-0.5">
+                    <p className="text-sm font-normal text-ink">{h.skill}</p>
+                    <p className="text-xs text-ink-3 mt-0.5">
                       {h.requestsCount} requests · {h.expertsCount} available experts
                     </p>
                   </div>
 
                   <div className="flex-1 min-w-52 space-y-1.5">
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-bold text-ink-3 w-14 shrink-0">Demand</span>
+                      <span className="text-xs font-semibold text-ink-3 w-14 shrink-0">Demand</span>
                       <div className="flex-1 h-2 rounded-full bg-surface-2 overflow-hidden">
                         <div className="h-full rounded-full bg-primary draw-x"
                           style={{ width: `${h.demandScore}%`, transitionDelay: `${i * 30}ms` }} />
                       </div>
-                      <span className="text-[10px] font-bold text-ink-2 w-7 text-right">{h.demandScore}</span>
+                      <span className="text-xs font-semibold text-ink-2 w-7 text-right">{h.demandScore}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-bold text-ink-3 w-14 shrink-0">Supply</span>
+                      <span className="text-xs font-semibold text-ink-3 w-14 shrink-0">Supply</span>
                       <div className="flex-1 h-2 rounded-full bg-surface-2 overflow-hidden">
                         <div className={`h-full rounded-full draw-x ${h.supplyScore < h.demandScore ? 'bg-red' : 'bg-green'}`}
                           style={{ width: `${h.supplyScore}%`, transitionDelay: `${i * 30 + 80}ms` }} />
                       </div>
-                      <span className="text-[10px] font-bold text-ink-2 w-7 text-right">{h.supplyScore}</span>
+                      <span className="text-xs font-semibold text-ink-2 w-7 text-right">{h.supplyScore}</span>
                     </div>
                   </div>
 
-                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold shrink-0 ${meta.cls}`}>
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold shrink-0 ${meta.cls}`}>
                     {meta.icon} {meta.label}
                   </span>
                 </Reveal>
@@ -153,25 +153,25 @@ export function InsightsView() {
       <div className="grid lg:grid-cols-2 gap-5">
         {/* Live demand from open posts */}
         <section>
-          <h2 className="text-sm font-bold text-ink mb-3">Most requested skills right now</h2>
-          <Card className="p-5">
+          <h2 className="text-sm font-semibold text-ink mb-3">Most requested skills right now</h2>
+          <Card className="p-7">
             {(data.topDemand || []).length === 0 ? (
               <p className="text-xs text-ink-3">No open requirements with skill tags yet.</p>
             ) : (
               <div className="space-y-2.5">
                 {data.topDemand.map((d: any, i: number) => (
                   <div key={d.skill} className="flex items-center gap-3">
-                    <span className="text-[11px] font-bold text-ink-2 w-28 shrink-0 truncate">{d.skill}</span>
+                    <span className="text-xs font-semibold text-ink-2 w-28 shrink-0 truncate">{d.skill}</span>
                     <div className="flex-1 h-2.5 rounded-full bg-surface-2 overflow-hidden">
                       <div className="h-full rounded-full bg-violet anim-grow-x"
                         style={{ width: `${(d.mentions / maxMentions) * 100}%`, animationDelay: `${i * 50}ms` }} />
                     </div>
-                    <span className="text-[11px] font-bold text-ink w-5 text-right">{d.mentions}</span>
+                    <span className="text-xs font-semibold text-ink w-5 text-right">{d.mentions}</span>
                   </div>
                 ))}
               </div>
             )}
-            <p className="text-[10px] text-ink-3 mt-3.5">
+            <p className="text-xs text-ink-3 mt-3.5">
               Live from open and in-progress requirements across all departments.
             </p>
           </Card>
@@ -179,19 +179,19 @@ export function InsightsView() {
 
         {/* Department load */}
         <section>
-          <h2 className="text-sm font-bold text-ink mb-3">Requirements by department</h2>
-          <Card className="p-5">
+          <h2 className="text-sm font-semibold text-ink mb-3">Requirements by department</h2>
+          <Card className="p-7">
             <div className="space-y-2.5">
               {data.departmentLoad.map((d: any, i: number) => (
                 <div key={d.department} className="flex items-center gap-3">
-                  <span className="flex items-center gap-1.5 text-[11px] font-bold text-ink-2 w-20 shrink-0">
+                  <span className="flex items-center gap-1.5 text-xs font-semibold text-ink-2 w-20 shrink-0">
                     <Building2 className="w-3 h-3 text-ink-3" /> {d.department}
                   </span>
                   <div className="flex-1 h-2.5 rounded-full bg-surface-2 overflow-hidden">
                     <div className="h-full rounded-full bg-blue anim-grow-x"
                       style={{ width: `${(d.posts / maxDeptPosts) * 100}%`, animationDelay: `${i * 50}ms` }} />
                   </div>
-                  <span className="text-[11px] font-bold text-ink w-12 text-right">{d.open} open</span>
+                  <span className="text-xs font-semibold text-ink w-12 text-right">{d.open} open</span>
                 </div>
               ))}
             </div>

@@ -25,7 +25,7 @@ export function SavedDrawer() {
 
   const Section = ({ icon, title, children, count }: any) => count === 0 ? null : (
     <div className="px-4 py-3">
-      <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-ink-3 mb-2">
+      <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-ink-3 mb-2">
         {icon} {title} ({count})
       </p>
       <div className="space-y-1.5">{children}</div>
@@ -49,8 +49,8 @@ export function SavedDrawer() {
                   className="flex-1 min-w-0 text-left"
                   onClick={() => { s.setTab('work'); s.setOpenWorkId(p.id); s.setSavedOpen(false); }}
                 >
-                  <p className="text-xs font-bold text-ink truncate">{p.title}</p>
-                  <p className="text-[10px] text-ink-3">{p.department} · {p.effortHours || p.duration}</p>
+                  <p className="text-xs font-medium text-ink truncate">{p.title}</p>
+                  <p className="text-xs text-ink-3">{p.department} · {p.effortHours || p.duration}</p>
                 </button>
                 <StatusBadge status={p.status} />
                 <SaveButton saved onToggle={() => s.toggleSaved('work', p.id)} />
@@ -64,8 +64,8 @@ export function SavedDrawer() {
                   className="flex-1 min-w-0 text-left"
                   onClick={() => { s.setTab('beyond'); s.setBeyondSection('market'); s.setSavedOpen(false); }}
                 >
-                  <p className="text-xs font-bold text-ink truncate">{l.title}</p>
-                  <p className="text-[10px] text-ink-3">{l.isFree || l.price === 0 ? 'Free' : `${l.currency}${l.price}`} · {l.sellerName}</p>
+                  <p className="text-xs font-medium text-ink truncate">{l.title}</p>
+                  <p className="text-xs text-ink-3">{l.isFree || l.price === 0 ? 'Free' : `${l.currency}${l.price}`} · {l.sellerName}</p>
                 </button>
                 <SaveButton saved onToggle={() => s.toggleSaved('listing', l.id)} />
               </div>
@@ -78,8 +78,8 @@ export function SavedDrawer() {
                   className="flex-1 min-w-0 text-left"
                   onClick={() => { s.setTab('beyond'); s.setBeyondSection('carpool'); s.setSavedOpen(false); }}
                 >
-                  <p className="text-xs font-bold text-ink truncate">{t.origin} → {t.destination}</p>
-                  <p className="text-[10px] text-ink-3">{t.direction === 'to_office' ? 'Morning' : 'Evening'} · {t.departureTime} · {t.driverName}</p>
+                  <p className="text-xs font-medium text-ink truncate">{t.origin} → {t.destination}</p>
+                  <p className="text-xs text-ink-3">{t.direction === 'to_office' ? 'Morning' : 'Evening'} · {t.departureTime} · {t.driverName}</p>
                 </button>
                 <SaveButton saved onToggle={() => s.toggleSaved('carpool', t.id)} />
               </div>
@@ -92,8 +92,8 @@ export function SavedDrawer() {
                   className="flex-1 min-w-0 text-left"
                   onClick={() => { s.setTab('beyond'); s.setBeyondSection('community'); s.setSavedOpen(false); }}
                 >
-                  <p className="text-xs font-bold text-ink truncate">{c.title}</p>
-                  <p className="text-[10px] text-ink-3">{c.type} · {c.authorName}</p>
+                  <p className="text-xs font-medium text-ink truncate">{c.title}</p>
+                  <p className="text-xs text-ink-3">{c.type} · {c.authorName}</p>
                 </button>
                 <SaveButton saved onToggle={() => s.toggleSaved('community', c.id)} />
               </div>

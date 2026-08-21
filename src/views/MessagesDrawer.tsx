@@ -88,8 +88,8 @@ export function MessagesDrawer() {
                   >
                     <Avatar initials={u.initials} size="sm" />
                     <span className="min-w-0">
-                      <span className="block text-xs font-bold text-ink truncate">{u.name}</span>
-                      <span className="block text-[10px] text-ink-3 truncate">{u.role}</span>
+                      <span className="block text-xs font-semibold text-ink truncate">{u.name}</span>
+                      <span className="block text-xs text-ink-3 truncate">{u.role}</span>
                     </span>
                   </button>
                 ))}
@@ -109,15 +109,15 @@ export function MessagesDrawer() {
                   <Avatar initials={c.user!.initials} name={c.user!.name} />
                   <span className="flex-1 min-w-0">
                     <span className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-bold text-ink truncate">{c.user!.name}</span>
-                      <span className="text-[10px] text-ink-3 shrink-0">{timeAgo(c.last.createdAt)}</span>
+                      <span className="text-sm font-semibold text-ink truncate">{c.user!.name}</span>
+                      <span className="text-xs text-ink-3 shrink-0">{timeAgo(c.last.createdAt)}</span>
                     </span>
                     <span className="block text-xs text-ink-3 truncate mt-0.5">
                       {c.last.senderId === me ? 'You: ' : ''}{c.last.text}
                     </span>
                   </span>
                   {c.unread > 0 && (
-                    <span className="min-w-5 h-5 px-1 rounded-full bg-primary text-on-primary text-[10px] font-bold flex items-center justify-center shrink-0">
+                    <span className="min-w-5 h-5 px-1 rounded-full bg-primary text-on-primary text-xs font-semibold flex items-center justify-center shrink-0">
                       {c.unread}
                     </span>
                   )}
@@ -130,7 +130,7 @@ export function MessagesDrawer() {
         <div className="flex flex-col h-full">
           <button
             onClick={() => s.setMessagePartnerId(null)}
-            className="flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold text-ink-2 hover:text-ink border-b border-line shrink-0"
+            className="flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold text-ink-2 hover:text-ink border-b border-line shrink-0"
           >
             <ArrowLeft className="w-3.5 h-3.5" /> All conversations
           </button>
@@ -141,7 +141,7 @@ export function MessagesDrawer() {
                 <div key={m.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
                   <div className={`max-w-[80%] min-w-0 ${mine ? 'items-end' : 'items-start'} flex flex-col`}>
                     {m.contextTitle && (
-                      <span className="text-[10px] font-semibold text-primary bg-primary-soft rounded-md px-2 py-0.5 mb-1 truncate max-w-full">
+                      <span className="text-xs font-semibold text-primary-text bg-primary-soft rounded-md px-2 py-0.5 mb-1 truncate max-w-full">
                         Re: {m.contextTitle}
                       </span>
                     )}
@@ -150,7 +150,7 @@ export function MessagesDrawer() {
                     }`}>
                       {m.text}
                     </div>
-                    <span className="text-[10px] text-ink-3 mt-1">{timeAgo(m.createdAt)}</span>
+                    <span className="text-xs text-ink-3 mt-1">{timeAgo(m.createdAt)}</span>
                   </div>
                 </div>
               );

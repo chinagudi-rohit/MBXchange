@@ -71,17 +71,17 @@ function Marketplace() {
                   s.toast('info', now ? 'Saved' : 'Removed from saved');
                 }} />
               </div>
-              <h3 className="text-sm font-bold text-ink leading-snug flex-1">{l.title}</h3>
-              <p className="text-lg font-extrabold text-primary mt-2.5">
+              <h3 className="text-base font-semibold text-ink leading-snug flex-1">{l.title}</h3>
+              <p className="text-lg font-medium text-primary-text mt-2.5">
                 {l.isFree || l.price === 0 ? 'Free' : `${l.currency}${Number(l.price).toLocaleString()}`}
-                {l.sold && <span className="ml-2 text-xs font-bold text-red">SOLD</span>}
+                {l.sold && <span className="ml-2 text-xs font-semibold text-red">SOLD</span>}
               </p>
               <div className="flex items-center justify-between mt-3 pt-3 border-t border-line">
                 <span className="flex items-center gap-2 min-w-0">
                   <Avatar initials={l.sellerInitials} size="sm" name={l.sellerName} />
-                  <span className="text-[11px] text-ink-2 truncate">{l.sellerName}</span>
+                  <span className="text-xs text-ink-2 truncate">{l.sellerName}</span>
                 </span>
-                <span className="text-[10px] text-ink-3 shrink-0">{timeAgo(l.createdAt)}</span>
+                <span className="text-xs text-ink-3 shrink-0">{timeAgo(l.createdAt)}</span>
               </div>
             </Card>
           ))}
@@ -117,7 +117,7 @@ function Marketplace() {
       >
         {detail && (
           <div className="space-y-4">
-            <p className="text-2xl font-extrabold text-primary">
+            <p className="text-2xl font-medium text-primary-text">
               {detail.isFree || detail.price === 0 ? 'Free' : `${detail.currency}${Number(detail.price).toLocaleString()}`}
             </p>
             <p className="text-sm text-ink-2 leading-relaxed whitespace-pre-line">{detail.description}</p>
@@ -125,8 +125,8 @@ function Marketplace() {
               <div className="grid sm:grid-cols-2 gap-2">
                 {Object.entries(detail.specs).map(([k, v]) => (
                   <div key={k} className="bg-surface-2 rounded-xl px-3.5 py-2.5">
-                    <p className="text-[10px] font-bold uppercase tracking-wide text-ink-3">{k}</p>
-                    <p className="text-xs font-semibold text-ink mt-0.5">{v}</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-ink-3">{k}</p>
+                    <p className="text-xs font-medium text-ink mt-0.5">{v}</p>
                   </div>
                 ))}
               </div>
@@ -134,8 +134,8 @@ function Marketplace() {
             <div className="flex items-center gap-2.5 pt-2 border-t border-line">
               <Avatar initials={detail.sellerInitials} name={detail.sellerName} />
               <div>
-                <p className="text-xs font-bold text-ink">{detail.sellerName}</p>
-                <p className="text-[11px] text-ink-3">{detail.sellerRole} · {timeAgo(detail.createdAt)}</p>
+                <p className="text-xs font-medium text-ink">{detail.sellerName}</p>
+                <p className="text-xs text-ink-3">{detail.sellerRole} · {timeAgo(detail.createdAt)}</p>
               </div>
             </div>
           </div>
@@ -263,7 +263,7 @@ function Carpool() {
           {([['all', 'All trips'], ['to_office', 'Morning → Office'], ['from_office', 'Evening → Home']] as const).map(([val, label]) => (
             <button
               key={val} onClick={() => setDirection(val)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
                 direction === val ? 'bg-primary text-on-primary' : 'text-ink-2 hover:text-ink'
               }`}
             >{label}</button>
@@ -273,7 +273,7 @@ function Carpool() {
         <Button onClick={() => setOfferOpen(true)}><Plus className="w-4 h-4" /> Offer a Ride</Button>
       </div>
 
-      <p className="text-[11px] text-ink-3 mb-4">
+      <p className="text-xs text-ink-3 mb-4">
         Every trip is a one-way offer — book only the direction and days you need. Not going today? Just skip it.
       </p>
 
@@ -284,7 +284,7 @@ function Carpool() {
           return (
             <Card key={t.id} className="p-5">
               <div className="flex items-start justify-between gap-2">
-                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold ${
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold ${
                   t.direction === 'to_office' ? 'bg-amber-soft text-amber' : 'bg-violet-soft text-violet'
                 }`}>
                   {t.direction === 'to_office' ? <Sunrise className="w-3.5 h-3.5" /> : <Sunset className="w-3.5 h-3.5" />}
@@ -292,7 +292,7 @@ function Carpool() {
                 </span>
                 <div className="flex items-center gap-1">
                   {t.vehicleType.includes('Electric') && (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-green bg-green-soft px-2 py-1 rounded-lg">
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-green bg-green-soft px-2 py-1 rounded-lg">
                       <Leaf className="w-3 h-3" /> EV
                     </span>
                   )}
@@ -303,7 +303,7 @@ function Carpool() {
                 </div>
               </div>
 
-              <div className="mt-3 flex items-center gap-2 text-sm font-bold text-ink">
+              <div className="mt-3 flex items-center gap-2 text-sm font-semibold text-ink">
                 <MapPin className="w-4 h-4 text-ink-3 shrink-0" />
                 <span className="truncate">{t.origin}</span>
                 <ChevronRight className="w-4 h-4 text-ink-3 shrink-0" />
@@ -316,18 +316,18 @@ function Carpool() {
                 {t.womenOnly && <Chip>Women only</Chip>}
               </div>
 
-              {t.vehicleModel && <p className="text-[11px] text-ink-3 mt-2">{t.vehicleModel}</p>}
+              {t.vehicleModel && <p className="text-xs text-ink-3 mt-2">{t.vehicleModel}</p>}
 
               <div className="flex items-center justify-between mt-4 pt-3.5 border-t border-line">
                 <span className="flex items-center gap-2 min-w-0">
                   <Avatar initials={t.driverInitials} size="sm" name={t.driverName} />
                   <span className="min-w-0">
-                    <span className="block text-[11px] font-bold text-ink truncate">{t.driverName}</span>
-                    <span className="block text-[10px] text-ink-3">{t.driverDepartment}</span>
+                    <span className="block text-xs font-semibold text-ink truncate">{t.driverName}</span>
+                    <span className="block text-xs text-ink-3">{t.driverDepartment}</span>
                   </span>
                 </span>
                 <div className="flex items-center gap-2 shrink-0">
-                  <span className={`text-[11px] font-bold ${seatsLeft > 0 ? 'text-green' : 'text-red'}`}>
+                  <span className={`text-xs font-semibold ${seatsLeft > 0 ? 'text-green' : 'text-red'}`}>
                     {seatsLeft > 0 ? `${seatsLeft} seat${seatsLeft > 1 ? 's' : ''} left` : 'Full'}
                   </span>
                   {isDriver ? (
@@ -376,7 +376,7 @@ function Carpool() {
                 <input type="checkbox" checked={form.offerMorning} onChange={(e) => setForm({ ...form, offerMorning: e.target.checked })}
                   className="w-4 h-4 accent-(--primary)" />
                 <Sunrise className="w-4 h-4 text-amber" />
-                <span className="text-sm font-bold text-ink">Morning → office</span>
+                <span className="text-sm font-semibold text-ink">Morning → office</span>
               </label>
               {form.offerMorning && (
                 <TextInput className="mt-2.5" value={form.morningTime} onChange={(e) => setForm({ ...form, morningTime: e.target.value })} placeholder="08:30 AM" />
@@ -387,7 +387,7 @@ function Carpool() {
                 <input type="checkbox" checked={form.offerEvening} onChange={(e) => setForm({ ...form, offerEvening: e.target.checked })}
                   className="w-4 h-4 accent-(--primary)" />
                 <Sunset className="w-4 h-4 text-violet" />
-                <span className="text-sm font-bold text-ink">Evening → home</span>
+                <span className="text-sm font-semibold text-ink">Evening → home</span>
               </label>
               {form.offerEvening && (
                 <TextInput className="mt-2.5" value={form.eveningTime} onChange={(e) => setForm({ ...form, eveningTime: e.target.value })} placeholder="05:45 PM" />
@@ -404,7 +404,7 @@ function Carpool() {
                     ...form,
                     days: form.days.includes(d) ? form.days.filter((x) => x !== d) : [...form.days, d]
                   })}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
                     form.days.includes(d) ? 'bg-primary text-on-primary' : 'bg-surface-2 text-ink-2 hover:text-ink'
                   }`}
                 >{d}</button>
@@ -477,7 +477,7 @@ function Communities() {
     <div className="space-y-7">
       {/* Groups */}
       <section>
-        <h3 className="text-sm font-bold text-ink mb-3">Guilds & Groups</h3>
+        <h3 className="text-sm font-semibold text-ink mb-3">Guilds & Groups</h3>
         <Reveal stagger className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
           {data.groups.map((g: any) => (
             <Card key={g.id} className="p-4.5 p-5">
@@ -494,9 +494,9 @@ function Communities() {
                   {g.isJoined ? 'Joined ✓' : 'Join'}
                 </Button>
               </div>
-              <p className="text-sm font-bold text-ink mt-2.5 leading-snug">{g.name}</p>
-              <p className="text-[11px] text-ink-3 mt-1 line-clamp-2">{g.description}</p>
-              <p className="text-[10px] text-ink-3 mt-2.5 font-semibold">
+              <p className="text-sm font-normal text-ink mt-2.5 leading-snug">{g.name}</p>
+              <p className="text-xs text-ink-3 mt-1 line-clamp-2">{g.description}</p>
+              <p className="text-xs text-ink-3 mt-2.5 font-medium">
                 {g.memberCount.toLocaleString()} members · {g.activeDiscussions} active discussions
               </p>
             </Card>
@@ -507,7 +507,7 @@ function Communities() {
       {/* Q&A */}
       <section>
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-bold text-ink">Knowledge Q&A</h3>
+          <h3 className="text-sm font-semibold text-ink">Knowledge Q&A</h3>
           <Button size="sm" variant="soft" onClick={() => setAskOpen(true)}><Plus className="w-3.5 h-3.5" /> Ask a Question</Button>
         </div>
         <div className="space-y-2.5">
@@ -515,18 +515,18 @@ function Communities() {
             <Card key={q.id} className="p-4 flex items-start gap-3.5" onClick={() => openQ(q)}>
               <button
                 onClick={async (e) => { e.stopPropagation(); await api.post(`/community/questions/${q.id}/vote`); load(); }}
-                className="flex flex-col items-center px-2 py-1.5 rounded-xl bg-surface-2 hover:bg-primary-soft text-ink-2 hover:text-primary transition-colors shrink-0"
+                className="flex flex-col items-center px-2 py-1.5 rounded-xl bg-surface-2 hover:bg-primary-soft text-ink-2 hover:text-primary-text transition-colors shrink-0"
                 aria-label="Upvote question"
               >
                 <ThumbsUp className="w-3.5 h-3.5" />
-                <span className="text-[11px] font-bold mt-0.5">{q.votes}</span>
+                <span className="text-xs font-semibold mt-0.5">{q.votes}</span>
               </button>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-bold text-ink leading-snug">{q.title}</p>
+                <p className="text-sm font-normal text-ink leading-snug">{q.title}</p>
                 <p className="text-xs text-ink-3 line-clamp-1 mt-1">{q.details}</p>
                 <div className="flex flex-wrap items-center gap-1.5 mt-2">
                   {(q.tags || []).slice(0, 4).map((t: string) => <Chip key={t}>{t}</Chip>)}
-                  <span className="text-[10px] text-ink-3 ml-1">
+                  <span className="text-xs text-ink-3 ml-1">
                     {q.answerCount} answer{q.answerCount !== 1 ? 's' : ''} · {q.authorName} · {timeAgo(q.createdAt)}
                   </span>
                   {q.hasAccepted && <CheckCircle2 className="w-3.5 h-3.5 text-green" />}
@@ -540,16 +540,16 @@ function Communities() {
       {/* Notices */}
       <section>
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-bold text-ink">Notices & Events</h3>
+          <h3 className="text-sm font-semibold text-ink">Notices & Events</h3>
           <Button size="sm" variant="soft" onClick={() => setPostOpen(true)}><Plus className="w-3.5 h-3.5" /> Post Notice</Button>
         </div>
         <Reveal stagger className="grid md:grid-cols-2 gap-3.5">
           {data.posts.map((p: any) => (
             <Card key={p.id} className="p-4.5 p-5">
               <Chip tone="primary">{p.type}</Chip>
-              <p className="text-sm font-bold text-ink mt-2 leading-snug">{p.title}</p>
+              <p className="text-sm font-normal text-ink mt-2 leading-snug">{p.title}</p>
               <p className="text-xs text-ink-2 mt-1.5 line-clamp-2">{p.description}</p>
-              <p className="text-[10px] text-ink-3 mt-2.5">
+              <p className="text-xs text-ink-3 mt-2.5">
                 {p.location}{p.dateInfo ? ` · ${p.dateInfo}` : ''} · by {p.authorName} · {timeAgo(p.createdAt)}
               </p>
             </Card>
@@ -571,8 +571,8 @@ function Communities() {
                 <div key={a.id} className={`p-3.5 rounded-xl ${a.accepted ? 'bg-green-soft/50 border border-green/30' : 'bg-surface-2'}`}>
                   <div className="flex items-center gap-2 mb-1.5">
                     <Avatar initials={a.authorInitials} size="sm" />
-                    <span className="text-xs font-bold text-ink">{a.authorName}</span>
-                    {a.accepted && <span className="text-[10px] font-bold text-green flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Accepted Answer</span>}
+                    <span className="text-xs font-semibold text-ink">{a.authorName}</span>
+                    {a.accepted && <span className="text-xs font-semibold text-green flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Accepted Answer</span>}
                   </div>
                   <p className="text-xs text-ink-2 leading-relaxed whitespace-pre-line">{a.text}</p>
                 </div>
@@ -685,7 +685,7 @@ export function BeyondWork() {
   return (
     <div className="anim-fade-up">
       <div className="mb-5">
-        <h1 className="text-xl font-extrabold text-ink">Beyond Work</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-ink">Beyond Work</h1>
         <p className="text-xs text-ink-2 mt-0.5">
           The colleague-to-colleague space — buy & sell, share rides, and join communities
         </p>
@@ -696,7 +696,7 @@ export function BeyondWork() {
           <button
             key={sec.id}
             onClick={() => s.setBeyondSection(sec.id)}
-            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 ${
+            className={`px-3.5 py-2 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${
               s.beyondSection === sec.id ? 'bg-primary text-on-primary' : 'text-ink-2 hover:text-ink'
             }`}
           >

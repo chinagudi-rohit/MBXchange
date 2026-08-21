@@ -67,19 +67,19 @@ export function GlobalSearch({ open, onClose }: { open: boolean; onClose: () => 
 
           {results.posts.length > 0 && (
             <div className="mb-2">
-              <p className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide text-ink-3">Work opportunities</p>
+              <p className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-ink-3">Work opportunities</p>
               {results.posts.map((p) => (
                 <button
                   key={p.id}
                   onClick={() => { s.setTab('work'); s.setOpenWorkId(p.id); onClose(); }}
                   className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-surface-2 text-left"
                 >
-                  <span className="w-8 h-8 rounded-xl bg-primary-soft text-primary flex items-center justify-center shrink-0">
+                  <span className="w-8 h-8 rounded-xl bg-primary-soft text-primary-text flex items-center justify-center shrink-0">
                     <Briefcase className="w-4 h-4" />
                   </span>
                   <span className="flex-1 min-w-0">
-                    <span className="block text-sm font-bold text-ink truncate">{p.title}</span>
-                    <span className="block text-[11px] text-ink-3">{p.department} · {p.effortHours || p.duration}</span>
+                    <span className="block text-sm font-semibold text-ink truncate">{p.title}</span>
+                    <span className="block text-xs text-ink-3">{p.department} · {p.effortHours || p.duration}</span>
                   </span>
                   <StatusBadge status={p.status} />
                 </button>
@@ -89,7 +89,7 @@ export function GlobalSearch({ open, onClose }: { open: boolean; onClose: () => 
 
           {results.people.length > 0 && (
             <div>
-              <p className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide text-ink-3">People</p>
+              <p className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-ink-3">People</p>
               {results.people.map((u) => (
                 <button
                   key={u.id}
@@ -98,8 +98,8 @@ export function GlobalSearch({ open, onClose }: { open: boolean; onClose: () => 
                 >
                   <Avatar initials={u.initials} size="md" name={u.name} />
                   <span className="flex-1 min-w-0">
-                    <span className="block text-sm font-bold text-ink truncate">{u.name}</span>
-                    <span className="block text-[11px] text-ink-3 truncate">{u.role} · {u.department}</span>
+                    <span className="block text-sm font-semibold text-ink truncate">{u.name}</span>
+                    <span className="block text-xs text-ink-3 truncate">{u.role} · {u.department}</span>
                   </span>
                   <Chip tone="primary">{u.availableHoursWeek}h/wk</Chip>
                 </button>

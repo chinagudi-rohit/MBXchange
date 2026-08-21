@@ -84,7 +84,7 @@ export function MyRequests() {
     <div className="anim-fade-up">
       <div className="flex flex-wrap items-end justify-between gap-3 mb-5">
         <div>
-          <h1 className="text-xl font-extrabold text-ink">My Requests</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-ink">My Requests</h1>
           <p className="text-xs text-ink-2 mt-0.5">Everything you've submitted and everything waiting on you — in one place</p>
         </div>
         <Button variant="ghost" size="sm" onClick={load} aria-label="Refresh"><RefreshCw className="w-4 h-4" /></Button>
@@ -94,13 +94,13 @@ export function MyRequests() {
         {(['submitted', 'received'] as const).map((sec) => (
           <button
             key={sec} onClick={() => setSection(sec)}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 ${
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${
               section === sec ? 'bg-primary text-on-primary' : 'text-ink-2 hover:text-ink'
             }`}
           >
             {sec === 'submitted' ? 'Submitted by me' : 'Received'}
             {sec === 'received' && receivedActionable > 0 && (
-              <span className="min-w-4 h-4 px-1 rounded-full bg-primary text-on-primary text-[9px] font-bold flex items-center justify-center">
+              <span className="min-w-4 h-4 px-1 rounded-full bg-primary text-on-primary text-xs font-semibold flex items-center justify-center">
                 {receivedActionable}
               </span>
             )}
@@ -112,7 +112,7 @@ export function MyRequests() {
         <div className="space-y-6">
           {/* Gig applications */}
           <section>
-            <h2 className="text-sm font-bold text-ink mb-3">Work applications & nominations ({applications.length})</h2>
+            <h2 className="text-sm font-semibold text-ink mb-3">Work applications & nominations ({applications.length})</h2>
             {applications.length === 0 ? (
               <EmptyState title="No applications yet" hint="Apply to an opportunity in Work Exchange and track it here." />
             ) : (
@@ -127,23 +127,23 @@ export function MyRequests() {
                         <div className="flex-1 min-w-0">
                           <button
                             onClick={() => { s.setTab('work'); s.setOpenWorkId(a.postId); }}
-                            className="text-sm font-bold text-ink hover:text-primary text-left leading-snug"
+                            className="text-sm font-semibold text-ink hover:text-primary-text text-left leading-snug"
                           >
                             {a.postTitle}
                           </button>
-                          <p className="text-[11px] text-ink-3 mt-0.5">
+                          <p className="text-xs text-ink-3 mt-0.5">
                             {forSomeoneElse ? <>Nominated: <b className="text-ink-2">{a.applicantName}</b> · </> : null}
                             {a.commitment || a.postEffort} · {a.postDepartment} · {timeAgo(a.createdAt)}
                             {a.editedAt && ' · edited'}
                             {a.managerName && <> · approver: <b className="text-ink-2">{a.managerName}</b></>}
                           </p>
                           {a.status === 'awaiting_registration' && (
-                            <p className="text-[11px] text-violet font-semibold mt-1">
+                            <p className="text-xs text-violet font-medium mt-1">
                               Waiting for the admin to register {forSomeoneElse ? `${a.applicantName}'s` : 'your'} manager — then it routes for approval automatically.
                             </p>
                           )}
                           {a.managerNotes && (
-                            <p className="text-[11px] text-ink-2 mt-1 bg-surface-2 rounded-lg px-2.5 py-1.5">
+                            <p className="text-xs text-ink-2 mt-1 bg-surface-2 rounded-lg px-2.5 py-1.5">
                               Manager: “{a.managerNotes}”
                             </p>
                           )}
@@ -174,7 +174,7 @@ export function MyRequests() {
 
           {/* Collab requests sent */}
           <section>
-            <h2 className="text-sm font-bold text-ink mb-3">Collaboration requests sent ({collabSent.length})</h2>
+            <h2 className="text-sm font-semibold text-ink mb-3">Collaboration requests sent ({collabSent.length})</h2>
             {collabSent.length === 0 ? (
               <EmptyState title="No collaboration requests" hint="Ask a specific colleague for help from People & Skills." />
             ) : (
@@ -183,8 +183,8 @@ export function MyRequests() {
                   <Card key={c.id} className="p-4 flex flex-wrap items-center gap-3">
                     <Avatar initials={c.targetInitials} size="sm" name={c.targetName} />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-ink leading-snug">{c.task_title}</p>
-                      <p className="text-[11px] text-ink-3 mt-0.5">
+                      <p className="text-sm font-normal text-ink leading-snug">{c.task_title}</p>
+                      <p className="text-xs text-ink-3 mt-0.5">
                         To {c.targetName} ({c.targetDepartment}) · {c.estimated_hours || 'effort TBD'} · {timeAgo(c.created_at)}
                         {c.edited_at && ' · edited'}
                       </p>
@@ -217,7 +217,7 @@ export function MyRequests() {
           {/* Carpool bookings */}
           {bookings.length > 0 && (
             <section>
-              <h2 className="text-sm font-bold text-ink mb-3">Carpool bookings ({bookings.length})</h2>
+              <h2 className="text-sm font-semibold text-ink mb-3">Carpool bookings ({bookings.length})</h2>
               <Reveal stagger className="space-y-2.5">
                 {bookings.map((b) => (
                   <Card key={b.id} className="p-4 flex flex-wrap items-center gap-3">
@@ -225,8 +225,8 @@ export function MyRequests() {
                       <Car className="w-4 h-4" />
                     </span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-ink truncate">{b.origin} → {b.destination}</p>
-                      <p className="text-[11px] text-ink-3">
+                      <p className="text-sm font-normal text-ink truncate">{b.origin} → {b.destination}</p>
+                      <p className="text-xs text-ink-3">
                         {b.direction === 'to_office' ? 'Morning' : 'Evening'} · {b.departureTime} · driver {b.driverName}
                       </p>
                     </div>
@@ -240,7 +240,7 @@ export function MyRequests() {
           {/* Registration requests */}
           {regRequests.length > 0 && (
             <section>
-              <h2 className="text-sm font-bold text-ink mb-3">Registration requests ({regRequests.length})</h2>
+              <h2 className="text-sm font-semibold text-ink mb-3">Registration requests ({regRequests.length})</h2>
               <Reveal stagger className="space-y-2.5">
                 {regRequests.map((r) => (
                   <Card key={r.id} className="p-4 flex items-center gap-3">
@@ -248,8 +248,8 @@ export function MyRequests() {
                       <UserPlus className="w-4 h-4" />
                     </span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-ink truncate">{r.subjectName} <span className="text-ink-3 font-medium">({r.subjectKind})</span></p>
-                      <p className="text-[11px] text-ink-3 line-clamp-1">{r.note}</p>
+                      <p className="text-sm font-normal text-ink truncate">{r.subjectName} <span className="text-ink-3 font-medium">({r.subjectKind})</span></p>
+                      <p className="text-xs text-ink-3 line-clamp-1">{r.note}</p>
                     </div>
                     <StatusBadge status={r.status === 'pending' ? 'awaiting_registration' : r.status} />
                   </Card>
@@ -260,7 +260,7 @@ export function MyRequests() {
         </div>
       ) : (
         <section>
-          <h2 className="text-sm font-bold text-ink mb-3">Collaboration requests to me ({collabReceived.length})</h2>
+          <h2 className="text-sm font-semibold text-ink mb-3">Collaboration requests to me ({collabReceived.length})</h2>
           {collabReceived.length === 0 ? (
             <EmptyState title="Nothing waiting on you" hint="Requests colleagues send you will land here." />
           ) : (
@@ -270,8 +270,8 @@ export function MyRequests() {
                   <div className="flex flex-wrap items-center gap-3">
                     <Avatar initials={c.requesterInitials} size="sm" name={c.requesterName} />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-ink leading-snug">{c.task_title}</p>
-                      <p className="text-[11px] text-ink-3 mt-0.5">
+                      <p className="text-sm font-normal text-ink leading-snug">{c.task_title}</p>
+                      <p className="text-xs text-ink-3 mt-0.5">
                         From {c.requesterName} ({c.requesterDepartment}) · {c.estimated_hours || 'effort TBD'}
                         {c.dates && ` · ${c.dates}`} · {timeAgo(c.created_at)}{c.edited_at && ' · edited'}
                       </p>
@@ -326,7 +326,7 @@ export function MyRequests() {
           <Field label="Note to manager">
             <TextArea value={editForm.note} onChange={(e) => setEditForm({ ...editForm, note: e.target.value })} />
           </Field>
-          <p className="text-[11px] text-ink-3 bg-surface-2 rounded-xl px-3 py-2.5">
+          <p className="text-xs text-ink-3 bg-surface-2 rounded-xl px-3 py-2.5">
             Edits are only possible while the request is pending. The approver is notified and sees an “edited” marker.
           </p>
         </div>

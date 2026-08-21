@@ -161,7 +161,7 @@ export function Button({
   const variants: Record<ButtonVariant, string> = {
     primary: 'bg-primary text-on-primary hover:bg-primary-strong shadow-sm',
     secondary: 'panel text-ink border border-line-strong hover:bg-surface-2',
-    soft: 'bg-primary-soft text-primary hover:bg-primary hover:text-on-primary',
+    soft: 'bg-primary-soft text-primary-text hover:bg-primary hover:text-on-primary',
     ghost: 'text-ink-2 hover:bg-surface-2 hover:text-ink',
     danger: 'bg-red-soft text-red hover:bg-red hover:text-white'
   };
@@ -212,7 +212,7 @@ export function Modal({
       >
         <div className="flex items-start justify-between gap-4 px-6 pt-5 pb-4 border-b border-line">
           <div className="min-w-0">
-            <h2 className="text-base font-bold text-ink truncate">{title}</h2>
+            <h2 className="text-base font-semibold text-ink truncate">{title}</h2>
             {subtitle && <p className="text-xs text-ink-2 mt-0.5">{subtitle}</p>}
           </div>
           <button
@@ -262,7 +262,7 @@ export function Drawer({
       <aside className={`absolute right-0 top-0 h-full w-full ${width} panel-overlay shadow-pop flex flex-col animate-[fade-in_200ms_ease-out]`}>
         <div className="flex items-start justify-between gap-3 px-5 py-4 border-b border-line shrink-0">
           <div className="min-w-0">
-            <h2 className="text-base font-bold text-ink truncate">{title}</h2>
+            <h2 className="text-base font-semibold text-ink truncate">{title}</h2>
             {subtitle && <p className="text-xs text-ink-2 mt-0.5 truncate">{subtitle}</p>}
           </div>
           <button
@@ -291,7 +291,7 @@ export function Field({ label, required, hint, children }: {
         {label}{required && <span className="text-red ml-0.5">*</span>}
       </span>
       {children}
-      {hint && <span className="block text-[11px] text-ink-3 mt-1">{hint}</span>}
+      {hint && <span className="block text-xs text-ink-3 mt-1">{hint}</span>}
     </label>
   );
 }
@@ -313,7 +313,7 @@ export function Select(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
 /* ── Badges & chips ──────────────────────────────────────────────────── */
 
 const STATUS_STYLES: Record<string, string> = {
-  'Open': 'bg-primary-soft text-primary',
+  'Open': 'bg-primary-soft text-primary-text',
   'In Progress': 'bg-amber-soft text-amber',
   'Completed': 'bg-green-soft text-green',
   'Cancelled': 'bg-surface-2 text-ink-3',
@@ -340,7 +340,7 @@ const STATUS_LABELS: Record<string, string> = {
 
 export function StatusBadge({ status }: { status: string }) {
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold ${STATUS_STYLES[status] || 'bg-surface-2 text-ink-2'}`}>
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold ${STATUS_STYLES[status] || 'bg-surface-2 text-ink-2'}`}>
       {STATUS_LABELS[status] || status}
     </span>
   );
@@ -355,7 +355,7 @@ const URGENCY_STYLES: Record<string, string> = {
 
 export function UrgencyBadge({ urgency }: { urgency: string }) {
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold ${URGENCY_STYLES[urgency] || 'bg-surface-2 text-ink-2'}`}>
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold ${URGENCY_STYLES[urgency] || 'bg-surface-2 text-ink-2'}`}>
       {urgency}
     </span>
   );
@@ -363,8 +363,8 @@ export function UrgencyBadge({ urgency }: { urgency: string }) {
 
 export function Chip({ children, tone = 'default' }: { children: React.ReactNode; tone?: 'default' | 'primary' }) {
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium ${
-      tone === 'primary' ? 'bg-primary-soft text-primary' : 'bg-surface-2 text-ink-2'
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${
+      tone === 'primary' ? 'bg-primary-soft text-primary-text' : 'bg-surface-2 text-ink-2'
     }`}>
       {children}
     </span>
@@ -376,7 +376,7 @@ export function AiBadge({ verdict }: { verdict: string }) {
     : verdict === 'Review Capacity' ? 'bg-amber-soft text-amber'
     : 'bg-red-soft text-red';
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold ${style}`}>
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold ${style}`}>
       ✦ AI: {verdict}
     </span>
   );
@@ -385,17 +385,17 @@ export function AiBadge({ verdict }: { verdict: string }) {
 /* ── Avatar ──────────────────────────────────────────────────────────── */
 
 const AVATAR_TONES = [
-  'bg-primary-soft text-primary', 'bg-violet-soft text-violet', 'bg-blue-soft text-blue',
+  'bg-primary-soft text-primary-text', 'bg-violet-soft text-violet', 'bg-blue-soft text-blue',
   'bg-green-soft text-green', 'bg-amber-soft text-amber'
 ];
 
 export function Avatar({ initials, size = 'md', name }: { initials: string; size?: 'sm' | 'md' | 'lg' | 'xl'; name?: string }) {
-  const sizes = { sm: 'w-6 h-6 text-[9px]', md: 'w-8 h-8 text-[11px]', lg: 'w-10 h-10 text-xs', xl: 'w-16 h-16 text-xl' };
+  const sizes = { sm: 'w-6 h-6 text-xs', md: 'w-8 h-8 text-xs', lg: 'w-10 h-10 text-xs', xl: 'w-16 h-16 text-xl' };
   const tone = AVATAR_TONES[(initials.charCodeAt(0) + (initials.charCodeAt(1) || 0)) % AVATAR_TONES.length];
   return (
     <span
       title={name}
-      className={`inline-flex items-center justify-center rounded-full font-bold shrink-0 ${sizes[size]} ${tone}`}
+      className={`inline-flex items-center justify-center rounded-full font-semibold shrink-0 ${sizes[size]} ${tone}`}
     >
       {initials}
     </span>
@@ -409,7 +409,7 @@ export function SaveButton({ saved, onToggle, className = '' }: { saved: boolean
     <button
       onClick={(e) => { e.stopPropagation(); onToggle(); }}
       aria-label={saved ? 'Remove from saved' : 'Save item'}
-      className={`p-2 rounded-lg transition-colors ${saved ? 'text-primary bg-primary-soft' : 'text-ink-3 hover:text-ink hover:bg-surface-2'} ${className}`}
+      className={`p-2 rounded-lg transition-colors ${saved ? 'text-primary-text bg-primary-soft' : 'text-ink-3 hover:text-ink hover:bg-surface-2'} ${className}`}
     >
       <Bookmark className={`w-4 h-4 ${saved ? 'fill-current' : ''}`} />
     </button>
@@ -424,7 +424,7 @@ export function EmptyState({ title, hint, action }: { title: string; hint?: stri
       <div className="w-12 h-12 rounded-2xl bg-surface-2 flex items-center justify-center mb-3">
         <Inbox className="w-5 h-5 text-ink-3" />
       </div>
-      <p className="text-sm font-semibold text-ink">{title}</p>
+      <p className="text-sm font-normal text-ink">{title}</p>
       {hint && <p className="text-xs text-ink-3 mt-1 max-w-xs">{hint}</p>}
       {action && <div className="mt-4">{action}</div>}
     </div>
@@ -449,7 +449,7 @@ export function Toasts({ toasts, onDismiss }: {
         <div key={t.id} className="flex items-start gap-3 panel-overlay rounded-xl shadow-pop px-4 py-3 anim-pop-in">
           <span className="mt-0.5 shrink-0">{icons[t.kind]}</span>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-ink leading-tight">{t.title}</p>
+            <p className="text-sm font-normal text-ink leading-tight">{t.title}</p>
             {t.message && <p className="text-xs text-ink-2 mt-0.5">{t.message}</p>}
           </div>
           <button onClick={() => onDismiss(t.id)} aria-label="Dismiss" className="shrink-0 text-ink-3 hover:text-ink p-0.5">
@@ -467,7 +467,7 @@ export function Toasts({ toasts, onDismiss }: {
 export function SectionTitle({ children, right }: { children: React.ReactNode; right?: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-3 mb-3">
-      <h2 className="text-sm font-bold text-ink">{children}</h2>
+      <h2 className="text-sm font-semibold text-ink">{children}</h2>
       {right}
     </div>
   );
@@ -479,7 +479,7 @@ export function Card({ children, className = '', onClick }: {
   return (
     <div
       onClick={onClick}
-      className={`panel rounded-2xl shadow-card ${
+      className={`panel rounded-[1rem] shadow-card ${
         onClick ? 'cursor-pointer transition-all duration-200 hover:shadow-pop hover:-translate-y-0.5' : ''
       } ${className}`}
     >
@@ -505,7 +505,7 @@ export function SeatsIndicator({ total, filled }: { total: number; filled: numbe
           <span key={i} className={`w-1.5 h-3.5 rounded-sm ${i < filled ? 'bg-primary' : 'bg-line-strong'}`} />
         ))}
       </span>
-      <span className="text-[11px] font-semibold text-ink-2">
+      <span className="text-xs font-semibold text-ink-2">
         {open === 0 ? 'All seats filled' : `${open} of ${total} seat${total > 1 ? 's' : ''} open`}
       </span>
     </span>

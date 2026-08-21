@@ -15,7 +15,7 @@ function TempPasswordReveal({ email, password, onDone }: { email: string; passwo
   return (
     <div className="space-y-4">
       <div className="p-4 rounded-xl bg-green-soft/60 border border-green/30">
-        <p className="flex items-center gap-1.5 text-sm font-bold text-green"><CheckCircle2 className="w-4 h-4" /> Account created</p>
+        <p className="flex items-center gap-1.5 text-sm font-normal text-green"><CheckCircle2 className="w-4 h-4" /> Account created</p>
         <p className="text-xs text-ink-2 mt-1">
           Share these credentials with the employee over a secure channel. They can change the password after signing in.
         </p>
@@ -23,12 +23,12 @@ function TempPasswordReveal({ email, password, onDone }: { email: string; passwo
       <div className="space-y-2">
         <div className="flex items-center justify-between p-3 rounded-xl bg-surface-2">
           <span className="text-xs font-semibold text-ink-2">Email</span>
-          <span className="text-xs font-mono font-bold text-ink">{email}</span>
+          <span className="text-xs font-mono font-semibold text-ink">{email}</span>
         </div>
         <div className="flex items-center justify-between p-3 rounded-xl bg-surface-2">
           <span className="text-xs font-semibold text-ink-2">Temporary password</span>
           <span className="flex items-center gap-2">
-            <span className="text-sm font-mono font-extrabold text-primary">{password}</span>
+            <span className="text-sm font-mono font-semibold text-primary-text">{password}</span>
             <button
               onClick={() => { navigator.clipboard.writeText(password); s.toast('info', 'Password copied'); }}
               aria-label="Copy password" className="p-1.5 rounded-lg text-ink-3 hover:text-ink hover:bg-line"
@@ -38,7 +38,7 @@ function TempPasswordReveal({ email, password, onDone }: { email: string; passwo
           </span>
         </div>
       </div>
-      <p className="text-[11px] text-ink-3">This password is shown only once — it is stored hashed.</p>
+      <p className="text-xs text-ink-3">This password is shown only once — it is stored hashed.</p>
       <div className="flex justify-end">
         <Button onClick={onDone}>Done</Button>
       </div>
@@ -153,7 +153,7 @@ export function AdminConsole() {
     <div className="anim-fade-up">
       <div className="flex flex-wrap items-end justify-between gap-3 mb-5">
         <div>
-          <h1 className="text-xl font-extrabold text-ink">Admin Console</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-ink">Admin Console</h1>
           <p className="text-xs text-ink-2 mt-0.5">Accounts, registrations, governance and platform insight</p>
         </div>
         <Button variant="ghost" size="sm" onClick={load} aria-label="Refresh"><RefreshCw className="w-4 h-4" /></Button>
@@ -163,7 +163,7 @@ export function AdminConsole() {
         {sections.map((sec) => (
           <button
             key={sec.id} onClick={() => setSection(sec.id)}
-            className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 ${
+            className={`px-3.5 py-2 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${
               section === sec.id ? 'bg-primary text-on-primary' : 'text-ink-2 hover:text-ink'
             }`}
           >
@@ -187,23 +187,23 @@ export function AdminConsole() {
                 ['Marketplace listings', overview.stats.activeListings]
               ].map(([label, value]) => (
                 <Card key={label as string} className="p-4">
-                  <p className="text-2xl font-extrabold text-ink">{value as number}</p>
-                  <p className="text-[11px] font-medium text-ink-2 mt-0.5">{label}</p>
+                  <p className="text-2xl font-medium text-ink">{value as number}</p>
+                  <p className="text-xs font-medium text-ink-2 mt-0.5">{label}</p>
                 </Card>
               ))}
             </div>
-            <Card className="p-5">
-              <h3 className="text-sm font-bold text-ink mb-4">Requirements by department</h3>
+            <Card className="p-7">
+              <h3 className="text-sm font-semibold text-ink mb-4">Requirements by department</h3>
               <div className="space-y-2.5">
                 {overview.departmentLoad.map((d: any) => {
                   const max = Math.max(...overview.departmentLoad.map((x: any) => x.posts));
                   return (
                     <div key={d.department} className="flex items-center gap-3">
-                      <span className="text-[11px] font-bold text-ink-2 w-20 shrink-0">{d.department}</span>
+                      <span className="text-xs font-semibold text-ink-2 w-20 shrink-0">{d.department}</span>
                       <div className="flex-1 h-2.5 rounded-full bg-surface-2 overflow-hidden">
                         <div className="h-full rounded-full bg-primary" style={{ width: `${(d.posts / max) * 100}%` }} />
                       </div>
-                      <span className="text-[11px] font-bold text-ink w-6 text-right">{d.posts}</span>
+                      <span className="text-xs font-semibold text-ink w-6 text-right">{d.posts}</span>
                     </div>
                   );
                 })}
@@ -224,7 +224,7 @@ export function AdminConsole() {
               <thead>
                 <tr className="border-b border-line">
                   {['User', 'Role', 'Department', 'Manager', 'Status', 'Actions'].map((h) => (
-                    <th key={h} className="px-4 py-3 text-[10px] font-bold uppercase tracking-wide text-ink-3">{h}</th>
+                    <th key={h} className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-ink-3">{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -237,8 +237,8 @@ export function AdminConsole() {
                         <span className="flex items-center gap-2.5">
                           <Avatar initials={u.initials} size="sm" name={u.name} />
                           <span className="min-w-0">
-                            <span className="block text-xs font-bold text-ink truncate">{u.name}</span>
-                            <span className="block text-[10px] text-ink-3 truncate">{u.email}</span>
+                            <span className="block text-xs font-semibold text-ink truncate">{u.name}</span>
+                            <span className="block text-xs text-ink-3 truncate">{u.email}</span>
                           </span>
                         </span>
                       </td>
@@ -256,7 +256,7 @@ export function AdminConsole() {
                             <>
                               <button title="Sign in as (audit-logged)" aria-label={`View as ${u.name}`}
                                 onClick={() => s.impersonate(u.id)}
-                                className="p-1.5 rounded-lg text-ink-3 hover:text-primary hover:bg-primary-soft">
+                                className="p-1.5 rounded-lg text-ink-3 hover:text-primary-text hover:bg-primary-soft">
                                 <Eye className="w-3.5 h-3.5" />
                               </button>
                               <button title="Reset password" aria-label={`Reset password for ${u.name}`}
@@ -267,7 +267,7 @@ export function AdminConsole() {
                               <button title={u.status === 'active' ? 'Deactivate' : 'Reactivate'}
                                 aria-label={`${u.status === 'active' ? 'Deactivate' : 'Reactivate'} ${u.name}`}
                                 onClick={() => toggleActive(u)}
-                                className="p-1.5 rounded-lg text-ink-3 hover:text-red hover:bg-red-soft text-[10px] font-bold">
+                                className="p-1.5 rounded-lg text-ink-3 hover:text-red hover:bg-red-soft text-xs font-bold">
                                 {u.status === 'active' ? '⏻' : '↺'}
                               </button>
                             </>
@@ -297,11 +297,11 @@ export function AdminConsole() {
                     <UserPlus className="w-4.5 h-4.5" />
                   </span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-ink">
+                    <p className="text-sm font-normal text-ink">
                       {r.subjectName} <span className="text-ink-3 font-medium">· {r.subjectKind} registration</span>
                     </p>
                     <p className="text-xs text-ink-2 mt-0.5 leading-relaxed">{r.note}</p>
-                    <p className="text-[10px] text-ink-3 mt-1">
+                    <p className="text-xs text-ink-3 mt-1">
                       Requested by {r.requestedByName} · {timeAgo(r.createdAt)}
                       {r.postTitle && <> · for “{r.postTitle.slice(0, 50)}”</>}
                     </p>
@@ -333,7 +333,7 @@ export function AdminConsole() {
               <div key={i} className="flex items-center gap-3 px-4.5 px-5 py-3">
                 <Chip tone="primary">{a.action}</Chip>
                 <span className="text-xs text-ink-2 flex-1 min-w-0 truncate">{a.subject}</span>
-                <span className="text-[10px] text-ink-3 shrink-0">{a.actorName || 'system'} · {timeAgo(a.createdAt)}</span>
+                <span className="text-xs text-ink-3 shrink-0">{a.actorName || 'system'} · {timeAgo(a.createdAt)}</span>
               </div>
             ))}
             {overview.auditTail.length === 0 && <EmptyState title="No audit entries" />}

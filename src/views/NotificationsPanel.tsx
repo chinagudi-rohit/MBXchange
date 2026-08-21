@@ -5,10 +5,10 @@ import { api, timeAgo } from '../lib/api';
 import { Drawer, Button, EmptyState } from '../components/ui';
 
 const TYPE_ICONS: Record<string, React.ReactNode> = {
-  manager_approval: <ShieldCheck className="w-4 h-4 text-primary" />,
+  manager_approval: <ShieldCheck className="w-4 h-4 text-primary-text" />,
   match_found: <Sparkles className="w-4 h-4 text-violet" />,
   direct_message: <MessageSquare className="w-4 h-4 text-blue" />,
-  collab_request: <UserPlus className="w-4 h-4 text-primary" />,
+  collab_request: <UserPlus className="w-4 h-4 text-primary-text" />,
   registration_request: <UserPlus className="w-4 h-4 text-violet" />,
   feedback_received: <Star className="w-4 h-4 text-amber" />,
   reply: <MessageSquare className="w-4 h-4 text-blue" />,
@@ -80,11 +80,11 @@ export function NotificationsPanel() {
               </span>
               <span className="min-w-0 flex-1">
                 <span className="flex items-center justify-between gap-2">
-                  <span className={`text-sm truncate ${!n.read ? 'font-bold text-ink' : 'font-semibold text-ink-2'}`}>{n.title}</span>
+                  <span className={`text-sm truncate ${!n.read ? 'font-semibold text-ink' : 'font-semibold text-ink-2'}`}>{n.title}</span>
                   {!n.read && <span className="w-2 h-2 rounded-full bg-primary shrink-0" />}
                 </span>
                 <span className="block text-xs text-ink-3 mt-0.5 leading-relaxed">{n.description}</span>
-                <span className="block text-[10px] text-ink-3 mt-1">{timeAgo(n.createdAt)}</span>
+                <span className="block text-xs text-ink-3 mt-1">{timeAgo(n.createdAt)}</span>
               </span>
             </button>
           ))}

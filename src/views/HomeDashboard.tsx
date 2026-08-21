@@ -42,10 +42,10 @@ export function HomeDashboard() {
   ];
 
   return (
-    <div className="anim-fade-up space-y-6">
+    <div className="anim-fade-up space-y-14">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-extrabold text-ink">Welcome back, {firstName}</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-ink">Welcome back, {firstName}</h1>
           <p className="text-sm text-ink-2 mt-1">
             Find help, lend your skills, and keep cross-department work moving.
           </p>
@@ -62,14 +62,12 @@ export function HomeDashboard() {
 
       <Reveal stagger className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {stats.map((st) => (
-          <Card key={st.label} className="p-4 flex items-center gap-3.5" onClick={() => s.setTab(st.tab)}>
-            <span className="w-9 h-9 rounded-xl bg-primary-soft text-primary flex items-center justify-center shrink-0">
+          <Card key={st.label} className="p-6" onClick={() => s.setTab(st.tab)}>
+            <span className="flex items-center gap-2 text-ink-3">
               {st.icon}
+              <span className="text-xs font-medium uppercase tracking-wide">{st.label}</span>
             </span>
-            <span className="min-w-0">
-              <span className="block text-xl font-extrabold text-ink leading-none">{st.value}</span>
-              <span className="block text-[11px] font-medium text-ink-2 mt-1 truncate">{st.label}</span>
-            </span>
+            <span className="block text-2xl font-bold tracking-tight text-ink mt-3 leading-none">{st.value}</span>
           </Card>
         ))}
       </Reveal>
@@ -78,11 +76,11 @@ export function HomeDashboard() {
       {!recs.configured && (
         <Card className="p-5 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3.5">
-            <span className="w-10 h-10 rounded-2xl bg-primary-soft text-primary flex items-center justify-center shrink-0">
+            <span className="w-10 h-10 rounded-2xl bg-primary-soft text-primary-text flex items-center justify-center shrink-0">
               <Cpu className="w-5 h-5" />
             </span>
             <div>
-              <p className="text-sm font-bold text-ink">Add your specialisation</p>
+              <p className="text-sm font-normal text-ink">Add your specialisation</p>
               <p className="text-xs text-ink-2">
                 Tell us your tech stack and we'll rank opportunities against it instead of showing everything.
               </p>
@@ -95,16 +93,16 @@ export function HomeDashboard() {
       <section>
         <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
           <div className="flex items-center gap-2">
-            <h2 className="text-sm font-bold text-ink">Recommended for you</h2>
+            <h2 className="text-sm font-semibold text-ink">Recommended for you</h2>
             {s.user?.specialisation && (
               <Chip tone="primary">matched to {s.user.specialisation}</Chip>
             )}
           </div>
           <div className="flex items-center gap-3">
-            <button onClick={() => s.setProfileOpen(true)} className="text-xs font-bold text-ink-2 hover:text-ink">
+            <button onClick={() => s.setProfileOpen(true)} className="text-xs font-semibold text-ink-2 hover:text-ink">
               Tune my stack
             </button>
-            <button onClick={() => s.setTab('work')} className="text-xs font-bold text-primary hover:underline underline-offset-2 flex items-center gap-1">
+            <button onClick={() => s.setTab('work')} className="text-xs font-medium text-ink-2 hover:text-ink hover:underline underline-offset-2 flex items-center gap-1">
               All opportunities <ArrowRight className="w-3 h-3" />
             </button>
           </div>
@@ -113,20 +111,20 @@ export function HomeDashboard() {
           {recommended.map((p: any) => (
             <Card key={p.id} className="p-5 h-full flex flex-col" onClick={() => { s.setTab('work'); s.setOpenWorkId(p.id); }}>
               <div className="flex items-center gap-1.5 flex-wrap mb-2">
-                <Chip tone="primary">{p.department}</Chip>
+                <Chip>{p.department}</Chip>
                 <UrgencyBadge urgency={p.urgency} />
               </div>
-              <h3 className="text-sm font-bold text-ink leading-snug">{p.title}</h3>
+              <h3 className="text-base font-semibold text-ink leading-snug">{p.title}</h3>
               {p.matchedSkills?.length > 0 && (
-                <p className="text-[11px] text-ink-2 mt-2">
-                  <span className="font-bold text-primary">Matches your stack:</span>{' '}
+                <p className="text-xs text-ink-2 mt-2">
+                  <span className="font-medium text-ink-2">Matches your stack:</span>{' '}
                   {p.matchedSkills.slice(0, 3).join(', ')}
                   {p.matchedSkills.length > 3 && ` +${p.matchedSkills.length - 3}`}
                 </p>
               )}
               <div className="flex items-center justify-between mt-auto pt-3">
                 <SeatsIndicator total={p.seats} filled={p.seatsFilled} />
-                <span className="text-[11px] text-ink-3">{p.effortHours || p.duration}</span>
+                <span className="text-xs text-ink-3">{p.effortHours || p.duration}</span>
               </div>
             </Card>
           ))}
@@ -141,8 +139,8 @@ export function HomeDashboard() {
       {pendingMine.length > 0 && (
         <section>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-bold text-ink">My pending requests</h2>
-            <button onClick={() => s.setTab('requests')} className="text-xs font-bold text-primary hover:underline underline-offset-2 flex items-center gap-1">
+            <h2 className="text-sm font-semibold text-ink">My pending requests</h2>
+            <button onClick={() => s.setTab('requests')} className="text-xs font-medium text-ink-2 hover:text-ink hover:underline underline-offset-2 flex items-center gap-1">
               My Requests <ArrowRight className="w-3 h-3" />
             </button>
           </div>
@@ -151,8 +149,8 @@ export function HomeDashboard() {
               <Card key={r.id} className="px-4.5 px-5 py-3.5 flex items-center gap-3" onClick={() => s.setTab('requests')}>
                 <Avatar initials={r.applicantInitials} size="sm" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-bold text-ink truncate">{r.postTitle}</p>
-                  <p className="text-[11px] text-ink-3">
+                  <p className="text-xs font-medium text-ink truncate">{r.postTitle}</p>
+                  <p className="text-xs text-ink-3">
                     {r.applicantId === s.user?.id ? 'You' : r.applicantName} · {r.commitment || r.postEffort} · {timeAgo(r.createdAt)}
                   </p>
                 </div>
@@ -169,7 +167,7 @@ export function HomeDashboard() {
             <Compass className="w-5 h-5" />
           </span>
           <div>
-            <p className="text-sm font-bold text-ink">Beyond Work</p>
+            <p className="text-sm font-normal text-ink">Beyond Work</p>
             <p className="text-xs text-ink-2">Marketplace listings, carpool rides and communities — everything off-desk lives here.</p>
           </div>
         </div>
