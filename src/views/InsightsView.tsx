@@ -48,6 +48,19 @@ export function InsightsView() {
     !mySkills.some((sk) => g.skill.toLowerCase().includes(sk) || sk.includes(g.skill.toLowerCase().split(' ')[0]))
   ).slice(0, 4);
 
+  // Organisation totals, summed from the same user records the directory shows.
+  const orgTotals = (() => {
+    const contributors = s.users.filter((u) => (u.hoursContributed || 0) > 0);
+    const hours = contributors.reduce((sum, u) => sum + (u.hoursContributed || 0), 0);
+    const gigs = contributors.reduce((sum, u) => sum + (u.collaborationsCount || 0), 0);
+    const multiDept = contributors.filter((u) => (u.departmentsSupported || 0) > 1).length;
+    return {
+      hours, gigs,
+      people: contributors.length,
+      crossPct: contributors.length ? Math.round((multiDept / contributors.length) * 100) : 0
+    };
+  })();
+
   const maxDeptPosts = Math.max(1, ...data.departmentLoad.map((d: any) => d.posts));
   const maxMentions = Math.max(1, ...(data.topDemand || []).map((d: any) => d.mentions));
 
@@ -58,6 +71,22 @@ export function InsightsView() {
         <p className="text-xs text-ink-2 mt-0.5">
           Where the organisation needs skills, where it has spare capacity — open to everyone
         </p>
+      </div>
+
+      {/* Headline numbers — all computed from live records, not fixed samples */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {[
+          { label: 'Hours contributed', value: `${orgTotals.hours}h`, hint: 'Across completed engagements' },
+          { label: 'Completed engagements', value: orgTotals.gigs, hint: 'Approved and finished' },
+          { label: 'Active contributors', value: orgTotals.people, hint: 'People who have helped' },
+          { label: 'Cross-department share', value: `${orgTotals.crossPct}%`, hint: 'Helper outside the requesting team' }
+        ].map((k) => (
+          <Card key={k.label} className="p-5">
+            <p className="text-xs font-medium uppercase tracking-wide text-ink-3">{k.label}</p>
+            <p className="text-2xl font-bold tracking-tight text-ink mt-2 leading-none tabular-nums">{k.value}</p>
+            <p className="text-xs text-ink-3 mt-1.5">{k.hint}</p>
+          </Card>
+        ))}
       </div>
 
       {/* Personal upskilling callout */}

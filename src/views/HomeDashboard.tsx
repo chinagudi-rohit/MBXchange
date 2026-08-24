@@ -1,11 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { Briefcase, ListChecks, ShieldCheck, Zap, ArrowRight, Compass, Users, Plus, Cpu } from 'lucide-react';
+import {
+  Briefcase, ListChecks, ShieldCheck, Zap, ArrowRight, Compass, Users, Plus, Cpu,
+  Award, Search, HandHeart
+} from 'lucide-react';
 import { useStore } from '../lib/store';
 import { api, timeAgo } from '../lib/api';
 import {
   Card, Chip, StatusBadge, UrgencyBadge, Button, SeatsIndicator, Avatar, Reveal
 } from '../components/ui';
 import { WorkFormModal } from './WorkExchange';
+import { ActivityTelemetry } from './ActivityTelemetry';
+import { TiltCard } from '../components/TiltCard';
 
 export function HomeDashboard() {
   const s = useStore();
@@ -31,6 +36,33 @@ export function HomeDashboard() {
   const activeMine = myRequests.filter((r) => r.status === 'approved' && r.postStatus !== 'Completed' && r.postStatus !== 'Cancelled');
   const openCount = s.posts.filter((p) => p.status === 'Open').length;
   const firstName = (s.user?.name || '').replace(/^(Dr\.|Mr\.|Ms\.)\s*/, '').split(' ')[0];
+
+  // Tier ladder mirrored from the server so the dashboard can show progress
+  // toward the next rung without an extra round-trip.
+  const TIER_LADDER = [
+    { name: 'Contributor', icon: '\u25c7', hours: 0, gigs: 0, depts: 0 },
+    { name: 'Collaborator', icon: '\u25c6', hours: 10, gigs: 2, depts: 1 },
+    { name: 'Connector', icon: '\u2726', hours: 40, gigs: 5, depts: 2 },
+    { name: 'Catalyst', icon: '\u2727', hours: 100, gigs: 12, depts: 3 },
+    { name: 'Principal', icon: '\u2605', hours: 250, gigs: 25, depts: 5 }
+  ];
+  const currentTierName = s.user?.tier || 'Contributor';
+  const tierIdx = Math.max(0, TIER_LADDER.findIndex((t) => t.name === currentTierName));
+  const tierIcon = TIER_LADDER[tierIdx]?.icon || '\u25c7';
+  const nextTier = TIER_LADDER[tierIdx + 1];
+  const tierProgress = (() => {
+    if (!nextTier || !s.user) return null;
+    const h = s.user.hoursContributed || 0;
+    const g = s.user.collaborationsCount || 0;
+    const d = s.user.departmentsSupported || 0;
+    const needs: string[] = [];
+    if (nextTier.hours > h) needs.push(`${nextTier.hours - h}h more`);
+    if (nextTier.gigs > g) needs.push(`${nextTier.gigs - g} more ${nextTier.gigs - g === 1 ? 'engagement' : 'engagements'}`);
+    if (nextTier.depts > d) needs.push(`${nextTier.depts - d} more ${nextTier.depts - d === 1 ? 'department' : 'departments'}`);
+    if (needs.length === 0) return null;
+    const pct = Math.min(100, Math.round((h / Math.max(1, nextTier.hours)) * 100));
+    return { next: nextTier.name, needs: needs.join(', '), pct };
+  })();
 
   const stats = [
     { label: 'Open opportunities', value: openCount, icon: <Briefcase className="w-4 h-4" />, tab: 'work' as const },
@@ -72,6 +104,69 @@ export function HomeDashboard() {
         ))}
       </Reveal>
 
+      {/* Post a requirement is the product's core action, so it gets a permanent
+          home on the dashboard rather than living only in the header. */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3.5">
+        <Card className="p-5 lg:col-span-2">
+          <h2 className="text-sm font-semibold text-ink mb-3.5">Quick actions</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+            {[
+              { label: 'Post a requirement', hint: 'Ask for help', icon: <Plus className="w-4 h-4" />, tone: 'primary', onClick: () => setNewOpen(true) },
+              { label: 'Offer bandwidth', hint: 'Lend your time', icon: <Zap className="w-4 h-4" />, tone: 'green', onClick: () => { s.setTab('work'); } },
+              { label: 'Find experts', hint: 'Search people', icon: <Search className="w-4 h-4" />, tone: 'violet', onClick: () => s.setTab('people') },
+              { label: 'My requests', hint: 'Track progress', icon: <ListChecks className="w-4 h-4" />, tone: 'amber', onClick: () => s.setTab('requests') }
+            ].map((a) => (
+              <button
+                key={a.label}
+                onClick={a.onClick}
+                className="p-3.5 rounded-xl bg-surface-2 hover:bg-surface border border-transparent hover:border-line-strong text-left transition-all group"
+              >
+                <span className={`w-8 h-8 rounded-xl flex items-center justify-center mb-2.5 transition-transform group-hover:scale-110 ${
+                  a.tone === 'primary' ? 'bg-primary text-on-primary'
+                  : a.tone === 'green' ? 'bg-green-soft text-green'
+                  : a.tone === 'violet' ? 'bg-violet-soft text-violet'
+                  : 'bg-amber-soft text-amber'
+                }`}>
+                  {a.icon}
+                </span>
+                <span className="block text-xs font-semibold text-ink leading-tight">{a.label}</span>
+                <span className="block text-xs text-ink-3 mt-0.5">{a.hint}</span>
+              </button>
+            ))}
+          </div>
+        </Card>
+
+        {/* Contribution tier — earned from completed work, not assigned */}
+        <Card className="p-5 flex flex-col">
+          <h2 className="text-sm font-semibold text-ink flex items-center gap-2">
+            <Award className="w-4 h-4 text-amber" /> Your tier
+          </h2>
+          <div className="flex items-center gap-3 mt-3.5">
+            <span className="w-12 h-12 rounded-2xl bg-amber-soft text-amber flex items-center justify-center text-xl shrink-0">
+              {tierIcon}
+            </span>
+            <div className="min-w-0">
+              <p className="text-base font-semibold text-ink leading-tight">{s.user?.tier || 'Contributor'}</p>
+              <p className="text-xs text-ink-3 mt-0.5">
+                {s.user?.hoursContributed ?? 0}h · {s.user?.collaborationsCount ?? 0} engagements
+              </p>
+            </div>
+          </div>
+          {tierProgress && (
+            <div className="mt-auto pt-4">
+              <div className="h-1.5 rounded-full bg-surface-2 overflow-hidden">
+                <div className="h-full rounded-full bg-amber transition-all" style={{ width: `${tierProgress.pct}%` }} />
+              </div>
+              <p className="text-xs text-ink-3 mt-2 leading-relaxed">
+                {tierProgress.needs} to reach <b className="text-ink-2">{tierProgress.next}</b>
+              </p>
+            </div>
+          )}
+        </Card>
+      </div>
+
+      <ActivityTelemetry />
+
       {/* Prompt to configure the stack — recommendations depend on it */}
       {!recs.configured && (
         <Card className="p-5 flex flex-wrap items-center justify-between gap-3">
@@ -109,7 +204,8 @@ export function HomeDashboard() {
         </div>
         <Reveal stagger className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
           {recommended.map((p: any) => (
-            <Card key={p.id} className="p-5 h-full flex flex-col" onClick={() => { s.setTab('work'); s.setOpenWorkId(p.id); }}>
+            <TiltCard key={p.id}>
+            <Card className="p-5 h-full flex flex-col" onClick={() => { s.setTab('work'); s.setOpenWorkId(p.id); }}>
               <div className="flex items-center gap-1.5 flex-wrap mb-2">
                 <Chip>{p.department}</Chip>
                 <UrgencyBadge urgency={p.urgency} />
@@ -127,6 +223,7 @@ export function HomeDashboard() {
                 <span className="text-xs text-ink-3">{p.effortHours || p.duration}</span>
               </div>
             </Card>
+            </TiltCard>
           ))}
           {recommended.length === 0 && (
             <Card className="p-6 md:col-span-2 xl:col-span-3 text-center">

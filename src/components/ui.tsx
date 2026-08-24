@@ -389,15 +389,52 @@ const AVATAR_TONES = [
   'bg-green-soft text-green', 'bg-amber-soft text-amber'
 ];
 
-export function Avatar({ initials, size = 'md', name }: { initials: string; size?: 'sm' | 'md' | 'lg' | 'xl'; name?: string }) {
+export function Avatar({
+  initials, size = 'md', name, src, online, showPresence = false
+}: {
+  initials: string;
+  size?: 'sm' | 'md' | 'lg' | 'xl';
+  name?: string;
+  /** Uploaded photo as a data URL; falls back to initials if absent or broken. */
+  src?: string | null;
+  online?: boolean;
+  showPresence?: boolean;
+}) {
   const sizes = { sm: 'w-6 h-6 text-xs', md: 'w-8 h-8 text-xs', lg: 'w-10 h-10 text-xs', xl: 'w-16 h-16 text-xl' };
+  const dotSize = { sm: 'w-2 h-2', md: 'w-2.5 h-2.5', lg: 'w-2.5 h-2.5', xl: 'w-4 h-4' };
   const tone = AVATAR_TONES[(initials.charCodeAt(0) + (initials.charCodeAt(1) || 0)) % AVATAR_TONES.length];
+  const [broken, setBroken] = useState(false);
+  useEffect(() => { setBroken(false); }, [src]);
+
+  const showImage = !!src && !broken;
+
   return (
-    <span
-      title={name}
-      className={`inline-flex items-center justify-center rounded-full font-semibold shrink-0 ${sizes[size]} ${tone}`}
-    >
-      {initials}
+    <span className="relative inline-flex shrink-0">
+      {showImage ? (
+        <img
+          src={src!}
+          alt={name || ''}
+          title={name}
+          onError={() => setBroken(true)}
+          className={`inline-block rounded-full object-cover shrink-0 ${sizes[size]}`}
+        />
+      ) : (
+        <span
+          title={name}
+          className={`inline-flex items-center justify-center rounded-full font-semibold shrink-0 ${sizes[size]} ${tone}`}
+        >
+          {initials}
+        </span>
+      )}
+      {showPresence && (
+        <span
+          aria-label={online ? 'Online' : 'Offline'}
+          title={online ? 'Online' : 'Offline'}
+          className={`absolute bottom-0 right-0 rounded-full ring-2 ring-(--surface-solid) ${dotSize[size]} ${
+            online ? 'bg-green' : 'bg-ink-3/50'
+          }`}
+        />
+      )}
     </span>
   );
 }

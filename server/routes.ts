@@ -5,7 +5,8 @@ import {
   requireAuth, requireRole, requireRealAdmin, signToken,
   getUserById, generateTempPassword, PUBLIC_USER_FIELDS, type AuthedRequest
 } from './auth.ts';
-import { computeRecommendation, parseHoursRange } from './rules.ts';
+import { computeRecommendation, parseHoursRange, computeTier, nextTierProgress, TIERS } from './rules.ts';
+import { SEED_USER_PASSWORD, SEED_ADMIN_PASSWORD } from './seed.ts';
 
 export const api = Router();
 
@@ -35,6 +36,97 @@ async function committedHours(applicantId: string, excludeAppId?: string): Promi
   return rows.reduce((sum, r) => sum + parseHoursRange(r.commitment || '')[1], 0);
 }
 
+/**
+ * Settle a requirement's approved applications against everyone's bandwidth.
+ *
+ * Hours move out of declared capacity and into contribution totals, tiers are
+ * recomputed, and each movement is written to the ledger so it can be reversed
+ * if the post is reopened. The unique index on (application_id, kind) makes this
+ * idempotent — completing an already-completed post is a no-op.
+ */
+async function settleCompletion(post: any, reverse = false): Promise<void> {
+  const { rows: apps } = await q(
+    `SELECT a.id, a.applicant_id, a.commitment, u.name
+       FROM applications a JOIN users u ON u.id = a.applicant_id
+      WHERE a.post_id = $1 AND a.status = 'approved'`,
+    [post.id]
+  );
+
+  for (const app of apps) {
+    // What the person actually signed up for, falling back to the post's estimate.
+    const [, hi] = parseHoursRange(app.commitment || post.effort_hours || '');
+    const hours = hi || 0;
+    if (hours <= 0) continue;
+
+    if (!reverse) {
+      const existing = await one(
+        `SELECT id FROM bandwidth_ledger WHERE application_id = $1 AND kind = 'consumed'`, [app.id]
+      );
+      if (existing) continue;
+
+      await q(
+        `INSERT INTO bandwidth_ledger (id, user_id, application_id, post_id, hours, kind, note)
+         VALUES ($1,$2,$3,$4,$5,'consumed',$6)`,
+        [newId('bl'), app.applicant_id, app.id, post.id, hours, `Completed "${post.title.slice(0, 60)}"`]
+      );
+      await q(
+        `UPDATE users SET
+           hours_consumed = hours_consumed + $1,
+           hours_contributed = hours_contributed + $1,
+           collaborations_count = collaborations_count + 1,
+           departments_supported = (
+             SELECT COUNT(DISTINCT wp.department) FROM applications a2
+               JOIN work_posts wp ON wp.id = a2.post_id
+              WHERE a2.applicant_id = $2 AND a2.status = 'approved' AND wp.status = 'Completed'
+           )
+         WHERE id = $2`,
+        [hours, app.applicant_id]
+      );
+      await notify(app.applicant_id, null, 'feedback_received', 'Engagement completed',
+        `"${post.title.slice(0, 50)}" is done. ${hours}h moved from your available bandwidth into your contribution total.`,
+        'requests', post.id);
+    } else {
+      const led = await one(
+        `SELECT id, hours FROM bandwidth_ledger WHERE application_id = $1 AND kind = 'consumed'`, [app.id]
+      );
+      if (!led) continue;
+      const back = Number(led.hours);
+      await q(`DELETE FROM bandwidth_ledger WHERE id = $1`, [led.id]);
+      await q(
+        `UPDATE users SET
+           hours_consumed = GREATEST(0, hours_consumed - $1),
+           hours_contributed = GREATEST(0, hours_contributed - $1),
+           collaborations_count = GREATEST(0, collaborations_count - 1)
+         WHERE id = $2`,
+        [back, app.applicant_id]
+      );
+    }
+
+    await refreshTier(app.applicant_id);
+  }
+}
+
+/** Recompute and persist a user's earned tier; notify them if it moved up. */
+async function refreshTier(userId: string): Promise<void> {
+  const u = await one(
+    `SELECT id, tier, hours_contributed, collaborations_count, departments_supported FROM users WHERE id = $1`,
+    [userId]
+  );
+  if (!u) return;
+  const earned = computeTier({
+    hoursContributed: Number(u.hours_contributed || 0),
+    collaborationsCount: Number(u.collaborations_count || 0),
+    departmentsSupported: Number(u.departments_supported || 0)
+  });
+  if (earned.name === u.tier) return;
+  const climbed = TIERS.findIndex((t) => t.name === earned.name) > TIERS.findIndex((t) => t.name === u.tier);
+  await q(`UPDATE users SET tier = $1 WHERE id = $2`, [earned.name, userId]);
+  if (climbed) {
+    await notify(userId, null, 'feedback_received', `New tier reached: ${earned.name}`,
+      `${earned.icon} You are now a ${earned.name} — ${earned.blurb}.`, 'insights', null);
+  }
+}
+
 async function recommendFor(applicant: any, post: any, excludeAppId?: string) {
   const committed = await committedHours(applicant.id, excludeAppId);
   return computeRecommendation({
@@ -42,6 +134,8 @@ async function recommendFor(applicant: any, post: any, excludeAppId?: string) {
     availableHoursWeek: applicant.available_hours_week ?? applicant.availableHoursWeek ?? 0,
     typicalAvailability: applicant.typical_availability ?? applicant.typicalAvailability ?? '',
     committedHours: committed,
+    consumedHours: Number(applicant.hours_consumed ?? applicant.hoursConsumed ?? 0),
+    bandwidthPeriod: (applicant.bandwidth_period ?? applicant.bandwidthPeriod ?? 'week') as 'week' | 'month',
     effortMin: post.effort_min,
     effortMax: post.effort_max,
     effortText: post.effort_hours,
@@ -68,6 +162,34 @@ api.post('/auth/login', async (req, res) => {
   const token = signToken({ sub: row.id });
   const user = await getUserById(row.id);
   res.json({ token, user });
+});
+
+/**
+ * Live roster for the pilot sign-in picker, so testers can jump into any account
+ * without a hardcoded list going stale as users are added or deactivated.
+ *
+ * This is unauthenticated and exposes names and email addresses, so it is gated
+ * behind DEMO_ACCOUNTS and must be turned off for a real rollout. It never
+ * returns password hashes; the picker fills in the seed password by convention,
+ * and admin-created accounts still need their one-time password typed in.
+ */
+api.get('/auth/demo-accounts', async (_req, res) => {
+  if (process.env.DEMO_ACCOUNTS === 'false') {
+    return res.status(404).json({ error: 'Not available' });
+  }
+  const { rows } = await q(
+    `SELECT u.id, u.name, u.email, u.role, u.system_role AS "systemRole", u.department,
+            u.initials, u.must_change_password AS "mustChangePassword",
+            m.name AS "managerName"
+       FROM users u
+       LEFT JOIN users m ON m.id = u.manager_id
+      WHERE u.status = 'active'
+      ORDER BY CASE u.system_role WHEN 'admin' THEN 0 WHEN 'manager' THEN 1 ELSE 2 END, u.name`
+  );
+  res.json({
+    accounts: rows,
+    defaultPasswords: { admin: SEED_ADMIN_PASSWORD, user: SEED_USER_PASSWORD }
+  });
 });
 
 api.post('/auth/change-password', requireAuth(), async (req, res) => {
@@ -112,8 +234,23 @@ api.patch('/me', requireAuth(), async (req, res) => {
   const { user } = req as AuthedRequest;
   const {
     bio, typicalAvailability, availableHoursWeek, primarySkills, interests,
-    availableFor, campus, specialisation
+    availableFor, campus, specialisation, avatarUrl, bandwidthPeriod
   } = req.body || {};
+
+  if (bandwidthPeriod && !['week', 'month'].includes(bandwidthPeriod)) {
+    return res.status(400).json({ error: 'bandwidthPeriod must be week or month' });
+  }
+  // Photos arrive as a client-compressed data URL. Cap the size so a stray
+  // upload cannot bloat the row — the client targets roughly 40 KB.
+  if (avatarUrl && typeof avatarUrl === 'string') {
+    if (avatarUrl.length > 400_000) {
+      return res.status(400).json({ error: 'Image is too large — please choose a smaller photo' });
+    }
+    if (avatarUrl && !/^data:image\/(png|jpeg|jpg|webp);base64,/.test(avatarUrl)) {
+      return res.status(400).json({ error: 'Unsupported image format' });
+    }
+  }
+
   await q(
     `UPDATE users SET
       bio = COALESCE($1, bio),
@@ -124,15 +261,18 @@ api.patch('/me', requireAuth(), async (req, res) => {
       available_for = COALESCE($6, available_for),
       campus = COALESCE($7, campus),
       specialisation = COALESCE($8, specialisation),
+      avatar_url = COALESCE($9, avatar_url),
+      bandwidth_period = COALESCE($10, bandwidth_period),
       updated_at = now()
-     WHERE id = $9`,
+     WHERE id = $11`,
     [
       bio ?? null, typicalAvailability ?? null,
       availableHoursWeek != null ? Number(availableHoursWeek) : null,
       primarySkills ? JSON.stringify(primarySkills) : null,
       interests ? JSON.stringify(interests) : null,
       availableFor ? JSON.stringify(availableFor) : null,
-      campus ?? null, specialisation ?? null, user.id
+      campus ?? null, specialisation ?? null,
+      avatarUrl ?? null, bandwidthPeriod ?? null, user.id
     ]
   );
   res.json({ user: await getUserById(user.id) });
@@ -303,6 +443,16 @@ api.patch('/work-posts/:id', requireAuth(), async (req, res) => {
       !!(b.title || b.description || b.effortHours || b.seats), req.params.id
     ]
   );
+  // Completing the requirement is what actually spends everyone's bandwidth.
+  // Moving it back out of Completed returns those hours.
+  if (b.status && b.status !== post.status) {
+    if (b.status === 'Completed') {
+      await settleCompletion({ ...post, title: b.title ?? post.title }, false);
+    } else if (post.status === 'Completed') {
+      await settleCompletion(post, true);
+    }
+  }
+
   const updated = await one(`SELECT ${POST_SELECT} FROM work_posts p WHERE p.id = $1`, [req.params.id]);
   res.json({ post: updated });
 });
@@ -332,13 +482,10 @@ api.post('/work-posts/:id/apply', requireAuth(), async (req, res) => {
     return res.status(400).json({ error: 'You cannot apply to a requirement you posted yourself' });
   }
 
-  const { note = '', includeSelf = true, colleagues = [], unregistered = [] } = req.body || {};
-  const memberIds: string[] = [];
-  if (includeSelf) memberIds.push(user.id);
-  for (const cid of colleagues) if (cid && cid !== user.id && cid !== post.author_id) memberIds.push(cid);
-  if (memberIds.length === 0 && unregistered.length === 0) {
-    return res.status(400).json({ error: 'At least one applicant is required' });
-  }
+  // You apply for yourself. Nominating colleagues was removed — an application
+  // is a commitment of your own time, and only you can make it.
+  const { note = '' } = req.body || {};
+  const memberIds: string[] = [user.id];
 
   const groupId = newId('grp');
   const results: any[] = [];
@@ -374,15 +521,8 @@ api.post('/work-posts/:id/apply', requireAuth(), async (req, res) => {
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'pending',$9,$10)`,
         [appId, post.id, groupId, memberId, user.id, member.manager_id, note, post.effort_hours, rec.verdict, rec.reason]
       );
-      const submittedText = memberId === user.id
-        ? `${member.name} requested approval to support`
-        : `${user.name} nominated ${member.name} for`;
       await notify(member.manager_id, null, 'manager_approval', `Approval Needed: ${member.name}`,
-        `${submittedText} "${post.title.slice(0, 60)}" (${post.effort_hours || post.duration}).`, 'manager', appId);
-      if (memberId !== user.id) {
-        await notify(memberId, null, 'collab_request', 'You have been nominated',
-          `${user.name} added you to an application for "${post.title.slice(0, 60)}". Your manager's approval was requested.`, 'work', post.id);
-      }
+        `${member.name} requested approval to support "${post.title.slice(0, 60)}" (${post.effort_hours || post.duration}).`, 'manager', appId);
       results.push({ userId: memberId, applicationId: appId, status: 'pending' });
     } else {
       // Manager not registered → application waits; admin gets a registration request
@@ -405,25 +545,6 @@ api.post('/work-posts/:id/apply', requireAuth(), async (req, res) => {
         `An application to "${post.title.slice(0, 50)}" is waiting until ${member.name}'s manager is registered.`, 'admin', regId);
       results.push({ userId: memberId, applicationId: appId, status: 'awaiting_registration' });
     }
-  }
-
-  // Colleagues who are not registered on the portal at all → admin registration queue
-  for (const person of unregistered) {
-    if (!person?.name) continue;
-    const regId = newId('reg');
-    await q(
-      `INSERT INTO registration_requests (id, requested_by, subject_name, subject_email, subject_kind,
-        subject_role, subject_department, related_post_id, note, status)
-       VALUES ($1,$2,$3,$4,'employee',$5,$6,$7,$8,'pending')`,
-      [
-        regId, user.id, person.name, person.email || '', person.role || '', person.department || '',
-        post.id,
-        `${user.name} wants to include ${person.name} in an application for "${post.title.slice(0, 60)}", but they are not registered on MBXchange.`
-      ]
-    );
-    await notify(null, 'admin', 'registration_request', `Registration Needed: ${person.name}`,
-      `${user.name} requested an account for ${person.name} to join "${post.title.slice(0, 50)}".`, 'admin', regId);
-    results.push({ name: person.name, status: 'registration_requested' });
   }
 
   res.status(201).json({ groupId, results });
@@ -1185,6 +1306,73 @@ api.get('/recommendations', requireAuth(), async (req, res) => {
 
 // ============================== INSIGHTS (all roles) ==============================
 
+/**
+ * Six months of real exchange activity for the home-page chart.
+ *
+ * Every figure is computed from the applications and posts tables — no fixed
+ * sample data. "Synergy" is defined rather than asserted: the share of a
+ * month's completed engagements that crossed a department boundary, which is
+ * the thing this platform exists to increase.
+ */
+api.get('/telemetry', requireAuth(), async (req, res) => {
+  const { user } = req as AuthedRequest;
+  const scope = req.query.scope === 'me' ? 'me' : 'org';
+
+  const { rows } = await q(
+    `WITH months AS (
+       SELECT generate_series(
+         date_trunc('month', now()) - interval '5 months',
+         date_trunc('month', now()),
+         interval '1 month'
+       ) AS m
+     ),
+     done AS (
+       SELECT date_trunc('month', COALESCE(a.decided_at, a.created_at)) AS m,
+              a.id, a.applicant_id, a.commitment,
+              wp.department AS post_dept, wp.effort_hours,
+              u.department AS applicant_dept
+         FROM applications a
+         JOIN work_posts wp ON wp.id = a.post_id
+         JOIN users u ON u.id = a.applicant_id
+        WHERE a.status = 'approved'
+          AND ($1::text = 'org' OR a.applicant_id = $2)
+     )
+     SELECT to_char(months.m, 'Mon') AS label,
+            to_char(months.m, 'YYYY-MM') AS key,
+            COUNT(done.id)::int AS gigs,
+            COUNT(DISTINCT done.applicant_id)::int AS people,
+            COUNT(*) FILTER (WHERE done.post_dept IS DISTINCT FROM done.applicant_dept)::int AS "crossDept",
+            COALESCE(string_agg(COALESCE(done.commitment, done.effort_hours, ''), '|'), '') AS "hoursRaw"
+       FROM months
+       LEFT JOIN done ON done.m = months.m
+      GROUP BY months.m
+      ORDER BY months.m`,
+    [scope, user.id]
+  );
+
+  const series = rows.map((r: any) => {
+    const hours = String(r.hoursRaw || '')
+      .split('|')
+      .filter(Boolean)
+      .reduce((sum, txt) => sum + parseHoursRange(txt)[1], 0);
+    const gigs = Number(r.gigs || 0);
+    // Share of the month's engagements that crossed departments.
+    const synergy = gigs > 0 ? Math.round((Number(r.crossDept || 0) / gigs) * 100) : 0;
+    return {
+      label: r.label, key: r.key, gigs, hours,
+      people: Number(r.people || 0),
+      crossDept: Number(r.crossDept || 0),
+      synergy
+    };
+  });
+
+  res.json({
+    scope,
+    series,
+    synergyDefinition: 'Share of completed engagements where the helper came from a different department than the requirement.'
+  });
+});
+
 api.get('/insights', requireAuth(), async (_req, res) => {
   const { rows: heatmap } = await q(
     `SELECT skill, demand_score AS "demandScore", supply_score AS "supplyScore",
@@ -1232,7 +1420,10 @@ api.get('/admin/overview', requireAuth(), requireRole('manager', 'admin'), async
 
 // Lightweight polling endpoint: unread counts only
 api.get('/sync', requireAuth(), async (req, res) => {
-  const { user } = req as AuthedRequest;
+  const { user, realUser } = req as AuthedRequest;
+  // Presence rides on the poll the client already makes every 20s. Stamp the
+  // real signed-in person, not an impersonated target.
+  await q(`UPDATE users SET last_seen = now() WHERE id = $1`, [realUser.id]);
   const unreadNotifications = await one<{ n: string }>(
     `SELECT COUNT(*)::text AS n FROM notifications n
      LEFT JOIN notification_clears nc ON nc.notification_id = n.id AND nc.user_id = $1

@@ -65,7 +65,11 @@ export function MessagesDrawer() {
       open={s.messagesOpen}
       onClose={() => { s.setMessagesOpen(false); s.setMessagePartnerId(null); }}
       title={partner ? partner.name : 'Messages'}
-      subtitle={partner ? `${partner.role} · ${partner.department}` : 'Direct messages with colleagues'}
+      subtitle={
+        partner
+          ? `${partner.isOnline ? 'Online now' : 'Offline'} · ${partner.role} · ${partner.department}`
+          : 'Direct messages with colleagues'
+      }
       width="max-w-md"
     >
       {!partnerId ? (
@@ -86,7 +90,7 @@ export function MessagesDrawer() {
                     onClick={() => { s.setMessagePartnerId(u.id); setQuery(''); }}
                     className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl hover:bg-surface-2 text-left"
                   >
-                    <Avatar initials={u.initials} size="sm" />
+                    <Avatar initials={u.initials} size="sm" src={u.avatarUrl} showPresence online={u.isOnline} />
                     <span className="min-w-0">
                       <span className="block text-xs font-semibold text-ink truncate">{u.name}</span>
                       <span className="block text-xs text-ink-3 truncate">{u.role}</span>
@@ -106,7 +110,7 @@ export function MessagesDrawer() {
                   onClick={() => s.setMessagePartnerId(c.partnerId)}
                   className="w-full flex items-center gap-3 px-4 py-3 hover:bg-surface-2 text-left border-b border-line/60"
                 >
-                  <Avatar initials={c.user!.initials} name={c.user!.name} />
+                  <Avatar initials={c.user!.initials} name={c.user!.name} src={c.user!.avatarUrl} showPresence online={c.user!.isOnline} />
                   <span className="flex-1 min-w-0">
                     <span className="flex items-center justify-between gap-2">
                       <span className="text-sm font-semibold text-ink truncate">{c.user!.name}</span>

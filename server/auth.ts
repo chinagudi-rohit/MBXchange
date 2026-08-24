@@ -36,7 +36,10 @@ const PUBLIC_USER_FIELDS = `
   rating_breakdown AS "ratingBreakdown", badges, collaborations_count AS "collaborationsCount",
   departments_supported AS "departmentsSupported", people_helped AS "peopleHelped",
   hours_contributed AS "hoursContributed", bio, manager_id AS "managerId",
-  must_change_password AS "mustChangePassword"
+  must_change_password AS "mustChangePassword",
+  avatar_url AS "avatarUrl", bandwidth_period AS "bandwidthPeriod",
+  hours_consumed AS "hoursConsumed", tier, last_seen AS "lastSeen",
+  (last_seen IS NOT NULL AND last_seen > now() - interval '90 seconds') AS "isOnline"
 `;
 
 export async function getUserById(id: string) {

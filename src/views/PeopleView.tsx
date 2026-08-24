@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Star, MessageSquare, Handshake } from 'lucide-react';
 import { useStore } from '../lib/store';
+import { TiltCard } from '../components/TiltCard';
 import { api, type User } from '../lib/api';
 import { Button, Card, Chip, Avatar, Modal, Field, TextInput, TextArea, EmptyState, Reveal } from '../components/ui';
 
@@ -72,9 +73,10 @@ export function PeopleView() {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
           {people.map((u, i) => (
             <Reveal key={u.id} delay={(i % 4) * 60}>
+              <TiltCard>
             <Card className="p-7 h-full flex flex-col">
               <div className="flex items-start gap-3">
-                <Avatar initials={u.initials} size="lg" name={u.name} />
+                <Avatar initials={u.initials} size="lg" name={u.name} src={u.avatarUrl} showPresence online={u.isOnline} />
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-normal text-ink truncate">{u.name}</p>
                   <p className="text-xs text-ink-2 truncate">{u.role}</p>
@@ -104,6 +106,7 @@ export function PeopleView() {
                 </Button>
               </div>
             </Card>
+              </TiltCard>
             </Reveal>
           ))}
         </div>

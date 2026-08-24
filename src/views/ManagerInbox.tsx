@@ -103,7 +103,6 @@ export function ManagerInbox() {
                       <Chip>Commitment: {a.commitment || a.postEffort || '—'}</Chip>
                       <Chip>Requested {timeAgo(a.createdAt)}</Chip>
                       {a.editedAt && <Chip>edited</Chip>}
-                      {a.submittedBy !== a.applicantId && <Chip tone="primary">Nominated by {a.submittedByName}</Chip>}
                     </div>
                     {a.note && <p className="text-xs text-ink-2 mt-2 bg-surface-2 rounded-lg px-3 py-2">“{a.note}”</p>}
                   </div>

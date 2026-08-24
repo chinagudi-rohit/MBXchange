@@ -17,6 +17,11 @@ CREATE TABLE IF NOT EXISTS users (
   available_for JSONB NOT NULL DEFAULT '[]',
   typical_availability TEXT NOT NULL DEFAULT '',
   available_hours_week INTEGER NOT NULL DEFAULT 0,
+  bandwidth_period TEXT NOT NULL DEFAULT 'week' CHECK (bandwidth_period IN ('week','month')),
+  hours_consumed NUMERIC NOT NULL DEFAULT 0,
+  avatar_url TEXT NOT NULL DEFAULT '',
+  last_seen TIMESTAMPTZ,
+  tier TEXT NOT NULL DEFAULT 'Contributor',
   contribution_score NUMERIC NOT NULL DEFAULT 0,
   rating_breakdown JSONB NOT NULL DEFAULT '{}',
   badges JSONB NOT NULL DEFAULT '[]',
@@ -291,6 +296,20 @@ CREATE TABLE IF NOT EXISTS audit_log (
   action TEXT NOT NULL,
   subject TEXT NOT NULL DEFAULT '',
   detail JSONB NOT NULL DEFAULT '{}',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Every hour drawn against (or returned to) a person's declared bandwidth.
+-- Kept as a ledger rather than a running total so a completion can be undone
+-- and so a manager can see exactly where someone's capacity went.
+CREATE TABLE IF NOT EXISTS bandwidth_ledger (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id),
+  application_id TEXT,
+  post_id TEXT,
+  hours NUMERIC NOT NULL,
+  kind TEXT NOT NULL DEFAULT 'consumed',
+  note TEXT NOT NULL DEFAULT '',
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

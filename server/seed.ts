@@ -5,7 +5,7 @@
  */
 import bcrypt from 'bcryptjs';
 import { q, one, newId } from './db.ts';
-import { computeRecommendation, parseHoursRange } from './rules.ts';
+import { computeRecommendation, parseHoursRange, computeTier } from './rules.ts';
 import {
   INITIAL_USER_ACCOUNTS,
   INITIAL_WORK_POSTS,
@@ -163,7 +163,16 @@ export async function seedIfEmpty(): Promise<void> {
   }
 
   // ---- Applications from seeded manager approvals (AI verdicts computed by the real engine)
-  for (const a of INITIAL_MANAGER_APPROVALS) {
+  // Spread the demo engagements back over the last six months so the activity
+  // chart has a real history to aggregate instead of one spike on install day.
+  const decidedAt = (i: number) => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - ((INITIAL_MANAGER_APPROVALS.length - 1 - i) % 6));
+    d.setDate(Math.min(28, 3 + (i * 5) % 25));
+    return d.toISOString();
+  };
+
+  for (const [i, a] of INITIAL_MANAGER_APPROVALS.entries()) {
     const applicant = await one(`SELECT * FROM users WHERE id = $1`, [a.employeeId]);
     if (!applicant) continue;
     const post = await one(`SELECT * FROM work_posts WHERE id = $1`, [String(a.opportunityId)]);
@@ -191,9 +200,105 @@ export async function seedIfEmpty(): Promise<void> {
         a.id, post ? String(a.opportunityId) : '101', a.id, a.employeeId, a.employeeId, a.managerId,
         `Current project: ${a.currentProject}. Period: ${a.period}.`,
         a.requestedCommitment, status, rec.verdict, rec.reason, a.managerNotes || '',
-        status === 'pending' ? null : new Date().toISOString()
+        status === 'pending' ? null : decidedAt(i)
       ]
     );
+  }
+
+  // ---- Historical completed engagements
+  // Demo history so the activity chart and contribution tiers have something
+  // real to aggregate on a fresh install. These are ordinary rows: completed
+  // work posts with approved applications, spread over the last six months and
+  // deliberately mixed across departments so cross-department synergy is
+  // measurable rather than assumed.
+  const historyPairs: Array<[string, string, string, number, string]> = [
+    ['usr_rakesh', 'PT-THIA', 'Terraform modules for the GenAI inference cluster', 8, 'Cloud'],
+    ['usr_priya', 'PT-THIS', 'LLM gateway rate-limiting review', 6, 'AI'],
+    ['usr_arjun', 'PT-THIM', 'Telemetry pipeline for thermal rig exports', 10, 'Data'],
+    ['usr_sneha', 'PT-THIT', 'CAN bus capture tooling for the security team', 6, 'Embedded'],
+    ['usr_anand', 'PT-THIF', 'Thermal model cross-check for fuel-cell HARA', 12, 'CAE'],
+    ['usr_vikram', 'PT-THIC', 'HiL rig automation for calibration sweeps', 8, 'Test'],
+    ['usr_maya', 'PT-THIG', 'Motor efficiency curves for the test bench', 6, 'Calibration'],
+    ['usr_rakesh', 'PT-THID', 'Kubernetes autoscaling for the BI workloads', 8, 'Cloud'],
+    ['usr_priya', 'PT-THIP', 'RAG evaluation harness for release governance docs', 10, 'AI'],
+    ['usr_arjun', 'PT-THIE', 'Kafka topic design for in-vehicle event capture', 8, 'Data'],
+    ['usr_sneha', 'PT-THIA', 'Embedded profiling for on-device inference', 6, 'Embedded'],
+    ['usr_anand', 'PT-THIS', 'Simulation workload sizing on the shared cluster', 8, 'CAE'],
+    ['usr_vikram', 'PT-THIF', 'Fault-injection rig for ASIL D validation', 12, 'Test'],
+    ['usr_maya', 'PT-THID', 'Signal decoding for calibration telemetry', 6, 'Calibration'],
+    ['usr_rakesh', 'PT-THIT', 'Private endpoints and DNS for the platform VPC', 8, 'Cloud'],
+    ['usr_priya', 'PT-THIM', 'Vision model for surface-defect screening', 10, 'AI'],
+    ['usr_arjun', 'PT-THIG', 'Test-run analytics dashboard for the HiL fleet', 8, 'Data'],
+    ['usr_sneha', 'PT-THIC', 'AUTOSAR adapter for calibration tooling', 6, 'Embedded']
+  ];
+
+  for (const [i, [helperId, deptNeedingHelp, title, hours, tag]] of historyPairs.entries()) {
+    const when = new Date();
+    when.setMonth(when.getMonth() - (5 - Math.floor(i / 3)));
+    when.setDate(Math.min(28, 4 + (i * 7) % 22));
+    const iso = when.toISOString();
+
+    const postId = `wp_hist_${i}`;
+    const appId = `app_hist_${i}`;
+    const author = deptNeedingHelp === 'PT-THIA' ? 'usr_priya' : 'usr_elena';
+
+    await q(
+      `INSERT INTO work_posts (id, title, description, department, status, urgency, duration,
+        effort_hours, effort_min, effort_max, location, approval_required, tags, author_id,
+        seats, created_at)
+       VALUES ($1,$2,$3,$4,'Completed','Medium','1 week',$5,$6,$6,'Remote / Hybrid',TRUE,$7,$8,1,$9)`,
+      [
+        postId, title, `Cross-department support delivered for ${deptNeedingHelp}.`,
+        deptNeedingHelp, `${hours} hours`, hours, JSON.stringify([tag]), author, iso
+      ]
+    );
+
+    await q(
+      `INSERT INTO applications (id, post_id, group_id, applicant_id, submitted_by, manager_id,
+        note, commitment, status, ai_recommendation, ai_reason, created_at, decided_at)
+       VALUES ($1,$2,$1,$3,$3,NULL,'',$4,'approved','Approve','Capacity confirmed at the time of approval.',$5,$5)`,
+      [appId, postId, helperId, `${hours} hours`, iso]
+    );
+
+    await q(
+      `INSERT INTO bandwidth_ledger (id, user_id, application_id, post_id, hours, kind, note, created_at)
+       VALUES ($1,$2,$3,$4,$5,'consumed',$6,$7)`,
+      [`bl_hist_${i}`, helperId, appId, postId, hours, `Completed "${title.slice(0, 50)}"`, iso]
+    );
+  }
+
+  // Bring contribution totals and tiers in line with the history just written.
+  await q(
+    `UPDATE users u SET
+       hours_contributed = COALESCE(h.hours, 0),
+       collaborations_count = COALESCE(h.gigs, 0),
+       departments_supported = COALESCE(h.depts, 0)
+     FROM (
+       SELECT a.applicant_id AS uid,
+              SUM(bl.hours)::int AS hours,
+              COUNT(*)::int AS gigs,
+              COUNT(DISTINCT wp.department)::int AS depts
+         FROM applications a
+         JOIN work_posts wp ON wp.id = a.post_id
+         JOIN bandwidth_ledger bl ON bl.application_id = a.id
+        WHERE a.status = 'approved' AND wp.status = 'Completed'
+        GROUP BY a.applicant_id
+     ) h
+     WHERE u.id = h.uid`
+  );
+
+  // Award the tier each person's history actually earns, using the same ladder
+  // the live completion path uses so seeded and earned tiers never disagree.
+  const { rows: forTier } = await q(
+    `SELECT id, hours_contributed, collaborations_count, departments_supported FROM users`
+  );
+  for (const t of forTier) {
+    const earned = computeTier({
+      hoursContributed: Number(t.hours_contributed || 0),
+      collaborationsCount: Number(t.collaborations_count || 0),
+      departmentsSupported: Number(t.departments_supported || 0)
+    });
+    await q(`UPDATE users SET tier = $1 WHERE id = $2`, [earned.name, t.id]);
   }
 
   // ---- Bandwidth offers

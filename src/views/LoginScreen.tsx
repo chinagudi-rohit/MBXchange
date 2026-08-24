@@ -1,16 +1,20 @@
-import React, { useState } from 'react';
-import { Eye, EyeOff, ChevronDown } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Eye, EyeOff, ChevronDown, RefreshCw } from 'lucide-react';
 import { useStore } from '../lib/store';
-import { Button, Field, TextInput, MercedesStar } from '../components/ui';
+import { api } from '../lib/api';
+import { Button, Field, TextInput, MercedesStar, Avatar } from '../components/ui';
 
-const DEMO_ACCOUNTS = [
-  { label: 'Admin — Dr. Markus Becker', email: 'markus.becker@mercedes-benz.com', password: 'MBXAdmin@2026' },
-  { label: 'Manager — Elena Rostova', email: 'elena.rostova@mercedes-benz.com', password: 'Mbx@2026' },
-  { label: 'Manager — Dr. Johannes Brandner', email: 'johannes.brandner@mercedes-benz.com', password: 'Mbx@2026' },
-  { label: 'Employee — Rakesh Kumar', email: 'rakesh.kumar@mercedes-benz.com', password: 'Mbx@2026' },
-  { label: 'Employee — Priya Sharma', email: 'priya.sharma@mercedes-benz.com', password: 'Mbx@2026' },
-  { label: 'Employee (no manager) — Nikhil Verma', email: 'nikhil.verma@mercedes-benz.com', password: 'Mbx@2026' }
-];
+interface DemoAccount {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  systemRole: 'employee' | 'manager' | 'admin';
+  department: string;
+  initials: string;
+  mustChangePassword: boolean;
+  managerName: string | null;
+}
 
 export function LoginScreen() {
   const s = useStore();
@@ -20,6 +24,26 @@ export function LoginScreen() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [demoOpen, setDemoOpen] = useState(false);
+  const [accounts, setAccounts] = useState<DemoAccount[] | null>(null);
+  const [defaults, setDefaults] = useState<{ admin: string; user: string }>({ admin: '', user: '' });
+  const [loadingAccounts, setLoadingAccounts] = useState(false);
+
+  // Pulled live so the picker reflects whoever exists right now — accounts the
+  // admin adds or deactivates show up without touching this file.
+  const loadAccounts = async () => {
+    setLoadingAccounts(true);
+    try {
+      const d = await api.get('/auth/demo-accounts');
+      setAccounts(d.accounts || []);
+      setDefaults(d.defaultPasswords || { admin: '', user: '' });
+    } catch {
+      setAccounts([]);
+    } finally {
+      setLoadingAccounts(false);
+    }
+  };
+
+  useEffect(() => { if (demoOpen && accounts === null) loadAccounts(); }, [demoOpen]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,7 +80,7 @@ export function LoginScreen() {
           <ul className="mt-8 space-y-3">
             {[
               'Post a requirement and get matched with the right people',
-              'Apply for yourself or nominate colleagues',
+              'Apply to opportunities that match your declared skills',
               'Capacity-aware approvals routed to the right manager'
             ].map((line) => (
               <li key={line} className="flex items-start gap-2.5 text-sm text-white/85">
@@ -139,23 +163,61 @@ export function LoginScreen() {
             className="w-full flex items-center justify-between px-5 py-3.5 text-xs font-semibold text-ink-2 hover:bg-surface-2"
             aria-expanded={demoOpen}
           >
-            <span>Demo seed accounts (pilot environment)</span>
+            <span>Sign in as any user (pilot environment){accounts ? ` · ${accounts.length}` : ''}</span>
             <ChevronDown className={`w-4 h-4 transition-transform ${demoOpen ? 'rotate-180' : ''}`} />
           </button>
           {demoOpen && (
-            <div className="px-3 pb-3 space-y-1">
-              {DEMO_ACCOUNTS.map((a) => (
+            <div className="px-3 pb-3">
+              <div className="flex items-center justify-between px-2 pb-2">
+                <span className="text-xs text-ink-3">Live list — updates as accounts change</span>
                 <button
-                  key={a.email}
-                  onClick={() => { setEmail(a.email); setPassword(a.password); setError(''); }}
-                  className="w-full text-left px-3 py-2 rounded-xl hover:bg-surface-2 transition-colors"
+                  onClick={loadAccounts}
+                  aria-label="Refresh account list"
+                  className="p-1.5 rounded-lg text-ink-3 hover:text-ink hover:bg-surface-2"
                 >
-                  <span className="block text-xs font-semibold text-ink">{a.label}</span>
-                  <span className="block text-xs text-ink-3">{a.email}</span>
+                  <RefreshCw className={`w-3.5 h-3.5 ${loadingAccounts ? 'animate-spin' : ''}`} />
                 </button>
-              ))}
-              <p className="px-3 pt-1.5 text-xs text-ink-3">
-                Seeded for testing — remove before production rollout.
+              </div>
+
+              {accounts === null ? (
+                <p className="px-3 py-4 text-xs text-ink-3">Loading accounts…</p>
+              ) : accounts.length === 0 ? (
+                <p className="px-3 py-4 text-xs text-ink-3">
+                  Account list unavailable. Sign in with your email and password above.
+                </p>
+              ) : (
+                <div className="max-h-72 overflow-y-auto space-y-1">
+                  {accounts.map((a) => (
+                    <button
+                      key={a.id}
+                      onClick={() => {
+                        setEmail(a.email);
+                        setPassword(a.systemRole === 'admin' ? defaults.admin : defaults.user);
+                        setError('');
+                      }}
+                      className="w-full flex items-center gap-2.5 text-left px-3 py-2 rounded-xl hover:bg-surface-2 transition-colors"
+                    >
+                      <Avatar initials={a.initials} size="sm" name={a.name} />
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-xs font-semibold text-ink truncate">
+                          {a.name}
+                          {a.mustChangePassword && (
+                            <span className="ml-1.5 font-medium text-amber">· temp password</span>
+                          )}
+                        </span>
+                        <span className="block text-xs text-ink-3 truncate">
+                          {a.systemRole} · {a.department}
+                          {a.systemRole === 'employee' && !a.managerName && ' · no manager'}
+                        </span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <p className="px-3 pt-2.5 text-xs text-ink-3">
+                Fills in the seed password. Accounts created by an admin keep their
+                one-time password until it is changed — type that one in manually.
               </p>
             </div>
           )}

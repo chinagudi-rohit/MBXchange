@@ -73,6 +73,12 @@ export interface User {
   bio: string;
   managerId: string | null;
   mustChangePassword: boolean;
+  avatarUrl: string;
+  bandwidthPeriod: 'week' | 'month';
+  hoursConsumed: number;
+  tier: string;
+  lastSeen: string | null;
+  isOnline: boolean;
 }
 
 export interface WorkPost {

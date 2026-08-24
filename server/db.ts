@@ -80,7 +80,30 @@ export async function initSchema(): Promise<void> {
  */
 export async function applyMigrations(): Promise<void> {
   const migrations = [
-    `ALTER TABLE users ADD COLUMN IF NOT EXISTS specialisation TEXT NOT NULL DEFAULT ''`
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS specialisation TEXT NOT NULL DEFAULT ''`,
+    // Profile photo, stored as a compressed data URL (~30–40 KB after client-side resize).
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT NOT NULL DEFAULT ''`,
+    // Bandwidth can be declared per week or per month; the hours column is unchanged,
+    // this only records which period those hours describe.
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS bandwidth_period TEXT NOT NULL DEFAULT 'week'`,
+    // Hours already consumed by completed engagements in the current period.
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS hours_consumed NUMERIC NOT NULL DEFAULT 0`,
+    // Presence: stamped by the existing /api/sync poll.
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen TIMESTAMPTZ`,
+    // Earned tier, recomputed whenever contribution totals change.
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS tier TEXT NOT NULL DEFAULT 'Contributor'`,
+    `CREATE TABLE IF NOT EXISTS bandwidth_ledger (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id),
+      application_id TEXT,
+      post_id TEXT,
+      hours NUMERIC NOT NULL,
+      kind TEXT NOT NULL DEFAULT 'consumed',
+      note TEXT NOT NULL DEFAULT '',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_ledger_user ON bandwidth_ledger(user_id)`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS idx_ledger_app_kind ON bandwidth_ledger(application_id, kind)`
   ];
   for (const sql of migrations) {
     await q(sql);

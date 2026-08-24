@@ -47,7 +47,7 @@ function WordMark() {
   );
 }
 
-const TAGLINE = 'Cross-Department Project Exchange';
+const TAGLINE = 'Connect · Collaborate · Contribute';
 
 function Shell() {
   const s = useStore();
@@ -93,6 +93,18 @@ function Shell() {
       badge: s.counts.pendingApprovals, show: s.user.systemRole === 'manager' || s.user.systemRole === 'admin'
     },
     { id: 'admin', label: 'Admin Console', icon: <Settings2 className="w-4.5 h-4.5" />, show: s.user.systemRole === 'admin' }
+  ];
+
+  // Five slots is the most that stays tappable on a 375px screen, so the tab bar
+  // carries the four most-used destinations and hands the rest to the drawer.
+  const hasAlerts = s.counts.unreadNotifications > 0 || s.counts.unreadMessages > 0 ||
+    (s.counts.pendingApprovals > 0 && s.user.systemRole !== 'employee');
+  const bottomNavItems: Array<{ id: string; label: string; icon: React.ReactNode; isMenu?: boolean; dot?: boolean }> = [
+    { id: 'home', label: 'Home', icon: <Home className="w-5 h-5" /> },
+    { id: 'work', label: 'Work', icon: <Briefcase className="w-5 h-5" /> },
+    { id: 'people', label: 'People', icon: <Users className="w-5 h-5" /> },
+    { id: 'requests', label: 'Requests', icon: <ListChecks className="w-5 h-5" /> },
+    { id: 'menu', label: 'Menu', icon: <Menu className="w-5 h-5" />, isMenu: true, dot: hasAlerts }
   ];
 
   const collapsed = s.sidebarCollapsed;
@@ -180,7 +192,12 @@ function Shell() {
             <button onClick={() => s.setTab('home')} className="flex items-center gap-2.5">
               <LogoMark />
               <span className="hidden sm:block text-left leading-tight">
-                <span className="block"><WordMark /></span>
+                <span className="flex items-center gap-1.5">
+                  <WordMark />
+                  <span className="text-[9px] font-semibold uppercase tracking-[0.08em] px-1.5 py-0.5 rounded bg-primary-soft text-primary-text border border-primary/25">
+                    Internal
+                  </span>
+                </span>
                 <span className="hidden xl:block text-xs text-ink-3 font-medium">{TAGLINE}</span>
               </span>
             </button>
@@ -260,7 +277,7 @@ function Shell() {
                 className="flex items-center gap-1.5 p-1 pr-2 rounded-2xl hover:bg-surface-2 transition-colors"
                 aria-haspopup="menu" aria-expanded={userMenuOpen}
               >
-                <Avatar initials={s.user.initials} name={s.user.name} />
+                <Avatar initials={s.user.initials} name={s.user.name} src={s.user.avatarUrl} />
                 <ChevronDown className="w-3.5 h-3.5 text-ink-3" />
               </button>
               {userMenuOpen && (
@@ -351,8 +368,9 @@ function Shell() {
           </div>
         )}
 
-        {/* Main content — fluid: fills the viewport at any width, no side gutters */}
-        <main className="flex-1 min-w-0 w-full px-4 sm:px-6 lg:px-10 2xl:px-12 py-8 sm:py-10">
+        {/* Main content — fluid: fills the viewport at any width, no side gutters.
+            Extra bottom padding below lg clears the fixed mobile tab bar. */}
+        <main className="flex-1 min-w-0 w-full px-4 sm:px-6 lg:px-10 2xl:px-12 py-8 sm:py-10 pb-28 lg:pb-10">
           {s.tab === 'home' && <HomeDashboard />}
           {s.tab === 'work' && <WorkExchange />}
           {s.tab === 'people' && <PeopleView />}
@@ -363,6 +381,41 @@ function Shell() {
           {s.tab === 'admin' && <AdminConsole />}
         </main>
       </div>
+
+      {/* Fixed tab bar — phones and tablets only; the sidebar takes over at lg */}
+      <nav
+        aria-label="Primary"
+        className="lg:hidden fixed bottom-0 inset-x-0 z-40 glass border-t border-line pb-[env(safe-area-inset-bottom)]"
+      >
+        <div className="flex items-stretch justify-around max-w-lg mx-auto px-1.5 py-1">
+          {bottomNavItems.map((n) => {
+            const active = !n.isMenu && s.tab === n.id;
+            return (
+              <button
+                key={n.id}
+                onClick={() => {
+                  if (n.isMenu) { setMobileNavOpen(true); return; }
+                  s.setTab(n.id as MainTab);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                aria-current={active ? 'page' : undefined}
+                className={`relative flex-1 flex flex-col items-center justify-center gap-1 py-1.5 rounded-xl transition-colors min-h-[52px] ${
+                  active ? 'text-primary-text' : 'text-ink-3 hover:text-ink-2'
+                }`}
+              >
+                {active && <span aria-hidden="true" className="absolute inset-x-1.5 inset-y-0.5 rounded-xl bg-primary-soft -z-10" />}
+                <span className="relative">
+                  {n.icon}
+                  {n.dot && (
+                    <span aria-hidden="true" className="absolute -top-0.5 -right-1 w-2 h-2 rounded-full bg-primary ring-2 ring-surface" />
+                  )}
+                </span>
+                <span className="text-[10px] font-semibold leading-none tracking-tight">{n.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
 
       {/* Overlays */}
       <MessagesDrawer />

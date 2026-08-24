@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
-import { Star, Zap, KeyRound, Award, Cpu, X, Plus } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Star, Zap, KeyRound, Award, Cpu, X, Plus, Camera, Trash2 } from 'lucide-react';
 import { useStore } from '../lib/store';
 import { api } from '../lib/api';
-import { Drawer, Button, Field, TextInput, Chip, Avatar } from '../components/ui';
+import { processImageFile } from '../lib/imageCompressor';
+import { Drawer, Button, Field, TextInput, Chip, Avatar, Select } from '../components/ui';
 
 /** Common stacks offered as one-tap additions. */
 const SKILL_SUGGESTIONS = [
@@ -85,8 +86,14 @@ function TagEditor({ tags, onChange, placeholder, suggestions = [] }: {
 export function ProfileDrawer() {
   const s = useStore();
   const u = s.user;
-  const [availability, setAvailability] = useState({ hours: u?.availableHoursWeek || 0, text: u?.typicalAvailability || '' });
+  const [availability, setAvailability] = useState({
+    hours: u?.availableHoursWeek || 0,
+    text: u?.typicalAvailability || '',
+    period: (u?.bandwidthPeriod || 'week') as 'week' | 'month'
+  });
   const [editingBandwidth, setEditingBandwidth] = useState(false);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
   const [pw, setPw] = useState({ current: '', next: '', confirm: '' });
   const [pwBusy, setPwBusy] = useState(false);
   const [showPwForm, setShowPwForm] = useState(false);
@@ -116,11 +123,47 @@ export function ProfileDrawer() {
 
   if (!u) return null;
 
+  const periodWord = u.bandwidthPeriod === 'month' ? 'month' : 'week';
+  const consumed = Number(u.hoursConsumed || 0);
+  const remaining = Math.max(0, (u.availableHoursWeek || 0) - consumed);
+
   const saveBandwidth = async () => {
-    await api.patch('/me', { availableHoursWeek: Number(availability.hours), typicalAvailability: availability.text });
+    await api.patch('/me', {
+      availableHoursWeek: Number(availability.hours),
+      typicalAvailability: availability.text,
+      bandwidthPeriod: availability.period
+    });
     await s.refreshMe();
     setEditingBandwidth(false);
-    s.toast('success', 'Bandwidth updated', `Declared availability: ${availability.hours}h/week.`);
+    s.toast('success', 'Bandwidth updated', `Declared availability: ${availability.hours}h per ${availability.period}.`);
+  };
+
+  const onPickPhoto = async (file?: File) => {
+    if (!file) return;
+    setPhotoBusy(true);
+    try {
+      // Resized and compressed in the browser so what reaches the API is small.
+      const dataUrl = await processImageFile(file, { maxWidth: 400, quality: 0.85, cropToSquare: true });
+      await api.patch('/me', { avatarUrl: dataUrl });
+      await Promise.all([s.refreshMe(), s.loadUsers()]);
+      s.toast('success', 'Photo updated');
+    } catch (e: any) {
+      s.toast('error', 'Could not update photo', e?.message || 'Please try a different image.');
+    } finally {
+      setPhotoBusy(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  };
+
+  const removePhoto = async () => {
+    setPhotoBusy(true);
+    try {
+      await api.patch('/me', { avatarUrl: '' });
+      await Promise.all([s.refreshMe(), s.loadUsers()]);
+      s.toast('info', 'Photo removed');
+    } finally {
+      setPhotoBusy(false);
+    }
   };
 
   const changePassword = async () => {
@@ -156,7 +199,30 @@ export function ProfileDrawer() {
       <div className="p-5 space-y-5">
         {/* Identity */}
         <div className="flex items-center gap-4">
-          <Avatar initials={u.initials} size="xl" name={u.name} />
+          <input
+            ref={fileRef} type="file" className="hidden"
+            accept="image/png,image/jpeg,image/jpg,image/webp"
+            onChange={(e) => onPickPhoto(e.target.files?.[0])}
+          />
+          <div className="relative shrink-0">
+            <button
+              onClick={() => fileRef.current?.click()}
+              disabled={photoBusy}
+              aria-label="Change profile photo"
+              title="Change profile photo"
+              className="group relative rounded-full block"
+            >
+              <Avatar initials={u.initials} size="xl" name={u.name} src={u.avatarUrl} />
+              <span className="absolute inset-0 rounded-full bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                <Camera className="w-5 h-5 text-white" />
+              </span>
+            </button>
+            {photoBusy && (
+              <span className="absolute inset-0 rounded-full bg-surface/70 flex items-center justify-center">
+                <span className="w-4 h-4 rounded-full border-2 border-line-strong border-t-primary animate-spin" />
+              </span>
+            )}
+          </div>
           <div className="min-w-0">
             <p className="text-lg font-medium text-ink">{u.name}</p>
             <p className="text-xs text-ink-2">{u.role} · {u.department}</p>
@@ -166,6 +232,22 @@ export function ProfileDrawer() {
                 <Star className="w-3.5 h-3.5 fill-current" /> {Number(u.contributionScore).toFixed(2)}
               </span>
               <Chip tone="primary">{u.systemRole.toUpperCase()}</Chip>
+            </div>
+            <div className="flex items-center gap-3 mt-2">
+              <button
+                onClick={() => fileRef.current?.click()}
+                className="text-xs font-semibold text-primary-text hover:underline underline-offset-2"
+              >
+                {u.avatarUrl ? 'Change photo' : 'Add a photo'}
+              </button>
+              {u.avatarUrl && (
+                <button
+                  onClick={removePhoto}
+                  className="text-xs font-medium text-ink-3 hover:text-red flex items-center gap-1"
+                >
+                  <Trash2 className="w-3 h-3" /> Remove
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -201,25 +283,53 @@ export function ProfileDrawer() {
           </p>
           {editingBandwidth ? (
             <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Hours / week">
-                  <TextInput type="number" min={0} max={40} value={availability.hours}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Field label="Hours available">
+                  <TextInput type="number" min={0} max={200} value={availability.hours}
                     onChange={(e) => setAvailability({ ...availability, hours: parseInt(e.target.value) || 0 })} />
                 </Field>
-                <Field label="Label" hint='e.g. "4–8 hours/month"'>
-                  <TextInput value={availability.text}
-                    onChange={(e) => setAvailability({ ...availability, text: e.target.value })} />
+                <Field label="Per" hint="Pick the period these hours cover">
+                  <Select
+                    value={availability.period}
+                    onChange={(e) => setAvailability({ ...availability, period: e.target.value as 'week' | 'month' })}
+                  >
+                    <option value="week">Week</option>
+                    <option value="month">Month</option>
+                  </Select>
                 </Field>
               </div>
+              <Field label="Label" hint='Free text shown on your profile, e.g. "Tue–Thu afternoons"'>
+                <TextInput value={availability.text}
+                  onChange={(e) => setAvailability({ ...availability, text: e.target.value })} />
+              </Field>
               <div className="flex gap-2 justify-end">
                 <Button size="sm" variant="secondary" onClick={() => setEditingBandwidth(false)}>Cancel</Button>
                 <Button size="sm" onClick={saveBandwidth}>Save</Button>
               </div>
             </div>
           ) : (
-            <p className="text-xl font-medium text-primary-text">
-              {u.availableHoursWeek}h<span className="text-xs font-semibold text-ink-3">/week · {u.typicalAvailability || '—'}</span>
-            </p>
+            <div>
+              <p className="text-xl font-medium text-primary-text">
+                {remaining}h
+                <span className="text-xs font-semibold text-ink-3">
+                  {' '}left of {u.availableHoursWeek}h this {periodWord}
+                  {u.typicalAvailability ? ` · ${u.typicalAvailability}` : ''}
+                </span>
+              </p>
+              {consumed > 0 && (
+                <div className="mt-2.5">
+                  <div className="h-1.5 rounded-full bg-surface-2 overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-primary transition-all"
+                      style={{ width: `${Math.min(100, (consumed / Math.max(1, u.availableHoursWeek)) * 100)}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-ink-3 mt-1.5">
+                    {consumed}h used by completed engagements this {periodWord}.
+                  </p>
+                </div>
+              )}
+            </div>
           )}
         </div>
 

@@ -112,7 +112,7 @@ export function MyRequests() {
         <div className="space-y-6">
           {/* Gig applications */}
           <section>
-            <h2 className="text-sm font-semibold text-ink mb-3">Work applications & nominations ({applications.length})</h2>
+            <h2 className="text-sm font-semibold text-ink mb-3">Work applications ({applications.length})</h2>
             {applications.length === 0 ? (
               <EmptyState title="No applications yet" hint="Apply to an opportunity in Work Exchange and track it here." />
             ) : (

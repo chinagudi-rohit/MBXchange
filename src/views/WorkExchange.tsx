@@ -4,6 +4,7 @@ import {
   AlertCircle, CalendarDays, ShieldCheck
 } from 'lucide-react';
 import { useStore } from '../lib/store';
+import { TiltCard } from '../components/TiltCard';
 import { api, timeAgo, type WorkPost, type User } from '../lib/api';
 import {
   Button, Modal, Field, TextInput, TextArea, Select, StatusBadge, UrgencyBadge, Chip, Avatar, SaveButton, EmptyState, Card, SeatsIndicator, Reveal, SkeletonGrid
@@ -138,49 +139,35 @@ export function WorkFormModal({ open, onClose, existing }: {
   );
 }
 
-/* ══════════════════ Apply / nominate modal ══════════════════ */
+/* ══════════════════ Apply modal ══════════════════ */
 
 function ApplyModal({ open, onClose, post }: { open: boolean; onClose: () => void; post: WorkPost }) {
   const s = useStore();
-  const [includeSelf, setIncludeSelf] = useState(true);
-  const [colleagues, setColleagues] = useState<string[]>([]);
-  const [unregistered, setUnregistered] = useState<Array<{ name: string; email: string; department: string; role: string }>>([]);
-  const [newColleague, setNewColleague] = useState('');
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
-  const [showUnregForm, setShowUnregForm] = useState(false);
-  const [unregForm, setUnregForm] = useState({ name: '', email: '', department: DEPARTMENTS[0], role: '' });
 
   useEffect(() => {
-    if (open) { setIncludeSelf(true); setColleagues([]); setUnregistered([]); setNote(''); setShowUnregForm(false); }
+    if (open) setNote('');
   }, [open]);
 
   const byId = useMemo(() => new Map(s.users.map((u) => [u.id, u])), [s.users]);
-  const managerName = (u?: User) => u?.managerId ? (byId.get(u.managerId)?.name || 'their manager') : null;
-
-  const candidates = s.users.filter((u) =>
-    u.id !== s.user?.id && !colleagues.includes(u.id) && u.systemRole !== 'admin' &&
-    (newColleague ? (u.name.toLowerCase().includes(newColleague.toLowerCase()) || u.department.toLowerCase().includes(newColleague.toLowerCase())) : false)
-  ).slice(0, 5);
-
   const openSeats = post.seats - post.seatsFilled;
-  const totalPeople = (includeSelf ? 1 : 0) + colleagues.length + unregistered.length;
+  const selfManager = s.user?.managerId ? byId.get(s.user.managerId)?.name : null;
 
   const submit = async () => {
-    if (totalPeople === 0) {
-      s.toast('error', 'Nobody to apply', 'Include yourself or add at least one colleague.');
-      return;
-    }
     setBusy(true);
     try {
-      const { results } = await api.post(`/work-posts/${post.id}/apply`, { includeSelf, colleagues, unregistered, note });
-      const ok = results.filter((r: any) => r.status === 'pending' || r.status === 'approved').length;
-      const waiting = results.filter((r: any) => r.status === 'awaiting_registration' || r.status === 'registration_requested').length;
-      const failed = results.filter((r: any) => r.error);
-      if (ok) s.toast('success', `Application submitted for ${ok} ${ok === 1 ? 'person' : 'people'}`,
-        post.approvalRequired ? 'Routed to each person\'s manager for approval.' : 'The author has been notified.');
-      if (waiting) s.toast('info', 'Registration required', `${waiting} request${waiting > 1 ? 's' : ''} sent to the admin to complete registration first.`);
-      failed.forEach((f: any) => s.toast('error', 'Skipped', f.error));
+      const { results } = await api.post(`/work-posts/${post.id}/apply`, { note });
+      const r = results[0] || {};
+      if (r.error) {
+        s.toast('error', 'Not submitted', r.error);
+      } else if (r.status === 'awaiting_registration') {
+        s.toast('info', 'Waiting on registration', 'Your manager needs to be registered before this can be approved. The admin has been notified.');
+      } else if (r.status === 'approved') {
+        s.toast('success', 'You are on this requirement', 'No approval was needed — the author has been notified.');
+      } else {
+        s.toast('success', 'Request submitted', selfManager ? `Sent to ${selfManager} for approval.` : 'Sent for manager approval.');
+      }
       await s.loadPosts();
       onClose();
     } catch (e: any) {
@@ -190,153 +177,45 @@ function ApplyModal({ open, onClose, post }: { open: boolean; onClose: () => voi
     }
   };
 
-  const selfManager = s.user?.managerId ? byId.get(s.user.managerId)?.name : null;
-
   return (
     <Modal
-      open={open} onClose={onClose} wide
-      title="Apply / Nominate"
+      open={open} onClose={onClose}
+      title="Apply to help"
       subtitle={`${post.title.slice(0, 70)} · ${openSeats} of ${post.seats} seats open`}
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button onClick={submit} disabled={busy || totalPeople === 0}>
+          <Button onClick={submit} disabled={busy}>
             <Send className="w-3.5 h-3.5" />
-            {busy ? 'Submitting…' : `Submit for ${totalPeople} ${totalPeople === 1 ? 'person' : 'people'}`}
+            {busy ? 'Submitting…' : 'Submit request'}
           </Button>
         </>
       }
     >
       <div className="space-y-5">
-        {/* Self */}
-        <div className={`flex items-start gap-3 p-3.5 rounded-xl border ${includeSelf ? 'border-primary bg-primary-soft/40' : 'border-line'}`}>
-          <input
-            type="checkbox" checked={includeSelf} onChange={(e) => setIncludeSelf(e.target.checked)}
-            className="mt-1 w-4 h-4 accent-(--primary)" id="apply-self"
-          />
-          <label htmlFor="apply-self" className="flex-1 min-w-0 cursor-pointer">
-            <span className="flex items-center gap-2">
-              <Avatar initials={s.user?.initials || '?'} size="sm" />
-              <span className="text-sm font-semibold text-ink">Myself — {s.user?.name}</span>
-            </span>
-            <span className="block text-xs text-ink-2 mt-1">
+        <div className="flex items-start gap-3 p-3.5 rounded-xl border border-primary bg-primary-soft/40">
+          <Avatar initials={s.user?.initials || '?'} size="sm" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-ink">{s.user?.name}</p>
+            <p className="text-xs text-ink-2 mt-1">
               {post.approvalRequired
                 ? selfManager
                   ? `Approval will be requested from ${selfManager}.`
                   : 'You have no registered manager — the admin will be asked to register them first.'
-                : 'No manager approval needed for this post.'}
-              {' '}Your declared capacity: <b>{s.user?.availableHoursWeek}h/week</b> vs required <b>{post.effortHours || post.duration || '—'}</b>.
-            </span>
-          </label>
-        </div>
-
-        {/* Colleagues */}
-        <div>
-          <p className="text-xs font-medium text-ink-2 mb-2 flex items-center gap-1.5">
-            <UserPlus className="w-3.5 h-3.5" /> Add colleagues to this application
-          </p>
-          {colleagues.length > 0 && (
-            <div className="space-y-2 mb-2.5">
-              {colleagues.map((cid) => {
-                const u = byId.get(cid);
-                if (!u) return null;
-                const mgr = managerName(u);
-                return (
-                  <div key={cid} className="flex items-center gap-2.5 p-2.5 rounded-xl bg-surface-2">
-                    <Avatar initials={u.initials} size="sm" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-ink truncate">{u.name} <span className="font-medium text-ink-3">· {u.department}</span></p>
-                      <p className={`text-xs ${mgr ? 'text-ink-3' : 'text-violet font-semibold'}`}>
-                        {mgr ? `Approval → ${mgr}` : 'No registered manager — admin registration will be requested'}
-                      </p>
-                    </div>
-                    <button onClick={() => setColleagues(colleagues.filter((c) => c !== cid))}
-                      aria-label={`Remove ${u.name}`} className="p-1.5 rounded-lg text-ink-3 hover:text-red hover:bg-red-soft">
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-          <div className="relative">
-            <TextInput
-              value={newColleague} onChange={(e) => setNewColleague(e.target.value)}
-              placeholder="Search colleagues by name or department…"
-            />
-            {newColleague && candidates.length > 0 && (
-              <div className="absolute z-10 left-0 right-0 top-full mt-1 bg-surface rounded-xl shadow-pop p-1.5 max-h-48 overflow-y-auto">
-                {candidates.map((u) => (
-                  <button
-                    key={u.id}
-                    onClick={() => { setColleagues([...colleagues, u.id]); setNewColleague(''); }}
-                    className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg hover:bg-surface-2 text-left"
-                  >
-                    <Avatar initials={u.initials} size="sm" />
-                    <span className="min-w-0">
-                      <span className="block text-xs font-semibold text-ink truncate">{u.name}</span>
-                      <span className="block text-xs text-ink-3">{u.role} · {u.department}</span>
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
+                : 'No manager approval is needed for this requirement.'}
+            </p>
           </div>
-          <p className="text-xs text-ink-3 mt-1.5">
-            Each added colleague's request is routed to <b>their own manager</b> for approval.
-          </p>
         </div>
 
-        {/* Unregistered colleague */}
-        <div>
-          {!showUnregForm ? (
-            <button onClick={() => setShowUnregForm(true)} className="text-xs font-medium text-ink-2 hover:text-ink hover:underline underline-offset-2">
-              + Colleague not on MBXchange yet?
-            </button>
-          ) : (
-            <div className="p-3.5 rounded-xl border border-violet/40 bg-violet-soft/40 space-y-3">
-              <p className="text-xs font-medium text-violet flex items-center gap-1.5">
-                <AlertCircle className="w-3.5 h-3.5" /> Unregistered colleague — the admin will be asked to create their account first
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <TextInput placeholder="Full name *" value={unregForm.name}
-                  onChange={(e) => setUnregForm({ ...unregForm, name: e.target.value })} />
-                <TextInput placeholder="Corporate email" value={unregForm.email}
-                  onChange={(e) => setUnregForm({ ...unregForm, email: e.target.value })} />
-                <Select value={unregForm.department} onChange={(e) => setUnregForm({ ...unregForm, department: e.target.value })}>
-                  {DEPARTMENTS.map((d) => <option key={d}>{d}</option>)}
-                </Select>
-                <TextInput placeholder="Role / title" value={unregForm.role}
-                  onChange={(e) => setUnregForm({ ...unregForm, role: e.target.value })} />
-              </div>
-              <div className="flex gap-2">
-                <Button size="sm" variant="secondary" onClick={() => setShowUnregForm(false)}>Cancel</Button>
-                <Button size="sm" onClick={() => {
-                  if (!unregForm.name.trim()) return;
-                  setUnregistered([...unregistered, unregForm]);
-                  setUnregForm({ name: '', email: '', department: DEPARTMENTS[0], role: '' });
-                  setShowUnregForm(false);
-                }}>Add to application</Button>
-              </div>
-            </div>
-          )}
-          {unregistered.length > 0 && (
-            <div className="mt-2 space-y-1.5">
-              {unregistered.map((p, i) => (
-                <div key={i} className="flex items-center gap-2 text-xs px-3 py-2 rounded-xl bg-violet-soft/40">
-                  <span className="font-semibold text-ink flex-1 truncate">{p.name} · {p.department}</span>
-                  <Chip>Registration will be requested</Chip>
-                  <button onClick={() => setUnregistered(unregistered.filter((_, j) => j !== i))}
-                    aria-label={`Remove ${p.name}`} className="p-1 text-ink-3 hover:text-red">
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
+        <div className="flex items-center justify-between gap-3 p-3.5 rounded-xl bg-surface-2 text-xs">
+          <span className="text-ink-2">Your remaining capacity</span>
+          <span className="font-semibold text-ink">
+            {s.user?.availableHoursWeek ?? 0}h / {s.user?.bandwidthPeriod === 'month' ? 'month' : 'week'}
+            <span className="text-ink-3 font-medium"> · this asks for {post.effortHours || post.duration || '—'}</span>
+          </span>
         </div>
 
-        <Field label="Note to the manager / author" hint="Optional — context on availability, motivation, or timing">
+        <Field label="Note to your manager" hint="Optional — context on availability, motivation, or timing">
           <TextArea value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Sprint commitments are on track; available Tue–Thu afternoons." />
         </Field>
       </div>
@@ -435,7 +314,7 @@ function WorkDetail({ postId, onBack }: { postId: string; onBack: () => void }) 
             <StatusBadge status={myApp.status} />
           ) : post.status === 'Open' && openSeats > 0 ? (
             <Button onClick={() => setApplyOpen(true)}>
-              <Send className="w-3.5 h-3.5" /> Apply / Nominate
+              <Send className="w-3.5 h-3.5" /> Apply to help
             </Button>
           ) : (
             <span className="text-xs font-semibold text-ink-3">
@@ -638,6 +517,7 @@ export function WorkExchange() {
                 const openSeats = p.seats - p.seatsFilled;
                 return (
                   <Reveal key={p.id} delay={(i % 2) * 70}>
+                    <TiltCard>
                     <Card className="p-7 h-full flex flex-col" onClick={() => s.setOpenWorkId(p.id)}>
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
@@ -705,6 +585,7 @@ export function WorkExchange() {
                           : <span className="text-xs font-semibold text-primary-text shrink-0">View &amp; Apply →</span>}
                       </div>
                     </Card>
+                    </TiltCard>
                   </Reveal>
                 );
               })}
