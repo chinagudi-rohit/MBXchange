@@ -52,7 +52,7 @@ export function PeopleView() {
       </div>
 
       <div className="sticky-bar -mx-1 px-1 py-2.5 mb-4">
-        <div className="grid sm:grid-cols-3 gap-2.5 max-w-2xl">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 max-w-2xl">
           <div className="sm:col-span-2">
             <TextInput placeholder="Search by name, skill, or role…" value={query} onChange={(e) => setQuery(e.target.value)} />
           </div>
@@ -69,7 +69,7 @@ export function PeopleView() {
       {people.length === 0 ? (
         <EmptyState title="No matching colleagues" hint="Try a different search term or department." />
       ) : (
-        <div className="grid md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
           {people.map((u, i) => (
             <Reveal key={u.id} delay={(i % 4) * 60}>
             <Card className="p-7 h-full flex flex-col">

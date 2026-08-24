@@ -150,7 +150,7 @@ export function InsightsView() {
         )}
       </section>
 
-      <div className="grid lg:grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* Live demand from open posts */}
         <section>
           <h2 className="text-sm font-semibold text-ink mb-3">Most requested skills right now</h2>

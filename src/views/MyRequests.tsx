@@ -122,7 +122,8 @@ export function MyRequests() {
                   const forSomeoneElse = a.applicantId !== s.user?.id;
                   return (
                     <Card key={a.id} className="p-4">
-                      <div className="flex flex-wrap items-center gap-3">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
                         <Avatar initials={a.applicantInitials} size="sm" name={a.applicantName} />
                         <div className="flex-1 min-w-0">
                           <button
@@ -148,7 +149,8 @@ export function MyRequests() {
                             </p>
                           )}
                         </div>
-                        <div className="flex items-center gap-2">
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
                           <StatusBadge status={a.status} />
                           {canEdit && (
                             <>
@@ -180,7 +182,8 @@ export function MyRequests() {
             ) : (
               <Reveal stagger className="space-y-2.5">
                 {collabSent.map((c) => (
-                  <Card key={c.id} className="p-4 flex flex-wrap items-center gap-3">
+                  <Card key={c.id} className="p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
                     <Avatar initials={c.targetInitials} size="sm" name={c.targetName} />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-normal text-ink leading-snug">{c.task_title}</p>
@@ -189,7 +192,8 @@ export function MyRequests() {
                         {c.edited_at && ' · edited'}
                       </p>
                     </div>
-                    <div className="flex items-center gap-2">
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
                       <StatusBadge status={c.status} />
                       {c.status === 'pending' && (
                         <>

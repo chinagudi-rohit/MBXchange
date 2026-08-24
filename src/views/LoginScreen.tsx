@@ -35,7 +35,7 @@ export function LoginScreen() {
   };
 
   return (
-    <div className="min-h-dvh grid lg:grid-cols-[1.1fr_minmax(26rem,0.9fr)]">
+    <div className="min-h-dvh grid grid-cols-1 lg:grid-cols-[1.1fr_minmax(26rem,0.9fr)]">
       {/* Brand panel — fills the left half instead of leaving the screen empty */}
       <aside className="hidden lg:flex flex-col justify-between p-10 xl:p-14 bg-black text-white">
         <div className="flex items-center gap-3">

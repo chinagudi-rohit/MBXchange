@@ -60,7 +60,7 @@ export function HomeDashboard() {
         </div>
       </div>
 
-      <Reveal stagger className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <Reveal stagger className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {stats.map((st) => (
           <Card key={st.label} className="p-6" onClick={() => s.setTab(st.tab)}>
             <span className="flex items-center gap-2 text-ink-3">
@@ -107,7 +107,7 @@ export function HomeDashboard() {
             </button>
           </div>
         </div>
-        <Reveal stagger className="grid md:grid-cols-2 xl:grid-cols-3 gap-3.5">
+        <Reveal stagger className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
           {recommended.map((p: any) => (
             <Card key={p.id} className="p-5 h-full flex flex-col" onClick={() => { s.setTab('work'); s.setOpenWorkId(p.id); }}>
               <div className="flex items-center gap-1.5 flex-wrap mb-2">

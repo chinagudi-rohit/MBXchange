@@ -79,7 +79,7 @@ export function WorkFormModal({ open, onClose, existing }: {
         </>
       }
     >
-      <div className="grid sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="sm:col-span-2">
           <Field label="Title" required>
             <TextInput value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })}
@@ -298,7 +298,7 @@ function ApplyModal({ open, onClose, post }: { open: boolean; onClose: () => voi
               <p className="text-xs font-medium text-violet flex items-center gap-1.5">
                 <AlertCircle className="w-3.5 h-3.5" /> Unregistered colleague — the admin will be asked to create their account first
               </p>
-              <div className="grid sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <TextInput placeholder="Full name *" value={unregForm.name}
                   onChange={(e) => setUnregForm({ ...unregForm, name: e.target.value })} />
                 <TextInput placeholder="Corporate email" value={unregForm.email}
@@ -607,7 +607,7 @@ export function WorkExchange() {
       {section === 'requirements' ? (
         <>
           <div className="sticky-bar -mx-1 px-3 py-3 mb-4">
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
               <TextInput placeholder="Search by title, tag, keyword…" value={query} onChange={(e) => setQuery(e.target.value)} />
               <Select value={dept} onChange={(e) => setDept(e.target.value)} aria-label="Filter by department">
                 <option value="All">All departments</option>
@@ -633,7 +633,7 @@ export function WorkExchange() {
           ) : (
             // Two per row at every desktop width — wider cards carry the full
             // brief so the feed is scannable without opening each one.
-            <div className="grid lg:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {filtered.map((p, i) => {
                 const openSeats = p.seats - p.seatsFilled;
                 return (
@@ -712,7 +712,7 @@ export function WorkExchange() {
           )}
         </>
       ) : (
-        <div className="grid lg:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {offers.map((o, i) => (
             <Reveal key={o.id} delay={(i % 2) * 70}>
             <Card className="p-7 h-full">

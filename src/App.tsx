@@ -336,7 +336,7 @@ function Shell() {
         {mobileNavOpen && (
           <div className="fixed inset-0 z-50 lg:hidden anim-fade-in">
             <div className="absolute inset-0 bg-black/35" onClick={() => setMobileNavOpen(false)} />
-            <aside className="absolute left-0 top-0 h-full w-72 glass p-4 shadow-pop">
+            <aside className="absolute left-0 top-0 h-full w-72 panel-overlay p-4 shadow-pop">
               <div className="flex items-center justify-between mb-4">
                 <span className="flex items-center gap-2.5">
                   <LogoMark />

@@ -61,7 +61,7 @@ function Marketplace() {
       {filtered.length === 0 ? (
         <EmptyState title="No listings" hint="Post the first item for your colleagues." />
       ) : (
-        <Reveal stagger className="grid sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
+        <Reveal stagger className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
           {filtered.map((l) => (
             <Card key={l.id} className={`p-5 flex flex-col ${l.sold ? 'opacity-60' : ''}`} onClick={() => setDetail(l)}>
               <div className="flex items-start justify-between gap-2 mb-2">
@@ -122,7 +122,7 @@ function Marketplace() {
             </p>
             <p className="text-sm text-ink-2 leading-relaxed whitespace-pre-line">{detail.description}</p>
             {Object.keys(detail.specs || {}).length > 0 && (
-              <div className="grid sm:grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {Object.entries(detail.specs).map(([k, v]) => (
                   <div key={k} className="bg-surface-2 rounded-xl px-3.5 py-2.5">
                     <p className="text-xs font-semibold uppercase tracking-wide text-ink-3">{k}</p>
@@ -153,7 +153,7 @@ function Marketplace() {
           </>
         }
       >
-        <div className="grid sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Type">
             <Select value={form.listingType} onChange={(e) => setForm({ ...form, listingType: e.target.value, isFree: e.target.value === 'Give Away (Free)' })}>
               {['Sell', 'Buy / Looking for', 'Give Away (Free)', 'Exchange', 'Ticket / Event', 'Service Offer'].map((t) => <option key={t}>{t}</option>)}
@@ -278,7 +278,7 @@ function Carpool() {
         Every trip is a one-way offer — book only the direction and days you need. Not going today? Just skip it.
       </p>
 
-      <Reveal stagger className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+      <Reveal stagger className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {filtered.map((t) => {
           const seatsLeft = t.seatsTotal - t.seatsBooked;
           const isDriver = t.driverId === s.user?.id;
@@ -362,7 +362,7 @@ function Carpool() {
         }
       >
         <div className="space-y-4">
-          <div className="grid sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Home / Pickup Point" required>
               <TextInput value={form.origin} onChange={(e) => setForm({ ...form, origin: e.target.value })} placeholder="Indiranagar Metro Gate 1" />
             </Field>
@@ -371,7 +371,7 @@ function Carpool() {
             </Field>
           </div>
 
-          <div className="grid sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className={`p-3.5 rounded-xl border ${form.offerMorning ? 'border-primary bg-primary-soft/40' : 'border-line'}`}>
               <label className="flex items-center gap-2.5 cursor-pointer">
                 <input type="checkbox" checked={form.offerMorning} onChange={(e) => setForm({ ...form, offerMorning: e.target.checked })}
@@ -413,7 +413,7 @@ function Carpool() {
             </div>
           </Field>
 
-          <div className="grid sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Field label="Vehicle">
               <TextInput value={form.vehicleModel} onChange={(e) => setForm({ ...form, vehicleModel: e.target.value })} placeholder="Mercedes-Benz EQA 250+" />
             </Field>
@@ -428,7 +428,7 @@ function Carpool() {
             </Field>
           </div>
 
-          <div className="grid sm:grid-cols-2 gap-4 items-end">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
             <Field label="Cost sharing">
               <Select value={form.costPerRide} onChange={(e) => setForm({ ...form, costPerRide: e.target.value })}>
                 {['Free / Eco-Commute', 'Split Fuel / Eco-share', 'Company Eco-Pass'].map((c) => <option key={c}>{c}</option>)}
@@ -479,7 +479,7 @@ function Communities() {
       {/* Groups */}
       <section>
         <h3 className="text-sm font-semibold text-ink mb-3">Guilds & Groups</h3>
-        <Reveal stagger className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+        <Reveal stagger className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
           {data.groups.map((g: any) => (
             <Card key={g.id} className="p-4.5 p-5">
               <div className="flex items-start justify-between gap-2">
@@ -544,7 +544,7 @@ function Communities() {
           <h3 className="text-sm font-semibold text-ink">Notices & Events</h3>
           <Button size="sm" variant="soft" onClick={() => setPostOpen(true)}><Plus className="w-3.5 h-3.5" /> Post Notice</Button>
         </div>
-        <Reveal stagger className="grid md:grid-cols-2 gap-3.5">
+        <Reveal stagger className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
           {data.posts.map((p: any) => (
             <Card key={p.id} className="p-4.5 p-5">
               <Chip tone="primary">{p.type}</Chip>

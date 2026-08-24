@@ -219,7 +219,8 @@ export function AdminConsole() {
           <div className="flex justify-end mb-4">
             <Button onClick={openCreate}><UserPlus className="w-4 h-4" /> Create Account</Button>
           </div>
-          <Card className="overflow-x-auto">
+          <p className="lg:hidden text-xs text-ink-3 mb-2">Swipe the table sideways to see all columns →</p>
+          <Card className="overflow-x-auto relative">
             <table className="w-full text-left min-w-[640px]">
               <thead>
                 <tr className="border-b border-line">
@@ -292,22 +293,24 @@ export function AdminConsole() {
             )}
             {regRequests.map((r) => (
               <Card key={r.id} className="p-4.5 p-5">
-                <div className="flex flex-wrap items-center gap-3">
-                  <span className="w-9 h-9 rounded-xl bg-violet-soft text-violet flex items-center justify-center shrink-0">
-                    <UserPlus className="w-4.5 h-4.5" />
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-normal text-ink">
-                      {r.subjectName} <span className="text-ink-3 font-medium">· {r.subjectKind} registration</span>
-                    </p>
-                    <p className="text-xs text-ink-2 mt-0.5 leading-relaxed">{r.note}</p>
-                    <p className="text-xs text-ink-3 mt-1">
-                      Requested by {r.requestedByName} · {timeAgo(r.createdAt)}
-                      {r.postTitle && <> · for “{r.postTitle.slice(0, 50)}”</>}
-                    </p>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <span className="w-9 h-9 rounded-xl bg-violet-soft text-violet flex items-center justify-center shrink-0">
+                      <UserPlus className="w-4.5 h-4.5" />
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-normal text-ink">
+                        {r.subjectName} <span className="text-ink-3 font-medium">· {r.subjectKind} registration</span>
+                      </p>
+                      <p className="text-xs text-ink-2 mt-0.5 leading-relaxed">{r.note}</p>
+                      <p className="text-xs text-ink-3 mt-1">
+                        Requested by {r.requestedByName} · {timeAgo(r.createdAt)}
+                        {r.postTitle && <> · for “{r.postTitle.slice(0, 50)}”</>}
+                      </p>
+                    </div>
                   </div>
                   {r.status === 'pending' ? (
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 shrink-0">
                       <Button size="sm" variant="secondary" onClick={async () => {
                         await api.post(`/admin/registration-requests/${r.id}/dismiss`);
                         load();
@@ -356,7 +359,7 @@ export function AdminConsole() {
         {created ? (
           <TempPasswordReveal email={created.email} password={created.password} onDone={() => setCreateOpen(false)} />
         ) : (
-          <div className="grid sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Full name" required>
               <TextInput value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
             </Field>
@@ -414,7 +417,7 @@ export function AdminConsole() {
             {completeReg && (
               <p className="text-xs text-ink-2 bg-surface-2 rounded-xl px-3.5 py-2.5 leading-relaxed">{completeReg.note}</p>
             )}
-            <div className="grid sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Field label="Full name" required>
                 <TextInput value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
               </Field>
