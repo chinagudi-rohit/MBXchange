@@ -11,6 +11,7 @@ import {
 
 const CATEGORIES = ['All', 'Vehicles', 'Electronics', 'Furniture & Home', 'Sports & Outdoors', 'Tickets & Events', 'Books & Tools', 'Services', 'Giveaways & Free', 'Other'];
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+const VEHICLE_TYPES = ['Electric (EV)', 'Hybrid (PHEV)', 'Diesel / Petrol'];
 
 /* ══════════════════ Marketplace ══════════════════ */
 
@@ -19,6 +20,8 @@ function Marketplace() {
   const [listings, setListings] = useState<Listing[] | null>(null);
   const [category, setCategory] = useState('All');
   const [query, setQuery] = useState('');
+  const [sort, setSort] = useState<'newest' | 'priceAsc' | 'priceDesc'>('newest');
+  const [hideSold, setHideSold] = useState(true);
   const [detail, setDetail] = useState<Listing | null>(null);
   const [newOpen, setNewOpen] = useState(false);
   const [form, setForm] = useState({
@@ -31,9 +34,21 @@ function Marketplace() {
 
   const filtered = useMemo(() => (listings || []).filter((l) => {
     if (category !== 'All' && l.category !== category) return false;
-    if (query && !l.title.toLowerCase().includes(query.toLowerCase())) return false;
+    if (hideSold && l.sold) return false;
+    if (query) {
+      const ql = query.toLowerCase();
+      if (!l.title.toLowerCase().includes(ql) &&
+          !(l.description || '').toLowerCase().includes(ql) &&
+          !(l.sellerName || '').toLowerCase().includes(ql)) return false;
+    }
     return true;
-  }), [listings, category, query]);
+  }).sort((a, b) => {
+    const pa = a.isFree ? 0 : Number(a.price || 0);
+    const pb = b.isFree ? 0 : Number(b.price || 0);
+    if (sort === 'priceAsc') return pa - pb;
+    if (sort === 'priceDesc') return pb - pa;
+    return +new Date(b.createdAt) - +new Date(a.createdAt);
+  }), [listings, category, query, sort, hideSold]);
 
   const submit = async () => {
     if (!form.title.trim()) { s.toast('error', 'Title required'); return; }
@@ -49,14 +64,30 @@ function Marketplace() {
   return (
     <div>
       <div className="flex flex-wrap gap-2.5 mb-4 items-center">
-        <TextInput placeholder="Search listings…" value={query} onChange={(e) => setQuery(e.target.value)} className="!w-56" />
+        <TextInput placeholder="Search title, description, seller…" value={query} onChange={(e) => setQuery(e.target.value)} className="!w-64" />
         <Select value={category} onChange={(e) => setCategory(e.target.value)} className="!w-48" aria-label="Filter by category">
           <option value="All">All categories</option>
           {CATEGORIES.filter((c) => c !== 'All').map((c) => <option key={c}>{c}</option>)}
         </Select>
+        <Select value={sort} onChange={(e) => setSort(e.target.value as typeof sort)} className="!w-44" aria-label="Sort listings">
+          <option value="newest">Newest first</option>
+          <option value="priceAsc">Price: low to high</option>
+          <option value="priceDesc">Price: high to low</option>
+        </Select>
+        <label className="flex items-center gap-2 text-xs font-medium text-ink-2 cursor-pointer select-none">
+          <input
+            type="checkbox" checked={hideSold} onChange={(e) => setHideSold(e.target.checked)}
+            className="w-4 h-4 accent-(--primary)"
+          />
+          Hide sold
+        </label>
         <span className="flex-1" />
         <Button onClick={() => setNewOpen(true)}><Plus className="w-4 h-4" /> Post Listing</Button>
       </div>
+
+      <p className="text-xs text-ink-3 mb-3">
+        Showing <b className="text-ink-2">{filtered.length}</b> of {(listings || []).length} listings
+      </p>
 
       {filtered.length === 0 ? (
         <EmptyState title="No listings" hint="Post the first item for your colleagues." />
@@ -206,6 +237,9 @@ function Carpool() {
   const s = useStore();
   const [trips, setTrips] = useState<CarpoolTrip[] | null>(null);
   const [direction, setDirection] = useState<'all' | 'to_office' | 'from_office'>('all');
+  const [campus, setCampus] = useState('All');
+  const [vehicle, setVehicle] = useState('All');
+  const [scope, setScope] = useState<'all' | 'ev' | 'mine' | 'booked' | 'women'>('all');
   const [offerOpen, setOfferOpen] = useState(false);
   const [form, setForm] = useState({
     origin: '', destination: '', morningTime: '08:30 AM', eveningTime: '05:45 PM',
@@ -216,7 +250,29 @@ function Carpool() {
   const load = () => api.get('/carpool/trips').then((d) => setTrips(d.trips));
   useEffect(() => { load(); }, []);
 
-  const filtered = (trips || []).filter((t) => direction === 'all' || t.direction === direction);
+  const all = trips || [];
+  const campuses = useMemo(
+    () => [...new Set(all.map((t) => t.campus).filter(Boolean))].sort(),
+    [all]
+  );
+  const stats = useMemo(() => ({
+    total: all.length,
+    ev: all.filter((t) => t.vehicleType === 'Electric (EV)').length,
+    mine: all.filter((t) => t.driverId === s.user?.id).length,
+    booked: all.filter((t) => t.iAmBooked).length,
+    seatsFree: all.reduce((n, t) => n + Math.max(0, t.seatsTotal - t.seatsBooked), 0)
+  }), [all, s.user]);
+
+  const filtered = all.filter((t) => {
+    if (direction !== 'all' && t.direction !== direction) return false;
+    if (campus !== 'All' && t.campus !== campus) return false;
+    if (vehicle !== 'All' && t.vehicleType !== vehicle) return false;
+    if (scope === 'ev' && t.vehicleType !== 'Electric (EV)') return false;
+    if (scope === 'mine' && t.driverId !== s.user?.id) return false;
+    if (scope === 'booked' && !t.iAmBooked) return false;
+    if (scope === 'women' && !t.womenOnly) return false;
+    return true;
+  });
 
   const book = async (t: CarpoolTrip) => {
     try {
@@ -274,8 +330,40 @@ function Carpool() {
         <Button onClick={() => setOfferOpen(true)}><Plus className="w-4 h-4" /> Offer a Ride</Button>
       </div>
 
+      {/* Scope chips with live counts, so you can see at a glance what is on
+          offer before narrowing the list. */}
+      <div className="flex flex-wrap gap-1.5 mb-3">
+        {([
+          ['all', `All rides (${stats.total})`],
+          ['ev', `Electric only (${stats.ev})`],
+          ['women', 'Women-only'],
+          ['mine', `Offered by me (${stats.mine})`],
+          ['booked', `My bookings (${stats.booked})`]
+        ] as const).map(([val, label]) => (
+          <button
+            key={val} onClick={() => setScope(val)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+              scope === val ? 'bg-primary-soft text-primary-text' : 'panel text-ink-2 hover:text-ink shadow-card'
+            }`}
+          >{label}</button>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 mb-3">
+        <Select value={campus} onChange={(e) => setCampus(e.target.value)} aria-label="Filter by campus">
+          <option value="All">All campuses</option>
+          {campuses.map((c) => <option key={c}>{c}</option>)}
+        </Select>
+        <Select value={vehicle} onChange={(e) => setVehicle(e.target.value)} aria-label="Filter by vehicle type">
+          <option value="All">Any vehicle</option>
+          {VEHICLE_TYPES.map((v) => <option key={v}>{v}</option>)}
+        </Select>
+      </div>
+
       <p className="text-xs text-ink-3 mb-4">
-        Every trip is a one-way offer — book only the direction and days you need. Not going today? Just skip it.
+        Showing <b className="text-ink-2">{filtered.length}</b> of {stats.total} one-way trips
+        {stats.seatsFree > 0 && <> · <b className="text-ink-2">{stats.seatsFree}</b> seats free</>}
+        {' '}· book only the direction and days you need.
       </p>
 
       <Reveal stagger className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -419,7 +507,7 @@ function Carpool() {
             </Field>
             <Field label="Type">
               <Select value={form.vehicleType} onChange={(e) => setForm({ ...form, vehicleType: e.target.value })}>
-                {['Electric (EV)', 'Hybrid (PHEV)', 'Diesel / Petrol'].map((v) => <option key={v}>{v}</option>)}
+                {VEHICLE_TYPES.map((v) => <option key={v}>{v}</option>)}
               </Select>
             </Field>
             <Field label="Seats">
