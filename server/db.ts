@@ -103,6 +103,20 @@ export async function applyMigrations(): Promise<void> {
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     )`,
     `CREATE INDEX IF NOT EXISTS idx_ledger_user ON bandwidth_ledger(user_id)`,
+    // Recognition written by a requirement's author or the helper's manager
+    // once work is finished. One per person per engagement.
+    `CREATE TABLE IF NOT EXISTS appreciations (
+      id TEXT PRIMARY KEY,
+      to_user_id TEXT NOT NULL REFERENCES users(id),
+      from_user_id TEXT NOT NULL REFERENCES users(id),
+      post_id TEXT,
+      application_id TEXT,
+      message TEXT NOT NULL DEFAULT '',
+      rating INTEGER,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_appreciation_to ON appreciations(to_user_id)`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS idx_appreciation_unique ON appreciations(application_id, from_user_id)`,
     `CREATE UNIQUE INDEX IF NOT EXISTS idx_ledger_app_kind ON bandwidth_ledger(application_id, kind)`
   ];
   for (const sql of migrations) {

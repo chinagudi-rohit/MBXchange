@@ -94,7 +94,7 @@ function Marketplace() {
       ) : (
         <Reveal stagger className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
           {filtered.map((l) => (
-            <Card key={l.id} className={`p-5 flex flex-col ${l.sold ? 'opacity-60' : ''}`} onClick={() => setDetail(l)}>
+            <Card key={l.id} className={`p-5 h-full flex flex-col ${l.sold ? 'opacity-60' : ''}`} onClick={() => setDetail(l)}>
               <div className="flex items-start justify-between gap-2 mb-2">
                 <Chip>{l.category}</Chip>
                 <SaveButton saved={s.isSaved('listing', l.id)} onToggle={async () => {
@@ -107,7 +107,7 @@ function Marketplace() {
                 {l.isFree || l.price === 0 ? 'Free' : `${l.currency}${Number(l.price).toLocaleString()}`}
                 {l.sold && <span className="ml-2 text-xs font-semibold text-red">SOLD</span>}
               </p>
-              <div className="flex items-center justify-between mt-3 pt-3 border-t border-line">
+              <div className="flex items-center justify-between mt-auto pt-3.5 border-t border-line">
                 <span className="flex items-center gap-2 min-w-0">
                   <Avatar initials={l.sellerInitials} size="sm" name={l.sellerName} />
                   <span className="text-xs text-ink-2 truncate">{l.sellerName}</span>
@@ -455,7 +455,7 @@ function Carpool() {
               <TextInput value={form.origin} onChange={(e) => setForm({ ...form, origin: e.target.value })} placeholder="Indiranagar Metro Gate 1" />
             </Field>
             <Field label="Office / Campus" required>
-              <TextInput value={form.destination} onChange={(e) => setForm({ ...form, destination: e.target.value })} placeholder="MBRDI Whitefield Campus" />
+              <TextInput value={form.destination} onChange={(e) => setForm({ ...form, destination: e.target.value })} placeholder="Office campus" />
             </Field>
           </div>
 

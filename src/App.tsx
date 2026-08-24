@@ -2,16 +2,18 @@ import React, { useState } from 'react';
 import {
   Home, Briefcase, Users, ListChecks, Compass, ShieldCheck, Settings2, BarChart3,
   Bell, MessageSquare, Bookmark, Sun, Moon, LogOut, KeyRound, ChevronDown, Search,
-  UserRound, X, PanelLeftClose, PanelLeftOpen, Menu, Plus, Zap
+  UserRound, X, PanelLeftClose, PanelLeftOpen, Menu, Plus, Zap, Award
 } from 'lucide-react';
 import { StoreProvider, useStore, type MainTab } from './lib/store';
 import { Toasts, Avatar, MercedesStar } from './components/ui';
 import { LoginScreen } from './views/LoginScreen';
+import { ForcePasswordChange } from './views/ForcePasswordChange';
 import { HomeDashboard } from './views/HomeDashboard';
 import { WorkExchange, WorkFormModal } from './views/WorkExchange';
 import { PeopleView } from './views/PeopleView';
 import { MyRequests } from './views/MyRequests';
 import { InsightsView } from './views/InsightsView';
+import { Achievements } from './views/Achievements';
 import { BeyondWork } from './views/BeyondWork';
 import { ManagerInbox } from './views/ManagerInbox';
 import { AdminConsole } from './views/AdminConsole';
@@ -82,11 +84,16 @@ function Shell() {
 
   if (!s.user) return <><div className="bg-mesh" /><LoginScreen /></>;
 
+  // A temporary password gets you exactly one screen: the one that replaces it.
+  // Impersonating admins are exempt — they are not the account's owner.
+  if (s.user.mustChangePassword && !s.impersonating) return <ForcePasswordChange />;
+
   const navItems: Array<{ id: MainTab; label: string; hint: string; icon: React.ReactNode; badge?: number; show: boolean }> = [
     { id: 'home', label: 'Home', hint: 'Matches, activity & quick actions', icon: <Home className="w-4.5 h-4.5" />, show: true },
-    { id: 'work', label: 'Work Exchange', hint: 'Requirements & bandwidth offers', icon: <Briefcase className="w-4.5 h-4.5" />, show: true },
+    { id: 'work', label: 'Opportunities', hint: 'Projects & PoCs beyond your day job', icon: <Briefcase className="w-4.5 h-4.5" />, show: true },
     { id: 'people', label: 'People & Skills', hint: 'Skill directory & collaboration', icon: <Users className="w-4.5 h-4.5" />, show: true },
     { id: 'requests', label: 'My Requests', hint: 'Everything you sent and received', icon: <ListChecks className="w-4.5 h-4.5" />, show: true },
+    { id: 'achievements', label: 'Achievements', hint: 'Tier, milestones & recognition', icon: <Award className="w-4.5 h-4.5" />, show: true },
     { id: 'insights', label: 'Insights', hint: 'Skill heatmap & org analytics', icon: <BarChart3 className="w-4.5 h-4.5" />, show: true },
     { id: 'beyond', label: 'Beyond Work', hint: 'Marketplace, carpool & communities', icon: <Compass className="w-4.5 h-4.5" />, show: true },
     {
@@ -461,6 +468,7 @@ function Shell() {
           {s.tab === 'work' && <WorkExchange />}
           {s.tab === 'people' && <PeopleView />}
           {s.tab === 'requests' && <MyRequests />}
+          {s.tab === 'achievements' && <Achievements />}
           {s.tab === 'insights' && <InsightsView />}
           {s.tab === 'beyond' && <BeyondWork />}
           {s.tab === 'manager' && <ManagerInbox />}

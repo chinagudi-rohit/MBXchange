@@ -37,6 +37,25 @@ spec:
                 secretKeyRef:
                   name: mbxchange-secrets
                   key: DATABASE_URL
+            # PRODUCTION SWITCH — see README "Turning off the pilot sign-in".
+            # "false" removes the demo account picker from the login screen.
+            - name: DEMO_ACCOUNTS
+              value: "false"
+            # Do not load the demo dataset into a production database.
+            - name: SKIP_SEED
+              value: "true"
+            # Bootstrap administrator, created once when the database has no
+            # admin. Required whenever SKIP_SEED is true.
+            - name: ADMIN_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: mbxchange-secrets
+                  key: ADMIN_EMAIL
+            - name: ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mbxchange-secrets
+                  key: ADMIN_PASSWORD
             - name: JWT_SECRET
               valueFrom:
                 secretKeyRef:

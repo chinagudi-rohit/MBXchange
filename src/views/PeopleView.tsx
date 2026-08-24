@@ -69,7 +69,7 @@ export function PeopleView() {
     <div className="anim-fade-up">
       <div className="mb-5">
         <h1 className="text-2xl font-bold tracking-tight text-ink">People & Skills</h1>
-        <p className="text-xs text-ink-2 mt-0.5">Verified colleagues across all PT-TH departments, with declared bandwidth</p>
+        <p className="text-xs text-ink-2 mt-0.5">Verified colleagues across every department, with the bandwidth they have declared</p>
       </div>
 
       <div className="sticky-bar -mx-1 px-1 py-2.5 mb-4">
@@ -158,7 +158,7 @@ export function PeopleView() {
                 {u.hoursConsumed > 0 && <span className="text-ink-3"> ({Math.max(0, u.availableHoursWeek - u.hoursConsumed)}h free)</span>}
                 {' '}· {u.collaborationsCount} gigs · {u.hoursContributed}h contributed
               </p>
-              <div className="flex gap-2 mt-4 pt-3.5 border-t border-line">
+              <div className="flex gap-2 mt-auto pt-3.5 border-t border-line">
                 <Button size="sm" className="flex-1" onClick={() => setTarget(u)}>
                   <Handshake className="w-3.5 h-3.5" /> Request Collaboration
                 </Button>

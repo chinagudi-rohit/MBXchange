@@ -27,6 +27,22 @@ export function LoginScreen() {
   const [accounts, setAccounts] = useState<DemoAccount[] | null>(null);
   const [defaults, setDefaults] = useState<{ admin: string; user: string }>({ admin: '', user: '' });
   const [loadingAccounts, setLoadingAccounts] = useState(false);
+  const [demoEnabled, setDemoEnabled] = useState<boolean | null>(null);
+
+  // One probe on mount decides whether the pilot panel exists at all. With
+  // DEMO_ACCOUNTS=false the endpoint 404s and nothing is rendered.
+  useEffect(() => {
+    let cancelled = false;
+    api.get('/auth/demo-accounts')
+      .then((d) => {
+        if (cancelled) return;
+        setDemoEnabled(true);
+        setAccounts(d.accounts || []);
+        setDefaults(d.defaultPasswords || { admin: '', user: '' });
+      })
+      .catch(() => { if (!cancelled) setDemoEnabled(false); });
+    return () => { cancelled = true; };
+  }, []);
 
   // Pulled live so the picker reflects whoever exists right now — accounts the
   // admin adds or deactivates show up without touching this file.
@@ -43,7 +59,7 @@ export function LoginScreen() {
     }
   };
 
-  useEffect(() => { if (demoOpen && accounts === null) loadAccounts(); }, [demoOpen]);
+
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,17 +87,18 @@ export function LoginScreen() {
 
         <div className="max-w-md">
           <h2 className="text-3xl xl:text-4xl font-semibold leading-tight">
-            Projects beyond your day-to-day work.
+            The best work you do this year might not be on your roadmap.
           </h2>
           <p className="text-sm text-white/70 mt-4 leading-relaxed">
-            Find help across departments, lend your skills where they are needed, and keep
-            every request moving through the right approvals — in one place.
+            Somewhere in the organisation, a team is stuck on exactly the thing you are good at.
+            MBXchange is where you find them — and where the hours you give come back
+            as skills, reach and a record of what you contributed.
           </p>
           <ul className="mt-8 space-y-3">
             {[
-              'Post a requirement and get matched with the right people',
-              'Apply to opportunities that match your declared skills',
-              'Capacity-aware approvals routed to the right manager'
+              'Work on something outside your team, for a few hours or a few days',
+              'Build a reputation your manager can actually see at review time',
+              'Earn tiers, milestones and recognition from the people you helped'
             ].map((line) => (
               <li key={line} className="flex items-start gap-2.5 text-sm text-white/85">
                 <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-[#d97757] shrink-0" />
@@ -118,7 +135,7 @@ export function LoginScreen() {
           <h1 className="hidden lg:block text-xl font-semibold text-ink mb-1">Welcome back</h1>
           <h1 className="lg:hidden text-base font-semibold text-ink mb-1">Sign in</h1>
           <p className="text-xs text-ink-2 mb-5">
-            Accounts are created by your MBXchange administrator.
+            Use the credentials your administrator gave you.
           </p>
 
           <form onSubmit={submit} className="space-y-4">
@@ -157,6 +174,7 @@ export function LoginScreen() {
           </form>
         </div>
 
+        {demoEnabled && (
         <div className="mt-4 panel rounded-2xl shadow-card overflow-hidden">
           <button
             onClick={() => setDemoOpen((v) => !v)}
@@ -222,6 +240,7 @@ export function LoginScreen() {
             </div>
           )}
         </div>
+        )}
       </div>
       </div>
     </div>

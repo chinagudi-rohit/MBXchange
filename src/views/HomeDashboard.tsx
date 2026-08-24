@@ -93,7 +93,14 @@ export function HomeDashboard() {
         </div>
       </div>
 
-      <Reveal stagger className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      {/* Column count follows the number of tiles — employees see three and
+          managers four, and neither should leave a gap at the end of the row. */}
+      <Reveal
+        stagger
+        className={`grid grid-cols-1 sm:grid-cols-2 gap-3 ${
+          stats.length === 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-3'
+        }`}
+      >
         {stats.map((st) => (
           <Card key={st.label} className="p-6" onClick={() => s.setTab(st.tab)}>
             <span className="flex items-center gap-2 text-ink-3">
@@ -153,6 +160,26 @@ export function HomeDashboard() {
               </p>
             </div>
           </div>
+          {(s.user?.badges?.length || 0) > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-3">
+              {s.user!.badges.slice(0, 3).map((b) => (
+                <span
+                  key={b.id}
+                  title={`${b.name} — ${b.description}`}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-surface-2 text-ink-2 text-xs font-medium max-w-36"
+                >
+                  <span aria-hidden="true">{b.icon}</span>
+                  <span className="truncate">{b.name}</span>
+                </span>
+              ))}
+            </div>
+          )}
+          <button
+            onClick={() => s.setTab('achievements')}
+            className="text-xs font-semibold text-primary-text hover:underline underline-offset-2 text-left mt-3"
+          >
+            See milestones and recognition →
+          </button>
           {tierProgress && (
             <div className="mt-auto pt-4">
               <div className="h-1.5 rounded-full bg-surface-2 overflow-hidden">

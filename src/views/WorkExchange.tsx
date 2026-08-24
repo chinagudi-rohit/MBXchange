@@ -267,7 +267,7 @@ function WorkDetail({ postId, onBack }: { postId: string; onBack: () => void }) 
   return (
     <div className="anim-fade-up">
       <button onClick={onBack} className="flex items-center gap-1.5 text-sm font-semibold text-ink-2 hover:text-ink mb-4">
-        <ArrowLeft className="w-4 h-4" /> Back to Work Exchange
+        <ArrowLeft className="w-4 h-4" /> Back to Opportunities
       </button>
 
       <Card className="p-6">
@@ -488,8 +488,8 @@ export function WorkExchange() {
     <div className="anim-fade-up">
       <div className="flex flex-wrap items-end justify-between gap-3 mb-5">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-ink">Work Exchange</h1>
-          <p className="text-xs text-ink-2 mt-0.5">Cross-department requirements, micro-gigs and bandwidth sharing</p>
+          <h1 className="text-2xl font-bold tracking-tight text-ink">Opportunities</h1>
+          <p className="text-xs text-ink-2 mt-0.5">Projects and proofs of concept you can take on alongside your day-to-day work</p>
         </div>
         <div className="flex gap-2">
           <Button variant="soft" onClick={() => setOfferModal(true)}>
@@ -623,7 +623,7 @@ export function WorkExchange() {
                         </span>
                       </div>
 
-                      <div className="flex items-center justify-between gap-3 mt-3 pt-3.5 border-t border-line">
+                      <div className="flex items-center justify-between gap-3 mt-auto pt-3.5 border-t border-line">
                         <span className="flex items-center gap-2 min-w-0">
                           <Avatar initials={p.authorInitials} size="sm" name={p.authorName} />
                           <span className="min-w-0">
@@ -647,7 +647,7 @@ export function WorkExchange() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {offers.map((o, i) => (
             <Reveal key={o.id} delay={(i % 2) * 70}>
-            <Card className="p-7 h-full">
+            <Card className="p-7 h-full flex flex-col">
               <div className="flex items-center gap-2.5 mb-3">
                 <Avatar initials={o.initials} name={o.authorName} />
                 <div className="min-w-0">
@@ -660,7 +660,7 @@ export function WorkExchange() {
                 {(o.skills || []).map((sk: string) => <Chip key={sk}>{sk}</Chip>)}
               </div>
               <p className="text-xs text-ink-2 leading-relaxed">{o.notes}</p>
-              <div className="mt-3.5 pt-3 border-t border-line flex justify-end">
+              <div className="mt-auto pt-3.5 border-t border-line flex justify-end">
                 <Button size="sm" variant="soft" onClick={() => { s.setMessagePartnerId(o.authorId); s.setMessagesOpen(true); }}>
                   <MessageSquare className="w-3.5 h-3.5" /> Message
                 </Button>

@@ -299,6 +299,19 @@ CREATE TABLE IF NOT EXISTS audit_log (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Recognition for finished work: written by the requirement's author or by the
+-- helper's own manager, and shown on the helper's profile.
+CREATE TABLE IF NOT EXISTS appreciations (
+  id TEXT PRIMARY KEY,
+  to_user_id TEXT NOT NULL REFERENCES users(id),
+  from_user_id TEXT NOT NULL REFERENCES users(id),
+  post_id TEXT,
+  application_id TEXT,
+  message TEXT NOT NULL DEFAULT '',
+  rating INTEGER,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 -- Every hour drawn against (or returned to) a person's declared bandwidth.
 -- Kept as a ledger rather than a running total so a completion can be undone
 -- and so a manager can see exactly where someone's capacity went.

@@ -71,7 +71,55 @@ function daysFromSchedule(scheduleType?: string, daysOfWeek?: string[]): string[
   }
 }
 
+
+/**
+ * Create the single administrator a fresh production database needs.
+ *
+ * Controlled by ADMIN_EMAIL / ADMIN_PASSWORD. Runs only when no admin exists,
+ * so restarts and rolling deploys never overwrite a changed password.
+ */
+export async function ensureBootstrapAdmin(): Promise<void> {
+  const email = process.env.ADMIN_EMAIL;
+  const password = process.env.ADMIN_PASSWORD;
+
+  const existingAdmin = await one<{ n: string }>(
+    `SELECT COUNT(*)::text AS n FROM users WHERE system_role = 'admin'`
+  );
+  if (existingAdmin && parseInt(existingAdmin.n, 10) > 0) return;
+
+  if (!email || !password) {
+    console.warn(
+      '[seed] No admin exists and ADMIN_EMAIL / ADMIN_PASSWORD are not set — ' +
+      'nobody will be able to sign in. Set both and restart.'
+    );
+    return;
+  }
+
+  const name = process.env.ADMIN_NAME || 'Platform Administrator';
+  const initials = name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
+  await q(
+    `INSERT INTO users (id, email, name, initials, role, system_role, status, department, campus,
+       password_hash, must_change_password)
+     VALUES ($1,$2,$3,$4,$5,'admin','active',$6,'',$7,TRUE)
+     ON CONFLICT (email) DO NOTHING`,
+    [
+      newId('usr'), email.toLowerCase(), name, initials,
+      process.env.ADMIN_ROLE || 'Platform Administrator',
+      process.env.ADMIN_DEPARTMENT || 'PT-THIT',
+      await bcrypt.hash(password, 10)
+    ]
+  );
+  console.log(`[seed] bootstrap admin created: ${email} (must change password on first sign-in)`);
+}
+
 export async function seedIfEmpty(): Promise<void> {
+  if (process.env.SKIP_SEED === 'true') {
+    // A production database still needs one account to sign in with, or the
+    // admin console is unreachable and no users can ever be created.
+    await ensureBootstrapAdmin();
+    console.log('[seed] SKIP_SEED=true — demo dataset skipped');
+    return;
+  }
   const existing = await one<{ n: string }>('SELECT COUNT(*)::text AS n FROM users');
   if (existing && parseInt(existing.n, 10) > 0) {
     console.log('[seed] database already populated — skipping');
@@ -125,7 +173,7 @@ export async function seedIfEmpty(): Promise<void> {
       JSON.stringify(['Test Automation', 'Quality Engineering']),
       JSON.stringify(['Test Suite Reviews', 'Automation Pairing']),
       '4–6 hours/month', 5, 4.6,
-      'QA automation engineer in PT-THIS. Recently onboarded — manager assignment pending.',
+      'QA automation engineer. Recently onboarded — manager assignment pending.',
       userHash
     ]
   );
@@ -471,7 +519,7 @@ export async function seedIfEmpty(): Promise<void> {
     [
       'reg_demo_1', 'usr_nikhil', 'Sandeep Iyer', 'sandeep.iyer@mercedes-benz.com',
       'Engineering Manager', 'PT-THIS', 'usr_nikhil',
-      'Nikhil Verma joined PT-THIS QA last month; his manager Sandeep Iyer is not yet registered on MBXchange.'
+      'Nikhil Verma joined the QA team last month; his manager Sandeep Iyer is not yet registered on MBXchange.'
     ]
   );
   await q(
@@ -480,7 +528,7 @@ export async function seedIfEmpty(): Promise<void> {
     [
       newId('n'),
       'Registration Needed: Sandeep Iyer',
-      'Nikhil Verma (PT-THIS) requires his manager Sandeep Iyer to be registered before approvals can flow.'
+      'Nikhil Verma requires his manager Sandeep Iyer to be registered before approvals can flow.'
     ]
   );
 

@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { api, setToken, getToken, ApiError, type User, type WorkPost, type Notification, type Message } from './api';
 
-export type MainTab = 'home' | 'work' | 'people' | 'requests' | 'insights' | 'beyond' | 'manager' | 'admin';
+export type MainTab = 'home' | 'work' | 'people' | 'requests' | 'achievements' | 'insights' | 'beyond' | 'manager' | 'admin';
 
 export interface Toast {
   id: string;

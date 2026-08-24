@@ -114,7 +114,7 @@ export function MyRequests() {
           <section>
             <h2 className="text-sm font-semibold text-ink mb-3">Work applications ({applications.length})</h2>
             {applications.length === 0 ? (
-              <EmptyState title="No applications yet" hint="Apply to an opportunity in Work Exchange and track it here." />
+              <EmptyState title="No applications yet" hint="Put your name forward for an opportunity and track it here." />
             ) : (
               <Reveal stagger className="space-y-2.5">
                 {applications.map((a) => {

@@ -99,6 +99,15 @@ async function settleCompletion(post: any, reverse = false): Promise<void> {
       await notify(app.applicant_id, null, 'feedback_received', 'Engagement completed',
         `"${post.title.slice(0, 50)}" is done. ${hours}h moved from your available bandwidth into your contribution total.`,
         'requests', post.id);
+
+      // The manager who approved the time should know it was delivered — they
+      // signed off the capacity and it now reads differently on their team's load.
+      const helper = await one(`SELECT manager_id, name FROM users WHERE id = $1`, [app.applicant_id]);
+      if (helper?.manager_id) {
+        await notify(helper.manager_id, null, 'feedback_received', `${helper.name} completed an engagement`,
+          `${hours}h on "${post.title.slice(0, 50)}" is finished and back in their available bandwidth. You can recognise the work from the requirement.`,
+          'manager', post.id);
+      }
     } else {
       const led = await one(
         `SELECT id, hours FROM bandwidth_ledger WHERE application_id = $1 AND kind = 'consumed'`, [app.id]
@@ -1408,6 +1417,178 @@ api.get('/recommendations', requireAuth(), async (req, res) => {
  * month's completed engagements that crossed a department boundary, which is
  * the thing this platform exists to increase.
  */
+// ============================== APPRECIATION ==============================
+
+/**
+ * Recognition for finished work.
+ *
+ * Only two people can write it: the person who posted the requirement (they
+ * received the help) and the helper's own manager (they authorised the time).
+ * The work has to be finished — praise for something still in flight is not
+ * recognition, it is encouragement, and it would dilute the signal.
+ */
+api.post('/appreciations', requireAuth(), async (req, res) => {
+  const { user } = req as AuthedRequest;
+  const { applicationId, message = '', rating } = req.body || {};
+  if (!applicationId) return res.status(400).json({ error: 'applicationId is required' });
+  if (!String(message).trim()) return res.status(400).json({ error: 'Write a short note — a blank thank-you says nothing' });
+  if (rating != null && (Number(rating) < 1 || Number(rating) > 5)) {
+    return res.status(400).json({ error: 'Rating must be between 1 and 5' });
+  }
+
+  const app = await one(
+    `SELECT a.id, a.applicant_id, a.manager_id, a.status,
+            p.id AS post_id, p.title, p.author_id, p.status AS post_status
+       FROM applications a JOIN work_posts p ON p.id = a.post_id
+      WHERE a.id = $1`,
+    [applicationId]
+  );
+  if (!app) return res.status(404).json({ error: 'Engagement not found' });
+  if (app.status !== 'approved') return res.status(400).json({ error: 'Only approved engagements can be recognised' });
+  if (app.post_status !== 'Completed') return res.status(400).json({ error: 'Recognise the work once the requirement is completed' });
+  if (app.applicant_id === user.id) return res.status(400).json({ error: 'You cannot recognise your own work' });
+
+  const isAuthor = app.author_id === user.id;
+  const isTheirManager = app.manager_id === user.id;
+  if (!isAuthor && !isTheirManager && user.systemRole !== 'admin') {
+    return res.status(403).json({ error: 'Only the requirement author or the helper\'s manager can recognise this work' });
+  }
+
+  const dup = await one(`SELECT id FROM appreciations WHERE application_id = $1 AND from_user_id = $2`, [applicationId, user.id]);
+  if (dup) return res.status(409).json({ error: 'You have already recognised this engagement' });
+
+  const id = newId('apr');
+  await q(
+    `INSERT INTO appreciations (id, to_user_id, from_user_id, post_id, application_id, message, rating)
+     VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+    [id, app.applicant_id, user.id, app.post_id, applicationId, String(message).trim(), rating != null ? Number(rating) : null]
+  );
+
+  // Recognition counts toward the peer score the directory sorts on.
+  if (rating != null) {
+    await q(
+      `UPDATE users SET contribution_score = ROUND((
+         SELECT AVG(r)::numeric FROM (
+           SELECT rating AS r FROM appreciations WHERE to_user_id = $1 AND rating IS NOT NULL
+         ) x
+       ), 2) WHERE id = $1`,
+      [app.applicant_id]
+    );
+  }
+
+  await notify(app.applicant_id, null, 'feedback_received', `${user.name} recognised your work`,
+    `On "${app.title.slice(0, 50)}": “${String(message).trim().slice(0, 90)}”`, 'requests', app.post_id);
+
+  const row = await one(
+    `SELECT ap.id, ap.message, ap.rating, ap.created_at AS "createdAt",
+            u.name AS "fromName", u.initials AS "fromInitials", u.role AS "fromRole", u.avatar_url AS "fromAvatarUrl",
+            p.title AS "postTitle"
+       FROM appreciations ap
+       JOIN users u ON u.id = ap.from_user_id
+       LEFT JOIN work_posts p ON p.id = ap.post_id
+      WHERE ap.id = $1`,
+    [id]
+  );
+  res.status(201).json({ appreciation: row });
+});
+
+/** Recognition received by a person (defaults to the signed-in user). */
+api.get('/appreciations', requireAuth(), async (req, res) => {
+  const { user } = req as AuthedRequest;
+  const target = (req.query.userId as string) || user.id;
+  const { rows } = await q(
+    `SELECT ap.id, ap.message, ap.rating, ap.created_at AS "createdAt",
+            u.name AS "fromName", u.initials AS "fromInitials", u.role AS "fromRole", u.avatar_url AS "fromAvatarUrl",
+            p.title AS "postTitle", p.department AS "postDepartment"
+       FROM appreciations ap
+       JOIN users u ON u.id = ap.from_user_id
+       LEFT JOIN work_posts p ON p.id = ap.post_id
+      WHERE ap.to_user_id = $1
+      ORDER BY ap.created_at DESC`,
+    [target]
+  );
+  res.json({ appreciations: rows });
+});
+
+/**
+ * Completed engagements the signed-in user is entitled to recognise, with
+ * whether they already have. Drives the "recognise the team" prompt.
+ */
+api.get('/appreciations/pending', requireAuth(), async (req, res) => {
+  const { user } = req as AuthedRequest;
+  const { rows } = await q(
+    `SELECT a.id AS "applicationId", a.applicant_id AS "applicantId", a.commitment,
+            u.name AS "applicantName", u.initials AS "applicantInitials",
+            u.role AS "applicantRole", u.department AS "applicantDepartment",
+            u.avatar_url AS "applicantAvatarUrl",
+            p.id AS "postId", p.title AS "postTitle",
+            (ap.id IS NOT NULL) AS "alreadyRecognised"
+       FROM applications a
+       JOIN work_posts p ON p.id = a.post_id
+       JOIN users u ON u.id = a.applicant_id
+       LEFT JOIN appreciations ap ON ap.application_id = a.id AND ap.from_user_id = $1
+      WHERE a.status = 'approved'
+        AND p.status = 'Completed'
+        AND a.applicant_id <> $1
+        AND (p.author_id = $1 OR a.manager_id = $1)
+      ORDER BY p.created_at DESC`,
+    [user.id]
+  );
+  res.json({ engagements: rows });
+});
+
+/**
+ * Milestones: fixed, checkable achievements on the way to the next tier.
+ *
+ * Kept separate from tiers because a tier is a rank and a milestone is a
+ * specific thing you did — "supported five departments" reads as an
+ * accomplishment in a way that "Connector" alone does not.
+ */
+api.get('/milestones', requireAuth(), async (req, res) => {
+  const { user } = req as AuthedRequest;
+  const target = (req.query.userId as string) || user.id;
+  const u = await one(
+    `SELECT hours_contributed, collaborations_count, departments_supported, people_helped, tier
+       FROM users WHERE id = $1`,
+    [target]
+  );
+  if (!u) return res.status(404).json({ error: 'User not found' });
+
+  const praise = await one<{ n: string }>(
+    `SELECT COUNT(*)::text AS n FROM appreciations WHERE to_user_id = $1`, [target]
+  );
+
+  const hours = Number(u.hours_contributed || 0);
+  const gigs = Number(u.collaborations_count || 0);
+  const depts = Number(u.departments_supported || 0);
+  const kudos = parseInt(praise?.n || '0', 10);
+
+  const defs: Array<{ id: string; label: string; hint: string; value: number; goal: number; icon: string }> = [
+    { id: 'first', label: 'First contribution', hint: 'Complete your first engagement', value: gigs, goal: 1, icon: '🌱' },
+    { id: 'five', label: 'Five engagements', hint: 'Complete five pieces of work', value: gigs, goal: 5, icon: '🖐' },
+    { id: 'twentyfive', label: 'Twenty-five engagements', hint: 'A sustained habit of helping', value: gigs, goal: 25, icon: '🏅' },
+    { id: 'h25', label: '25 hours given', hint: 'Contribute 25 hours', value: hours, goal: 25, icon: '⏱' },
+    { id: 'h100', label: '100 hours given', hint: 'Contribute 100 hours', value: hours, goal: 100, icon: '🔥' },
+    { id: 'h250', label: '250 hours given', hint: 'Contribute 250 hours', value: hours, goal: 250, icon: '💎' },
+    { id: 'd3', label: 'Three departments', hint: 'Help outside your own team three times over', value: depts, goal: 3, icon: '🌍' },
+    { id: 'd5', label: 'Five departments', hint: 'Reach across five departments', value: depts, goal: 5, icon: '🧭' },
+    { id: 'k1', label: 'First recognition', hint: 'Receive recognition from a colleague', value: kudos, goal: 1, icon: '👏' },
+    { id: 'k10', label: 'Ten recognitions', hint: 'Be recognised ten times', value: kudos, goal: 10, icon: '🌟' }
+  ];
+
+  const milestones = defs.map((d) => ({
+    ...d,
+    achieved: d.value >= d.goal,
+    progress: Math.min(100, Math.round((d.value / d.goal) * 100))
+  }));
+
+  res.json({
+    milestones,
+    achievedCount: milestones.filter((m) => m.achieved).length,
+    totals: { hours, gigs, departments: depts, recognitions: kudos, tier: u.tier }
+  });
+});
+
 api.get('/telemetry', requireAuth(), async (req, res) => {
   const { user } = req as AuthedRequest;
   const scope = req.query.scope === 'me' ? 'me' : 'org';

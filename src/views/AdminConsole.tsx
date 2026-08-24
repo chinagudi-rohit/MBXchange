@@ -478,7 +478,7 @@ export function AdminConsole() {
               )}
             </Field>
             <Field label="Campus">
-              <TextInput value={form.campus} onChange={(e) => setForm({ ...form, campus: e.target.value })} placeholder="MBRDI Bengaluru Hub" />
+              <TextInput value={form.campus} onChange={(e) => setForm({ ...form, campus: e.target.value })} placeholder="Primary office or campus" />
             </Field>
             <Field label="Weekly bandwidth (hours)">
               <TextInput type="number" min={0} value={form.availableHoursWeek}
