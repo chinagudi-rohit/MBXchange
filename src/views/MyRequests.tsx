@@ -144,8 +144,11 @@ export function MyRequests() {
                             </p>
                           )}
                           {a.managerNotes && (
-                            <p className="text-xs text-ink-2 mt-1 bg-surface-2 rounded-lg px-2.5 py-1.5">
-                              Manager: “{a.managerNotes}”
+                            <p className={`text-xs mt-1 rounded-lg px-2.5 py-1.5 ${
+                              a.status === 'approved' ? 'text-amber bg-amber-soft' : 'text-ink-2 bg-surface-2'
+                            }`}>
+                              {a.status === 'approved' ? 'Approved with conditions: ' : 'Manager: '}
+                              “{a.managerNotes}”
                             </p>
                           )}
                         </div>

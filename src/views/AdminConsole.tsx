@@ -52,6 +52,10 @@ export function AdminConsole() {
   const [overview, setOverview] = useState<any>(null);
   const [regRequests, setRegRequests] = useState<any[] | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [userQuery, setUserQuery] = useState('');
+  const [userDept, setUserDept] = useState('All');
+  const [userRole, setUserRole] = useState('All');
+  const [userStatus, setUserStatus] = useState('All');
   const [completeReg, setCompleteReg] = useState<any>(null);
   const [created, setCreated] = useState<{ email: string; password: string } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -60,17 +64,40 @@ export function AdminConsole() {
     campus: '', managerId: '', availableHoursWeek: '6'
   });
 
+  const [allUsers, setAllUsers] = useState<User[]>([]);
+
   const load = async () => {
-    const [ov, reg] = await Promise.all([
+    const [ov, reg, us] = await Promise.all([
       api.get('/admin/overview'),
-      api.get('/admin/registration-requests')
+      api.get('/admin/registration-requests'),
+      api.get('/users?includeInactive=true')
     ]);
     setOverview(ov);
     setRegRequests(reg.requests);
+    setAllUsers(us.users);
   };
   useEffect(() => { load(); }, []);
 
   const managers = s.users.filter((u) => u.systemRole === 'manager' || u.systemRole === 'admin');
+
+  const roster = allUsers.length ? allUsers : s.users;
+
+  const roleCounts = {
+    employee: roster.filter((u) => u.systemRole === 'employee').length,
+    manager: roster.filter((u) => u.systemRole === 'manager').length,
+    admin: roster.filter((u) => u.systemRole === 'admin').length
+  };
+
+  const visibleUsers = roster.filter((u) => {
+    if (userDept !== 'All' && u.department !== userDept) return false;
+    if (userRole !== 'All' && u.systemRole !== userRole) return false;
+    if (userStatus !== 'All' && u.status !== userStatus) return false;
+    if (userQuery) {
+      const ql = userQuery.toLowerCase();
+      if (!u.name.toLowerCase().includes(ql) && !u.email.toLowerCase().includes(ql)) return false;
+    }
+    return true;
+  });
   const pendingReg = (regRequests || []).filter((r) => r.status === 'pending');
 
   const openCreate = () => {
@@ -138,7 +165,7 @@ export function AdminConsole() {
 
   const toggleActive = async (u: User) => {
     await api.patch(`/users/${u.id}`, { status: u.status === 'active' ? 'inactive' : 'active' });
-    await s.loadUsers();
+    await Promise.all([s.loadUsers(), load()]);
     s.toast('info', u.status === 'active' ? 'Account deactivated' : 'Account reactivated', u.name);
   };
 
@@ -216,9 +243,33 @@ export function AdminConsole() {
       {/* ── Users ── */}
       {section === 'users' && (
         <div>
-          <div className="flex justify-end mb-4">
+          <div className="flex flex-wrap items-center gap-2.5 mb-4">
+            <TextInput
+              placeholder="Search name or email…"
+              value={userQuery} onChange={(e) => setUserQuery(e.target.value)}
+              className="!w-60"
+            />
+            <Select value={userDept} onChange={(e) => setUserDept(e.target.value)} className="!w-44" aria-label="Filter by department">
+              <option value="All">All departments</option>
+              {DEPARTMENTS.map((d) => <option key={d}>{d}</option>)}
+            </Select>
+            <Select value={userRole} onChange={(e) => setUserRole(e.target.value)} className="!w-40" aria-label="Filter by role">
+              <option value="All">All roles</option>
+              <option value="employee">Employees ({roleCounts.employee})</option>
+              <option value="manager">Managers ({roleCounts.manager})</option>
+              <option value="admin">Admins ({roleCounts.admin})</option>
+            </Select>
+            <Select value={userStatus} onChange={(e) => setUserStatus(e.target.value)} className="!w-36" aria-label="Filter by status">
+              <option value="All">Any status</option>
+              <option value="active">Active</option>
+              <option value="inactive">Deactivated</option>
+            </Select>
+            <span className="flex-1" />
             <Button onClick={openCreate}><UserPlus className="w-4 h-4" /> Create Account</Button>
           </div>
+          <p className="text-xs text-ink-3 mb-2">
+            Showing <b className="text-ink-2">{visibleUsers.length}</b> of {roster.length} accounts
+          </p>
           <p className="lg:hidden text-xs text-ink-3 mb-2">Swipe the table sideways to see all columns →</p>
           <Card className="overflow-x-auto relative">
             <table className="w-full text-left min-w-[640px]">
@@ -230,7 +281,7 @@ export function AdminConsole() {
                 </tr>
               </thead>
               <tbody>
-                {s.users.map((u) => {
+                {visibleUsers.map((u) => {
                   const mgr = s.users.find((m) => m.id === u.managerId);
                   return (
                     <tr key={u.id} className="border-b border-line/60 last:border-0 hover:bg-surface-2/50">

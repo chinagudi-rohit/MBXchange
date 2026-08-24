@@ -332,8 +332,17 @@ api.patch('/me', requireAuth(), async (req, res) => {
 
 // ============================== USERS ==============================
 
-api.get('/users', requireAuth(), async (_req, res) => {
-  const { rows } = await q(`SELECT ${PUBLIC_USER_FIELDS} FROM users WHERE status = 'active' ORDER BY name`);
+api.get('/users', requireAuth(), async (req, res) => {
+  const { user } = req as AuthedRequest;
+  // Admins need to see deactivated accounts to reactivate them; everyone else
+  // only ever sees colleagues they can actually work with.
+  const includeInactive = req.query.includeInactive === 'true' && user.systemRole === 'admin';
+  const { rows } = await q(
+    `SELECT ${PUBLIC_USER_FIELDS} FROM users
+      WHERE ($1::boolean OR status = 'active')
+      ORDER BY name`,
+    [includeInactive]
+  );
   res.json({ users: rows });
 });
 

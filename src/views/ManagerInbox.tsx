@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Check, X, MessageSquare, RefreshCw } from 'lucide-react';
+import { Check, X, MessageSquare, RefreshCw, ShieldCheck } from 'lucide-react';
 import { useStore } from '../lib/store';
 import { api, timeAgo, type Application } from '../lib/api';
 import {
@@ -33,7 +33,7 @@ function CapacityBar({ available, requiredText }: { available: number; requiredT
 export function ManagerInbox() {
   const s = useStore();
   const [approvals, setApprovals] = useState<Application[] | null>(null);
-  const [decide, setDecide] = useState<{ app: Application; decision: 'approved' | 'rejected' } | null>(null);
+  const [decide, setDecide] = useState<{ app: Application; decision: 'approved' | 'rejected'; conditional?: boolean } | null>(null);
   const [notes, setNotes] = useState('');
   const [busy, setBusy] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -56,10 +56,16 @@ export function ManagerInbox() {
       s.toast('error', 'Reason required', 'Give the employee a short reason for declining.');
       return;
     }
+    if (decide.conditional && !notes.trim()) {
+      s.toast('error', 'Conditions required', 'Spell out the limits you are approving under.');
+      return;
+    }
     setBusy(true);
     try {
       await api.post(`/approvals/${decide.app.id}/decision`, { decision: decide.decision, notes });
-      s.toast('success', decide.decision === 'approved' ? 'Request approved' : 'Request declined',
+      s.toast('success',
+        decide.decision === 'rejected' ? 'Request declined'
+          : decide.conditional ? 'Approved with conditions' : 'Request approved',
         `${decide.app.applicantName} has been notified.`);
       setDecide(null);
       setNotes('');
@@ -164,6 +170,9 @@ export function ManagerInbox() {
                   <p className="text-xs font-medium text-ink truncate">{a.applicantName} → {a.postTitle}</p>
                   <p className="text-xs text-ink-3">
                     {a.commitment} · decided {a.decidedAt ? timeAgo(a.decidedAt) : ''}
+                    {a.status === 'approved' && a.managerNotes && (
+                      <span className="text-amber font-medium"> · with conditions</span>
+                    )}
                     {a.managerNotes && ` · “${a.managerNotes.slice(0, 60)}”`}
                   </p>
                 </div>
@@ -177,13 +186,13 @@ export function ManagerInbox() {
 
       <Modal
         open={!!decide} onClose={() => setDecide(null)}
-        title={decide?.decision === 'approved' ? 'Approve Request' : 'Decline Request'}
+        title={decide?.decision === 'rejected' ? 'Decline Request' : decide?.conditional ? 'Approve with Conditions' : 'Approve Request'}
         subtitle={decide ? `${decide.app.applicantName} → ${decide.app.postTitle.slice(0, 60)}` : ''}
         footer={
           <>
             <Button variant="secondary" onClick={() => setDecide(null)}>Cancel</Button>
             <Button variant={decide?.decision === 'rejected' ? 'danger' : 'primary'} onClick={submitDecision} disabled={busy}>
-              {busy ? 'Submitting…' : decide?.decision === 'approved' ? 'Confirm Approval' : 'Confirm Decline'}
+              {busy ? 'Submitting…' : decide?.decision === 'rejected' ? 'Confirm Decline' : decide?.conditional ? 'Approve with Conditions' : 'Confirm Approval'}
             </Button>
           </>
         }
@@ -201,8 +210,13 @@ export function ManagerInbox() {
             </p>
           )}
           <Field
-            label={decide?.decision === 'approved' ? 'Conditions / notes (optional)' : 'Reason for declining'}
-            required={decide?.decision === 'rejected'}
+            label={
+              decide?.decision === 'rejected' ? 'Reason for declining'
+                : decide?.conditional ? 'Conditions of approval'
+                : 'Notes (optional)'
+            }
+            required={decide?.decision === 'rejected' || !!decide?.conditional}
+            hint={decide?.conditional ? 'The employee and the requirement author both see this.' : undefined}
           >
             <TextArea
               value={notes} onChange={(e) => setNotes(e.target.value)}
