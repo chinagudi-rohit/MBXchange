@@ -423,6 +423,8 @@ export function WorkExchange() {
   const [dept, setDept] = useState('All');
   const [status, setStatus] = useState('All');
   const [urgency, setUrgency] = useState('All');
+  const [skill, setSkill] = useState('All');
+  const [sort, setSort] = useState<'match' | 'newest' | 'urgency' | 'seats'>('match');
   const [newOpen, setNewOpen] = useState(false);
   const [section, setSection] = useState<'requirements' | 'bandwidth'>('requirements');
   const [offers, setOffers] = useState<any[]>([]);
@@ -433,17 +435,33 @@ export function WorkExchange() {
     if (section === 'bandwidth') api.get('/bandwidth-offers').then((d) => setOffers(d.offers));
   }, [section]);
 
+  const URGENCY_RANK: Record<string, number> = { Critical: 0, High: 1, Medium: 2, Low: 3 };
+
   const filtered = useMemo(() => s.posts.filter((p) => {
     if (dept !== 'All' && p.department !== dept) return false;
     if (status !== 'All' && p.status !== status) return false;
     if (urgency !== 'All' && p.urgency !== urgency) return false;
+    if (skill !== 'All' && !p.tags.includes(skill)) return false;
     if (query) {
       const ql = query.toLowerCase();
       if (!p.title.toLowerCase().includes(ql) && !p.tags.some((t) => t.toLowerCase().includes(ql)) &&
-          !p.description.toLowerCase().includes(ql)) return false;
+          !p.description.toLowerCase().includes(ql) && !(p.authorName || '').toLowerCase().includes(ql)) return false;
     }
     return true;
-  }), [s.posts, dept, status, urgency, query]);
+  }).sort((a, b) => {
+    if (sort === 'match') return (b.matchScore ?? -1) - (a.matchScore ?? -1) || +new Date(b.createdAt) - +new Date(a.createdAt);
+    if (sort === 'urgency') return (URGENCY_RANK[a.urgency] ?? 9) - (URGENCY_RANK[b.urgency] ?? 9) || +new Date(b.createdAt) - +new Date(a.createdAt);
+    if (sort === 'seats') return (b.seats - b.seatsFilled) - (a.seats - a.seatsFilled) || +new Date(b.createdAt) - +new Date(a.createdAt);
+    return +new Date(b.createdAt) - +new Date(a.createdAt);
+  }), [s.posts, dept, status, urgency, skill, query, sort]);
+
+  // Tag vocabulary drawn from the posts themselves, so the filter never offers
+  // a skill that nothing is asking for.
+  const skillOptions = useMemo(() => {
+    const seen = new Map<string, number>();
+    s.posts.forEach((p) => p.tags.forEach((t) => seen.set(t, (seen.get(t) || 0) + 1)));
+    return [...seen.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([t]) => t);
+  }, [s.posts]);
 
   if (s.openWorkId) {
     return <WorkDetail postId={s.openWorkId} onBack={() => s.setOpenWorkId(null)} />;
@@ -500,8 +518,12 @@ export function WorkExchange() {
       {section === 'requirements' ? (
         <>
           <div className="sticky-bar -mx-1 px-3 py-3 mb-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
-              <TextInput placeholder="Search by title, tag, keyword…" value={query} onChange={(e) => setQuery(e.target.value)} />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-2.5">
+              <TextInput
+                placeholder="Search title, tag, author…"
+                value={query} onChange={(e) => setQuery(e.target.value)}
+                className="xl:col-span-2"
+              />
               <Select value={dept} onChange={(e) => setDept(e.target.value)} aria-label="Filter by department">
                 <option value="All">All departments</option>
                 {DEPARTMENTS.map((d) => <option key={d}>{d}</option>)}
@@ -514,7 +536,21 @@ export function WorkExchange() {
                 <option value="All">Any urgency</option>
                 {URGENCIES.map((u) => <option key={u}>{u}</option>)}
               </Select>
+              <Select value={skill} onChange={(e) => setSkill(e.target.value)} aria-label="Filter by skill">
+                <option value="All">Any skill</option>
+                {skillOptions.map((t) => <option key={t}>{t}</option>)}
+              </Select>
+              <Select value={sort} onChange={(e) => setSort(e.target.value as typeof sort)} aria-label="Sort results">
+                <option value="match">Best match first</option>
+                <option value="newest">Newest first</option>
+                <option value="urgency">Most urgent first</option>
+                <option value="seats">Most seats open</option>
+              </Select>
             </div>
+            <p className="text-xs text-ink-3 mt-2.5">
+              Showing <b className="text-ink-2">{filtered.length}</b> of {s.posts.length}
+              {sort === 'match' && ' · ranked against your declared skills and remaining bandwidth'}
+            </p>
           </div>
 
           {filtered.length === 0 ? (

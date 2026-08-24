@@ -417,8 +417,11 @@ api.get('/work-posts', requireAuth(), async (req, res) => {
   const matcher = await matcherFor(user.id);
   res.json({
     posts: rows.map((p: any) => {
-      // Own posts are not scored — you cannot apply to them.
-      const m = p.authorId === user.id ? null : matcher.score(p);
+      // Only score what you could actually take on: an open requirement, with a
+      // seat free, that you did not post yourself. Anything else has no fit to
+      // report, and scoring it would push finished work up a "best match" sort.
+      const applicable = p.authorId !== user.id && p.status === 'Open' && p.seatsFilled < p.seats;
+      const m = applicable ? matcher.score(p) : null;
       return {
         ...p,
         myApplication: mineByPost.get(p.id) || null,
@@ -481,7 +484,8 @@ api.get('/work-posts/:id', requireAuth(), async (req, res) => {
     [req.params.id, user.id]
   );
   const matcher = await matcherFor(user.id);
-  const m = post.authorId === user.id ? null : matcher.score(post);
+  const applicable = post.authorId !== user.id && post.status === 'Open' && post.seatsFilled < post.seats;
+  const m = applicable ? matcher.score(post) : null;
   res.json({
     post: {
       ...post,

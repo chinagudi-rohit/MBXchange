@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Star, MessageSquare, Handshake } from 'lucide-react';
+import { Star, MessageSquare, Handshake, Award, X } from 'lucide-react';
 import { useStore } from '../lib/store';
 import { TiltCard } from '../components/TiltCard';
 import { api, type User } from '../lib/api';
@@ -11,6 +11,9 @@ export function PeopleView() {
   const s = useStore();
   const [query, setQuery] = useState('');
   const [dept, setDept] = useState('All');
+  const [skill, setSkill] = useState('All');
+  const [sort, setSort] = useState<'contribution' | 'availability' | 'name'>('contribution');
+  const [profile, setProfile] = useState<User | null>(null);
   const [target, setTarget] = useState<User | null>(null);
   const [form, setForm] = useState({ taskTitle: '', estimatedHours: '', dates: '', notes: '' });
   const [busy, setBusy] = useState(false);
@@ -18,6 +21,7 @@ export function PeopleView() {
   const people = useMemo(() => s.users.filter((u) => {
     if (u.id === s.user?.id || u.systemRole === 'admin') return false;
     if (dept !== 'All' && u.department !== dept) return false;
+    if (skill !== 'All' && !u.primarySkills.includes(skill)) return false;
     if (query) {
       const ql = query.toLowerCase();
       if (!u.name.toLowerCase().includes(ql) &&
@@ -25,7 +29,23 @@ export function PeopleView() {
           !u.role.toLowerCase().includes(ql)) return false;
     }
     return true;
-  }), [s.users, s.user, dept, query]);
+  }).sort((a, b) => {
+    if (sort === 'availability') {
+      // Most free hours first — who can actually take something on today.
+      const freeA = Math.max(0, (a.availableHoursWeek || 0) - (a.hoursConsumed || 0));
+      const freeB = Math.max(0, (b.availableHoursWeek || 0) - (b.hoursConsumed || 0));
+      return freeB - freeA;
+    }
+    if (sort === 'name') return a.name.localeCompare(b.name);
+    return Number(b.contributionScore) - Number(a.contributionScore);
+  }), [s.users, s.user, dept, skill, query, sort]);
+
+  // Skill vocabulary from the directory itself.
+  const skillOptions = useMemo(() => {
+    const seen = new Map<string, number>();
+    s.users.forEach((u) => u.primarySkills.forEach((sk) => seen.set(sk, (seen.get(sk) || 0) + 1)));
+    return [...seen.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([t]) => t);
+  }, [s.users]);
 
   const sendRequest = async () => {
     if (!target || !form.taskTitle.trim()) {
@@ -53,10 +73,8 @@ export function PeopleView() {
       </div>
 
       <div className="sticky-bar -mx-1 px-1 py-2.5 mb-4">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 max-w-2xl">
-          <div className="sm:col-span-2">
-            <TextInput placeholder="Search by name, skill, or role…" value={query} onChange={(e) => setQuery(e.target.value)} />
-          </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2.5 max-w-4xl">
+          <TextInput placeholder="Search by name, skill, or role…" value={query} onChange={(e) => setQuery(e.target.value)} />
           <select
             value={dept} onChange={(e) => setDept(e.target.value)} aria-label="Filter by department"
             className="w-full px-3.5 py-2.5 rounded-xl panel border border-line-strong text-sm text-ink focus:border-primary focus:outline-none"
@@ -64,7 +82,25 @@ export function PeopleView() {
             <option value="All">All departments</option>
             {DEPARTMENTS.filter((d) => d !== 'All').map((d) => <option key={d}>{d}</option>)}
           </select>
+          <select
+            value={skill} onChange={(e) => setSkill(e.target.value)} aria-label="Filter by skill"
+            className="w-full px-3.5 py-2.5 rounded-xl panel border border-line-strong text-sm text-ink focus:border-primary focus:outline-none"
+          >
+            <option value="All">Any skill</option>
+            {skillOptions.map((sk) => <option key={sk}>{sk}</option>)}
+          </select>
+          <select
+            value={sort} onChange={(e) => setSort(e.target.value as typeof sort)} aria-label="Sort colleagues"
+            className="w-full px-3.5 py-2.5 rounded-xl panel border border-line-strong text-sm text-ink focus:border-primary focus:outline-none"
+          >
+            <option value="contribution">Highest rated</option>
+            <option value="availability">Most bandwidth free</option>
+            <option value="name">Name A–Z</option>
+          </select>
         </div>
+        <p className="text-xs text-ink-3 mt-2 px-1">
+          Showing <b className="text-ink-2">{people.length}</b> of {s.users.length - 1} colleagues
+        </p>
       </div>
 
       {people.length === 0 ? (
@@ -75,7 +111,7 @@ export function PeopleView() {
             <Reveal key={u.id} delay={(i % 4) * 60}>
               <TiltCard>
             <Card className="p-7 h-full flex flex-col">
-              <div className="flex items-start gap-3">
+              <div className="flex items-start gap-3 cursor-pointer" onClick={() => setProfile(u)}>
                 <Avatar initials={u.initials} size="lg" name={u.name} src={u.avatarUrl} showPresence online={u.isOnline} />
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-normal text-ink truncate">{u.name}</p>
@@ -92,8 +128,34 @@ export function PeopleView() {
                 {u.primarySkills.slice(0, 4).map((sk) => <Chip key={sk}>{sk}</Chip>)}
                 {u.primarySkills.length > 4 && <Chip>+{u.primarySkills.length - 4}</Chip>}
               </div>
+
+              {/* Earned recognition — tier from completed work, badges from the profile */}
+              {(u.tier || u.badges?.length > 0) && (
+                <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
+                  {u.tier && u.tier !== 'Contributor' && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-soft text-amber text-xs font-semibold">
+                      <Award className="w-3 h-3" /> {u.tier}
+                    </span>
+                  )}
+                  {(u.badges || []).slice(0, 2).map((bdg) => (
+                    <span
+                      key={bdg.id}
+                      title={`${bdg.name} — ${bdg.description}`}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-surface-2 text-ink-2 text-xs font-medium max-w-40"
+                    >
+                      <span aria-hidden="true">{bdg.icon}</span>
+                      <span className="truncate">{bdg.name}</span>
+                    </span>
+                  ))}
+                  {(u.badges?.length || 0) > 2 && (
+                    <span className="text-xs text-ink-3 font-medium">+{u.badges.length - 2}</span>
+                  )}
+                </div>
+              )}
+
               <p className="text-xs text-ink-3 mt-3">
-                Bandwidth: <b className="text-ink-2">{u.typicalAvailability || `${u.availableHoursWeek}h/week`}</b>
+                Bandwidth: <b className="text-ink-2">{u.availableHoursWeek}h/{u.bandwidthPeriod === 'month' ? 'month' : 'week'}</b>
+                {u.hoursConsumed > 0 && <span className="text-ink-3"> ({Math.max(0, u.availableHoursWeek - u.hoursConsumed)}h free)</span>}
                 {' '}· {u.collaborationsCount} gigs · {u.hoursContributed}h contributed
               </p>
               <div className="flex gap-2 mt-4 pt-3.5 border-t border-line">
@@ -111,6 +173,114 @@ export function PeopleView() {
           ))}
         </div>
       )}
+
+      {/* Full profile — the rating breakdown and badges we already store but
+          previously only showed for the signed-in user. */}
+      <Modal
+        open={!!profile} onClose={() => setProfile(null)}
+        title={profile?.name || ''}
+        subtitle={profile ? `${profile.role} · ${profile.department} · ${profile.campus}` : ''}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => { const u = profile; setProfile(null); if (u) { s.setMessagePartnerId(u.id); s.setMessagesOpen(true); } }}>
+              <MessageSquare className="w-3.5 h-3.5" /> Message
+            </Button>
+            <Button onClick={() => { const u = profile; setProfile(null); setTarget(u); }}>
+              <Handshake className="w-3.5 h-3.5" /> Request Collaboration
+            </Button>
+          </>
+        }
+      >
+        {profile && (
+          <div className="space-y-5">
+            <div className="flex items-center gap-4">
+              <Avatar initials={profile.initials} size="xl" name={profile.name} src={profile.avatarUrl} showPresence online={profile.isOnline} />
+              <div className="min-w-0">
+                <p className="flex items-center gap-1.5 text-sm font-semibold text-amber">
+                  <Star className="w-4 h-4 fill-current" /> {Number(profile.contributionScore).toFixed(2)}
+                  <span className="text-xs font-medium text-ink-3">contribution score</span>
+                </p>
+                <p className="text-xs text-ink-2 mt-1">
+                  {profile.isOnline ? 'Online now' : 'Offline'} · {profile.experienceYears} yrs experience
+                </p>
+                {profile.tier && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-soft text-amber text-xs font-semibold mt-1.5">
+                    <Award className="w-3 h-3" /> {profile.tier}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {profile.bio && <p className="text-sm text-ink-2 leading-relaxed">{profile.bio}</p>}
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              {[
+                { label: 'Gigs', value: profile.collaborationsCount },
+                { label: 'Hours', value: `${profile.hoursContributed}h` },
+                { label: 'Departments', value: profile.departmentsSupported },
+                { label: 'People helped', value: profile.peopleHelped }
+              ].map((st) => (
+                <div key={st.label} className="p-3 rounded-xl bg-surface-2 text-center">
+                  <p className="text-base font-semibold text-ink tabular-nums">{st.value}</p>
+                  <p className="text-xs text-ink-3 mt-0.5">{st.label}</p>
+                </div>
+              ))}
+            </div>
+
+            {profile.ratingBreakdown && Object.keys(profile.ratingBreakdown).length > 0 && (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-ink-3 mb-2.5">Peer ratings</p>
+                <div className="space-y-2.5">
+                  {[
+                    ['helping', 'Helpfulness'],
+                    ['technicalExpertise', 'Technical expertise'],
+                    ['collaboration', 'Collaboration'],
+                    ['reliability', 'Reliability']
+                  ].map(([key, label]) => {
+                    const v = Number(profile.ratingBreakdown[key] ?? 0);
+                    if (!v) return null;
+                    return (
+                      <div key={key}>
+                        <div className="flex items-center justify-between text-xs mb-1">
+                          <span className="font-medium text-ink-2">{label}</span>
+                          <span className="font-semibold text-ink tabular-nums">{v.toFixed(1)} / 5</span>
+                        </div>
+                        <div className="h-1.5 rounded-full bg-surface-2 overflow-hidden">
+                          <div className="h-full rounded-full bg-primary transition-all duration-500" style={{ width: `${(v / 5) * 100}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {profile.badges?.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-ink-3 mb-2.5">Recognition</p>
+                <div className="space-y-2">
+                  {profile.badges.map((bdg) => (
+                    <div key={bdg.id} className="flex items-start gap-2.5 p-2.5 rounded-xl bg-surface-2">
+                      <span className="text-base leading-none mt-0.5" aria-hidden="true">{bdg.icon}</span>
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-ink">{bdg.name}</p>
+                        <p className="text-xs text-ink-3 mt-0.5">{bdg.description} · {bdg.dateEarned}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-ink-3 mb-2">Skills</p>
+              <div className="flex flex-wrap gap-1.5">
+                {profile.primarySkills.map((sk) => <Chip key={sk}>{sk}</Chip>)}
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal>
 
       <Modal
         open={!!target} onClose={() => setTarget(null)}
