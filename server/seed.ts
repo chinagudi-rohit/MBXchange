@@ -105,7 +105,7 @@ export async function ensureBootstrapAdmin(): Promise<void> {
     [
       newId('usr'), email.toLowerCase(), name, initials,
       process.env.ADMIN_ROLE || 'Platform Administrator',
-      process.env.ADMIN_DEPARTMENT || 'PT-THIT',
+      process.env.ADMIN_DEPARTMENT || '',
       await bcrypt.hash(password, 10)
     ]
   );
