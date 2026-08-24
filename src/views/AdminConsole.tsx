@@ -78,7 +78,13 @@ export function AdminConsole() {
   };
   useEffect(() => { load(); }, []);
 
-  const managers = s.users.filter((u) => u.systemRole === 'manager' || u.systemRole === 'admin');
+  const allManagers = s.users.filter((u) => u.systemRole === 'manager' || u.systemRole === 'admin');
+  // Approvals route to someone who owns the employee's department, so the
+  // picker offers that department's managers first. Anything else is a
+  // deliberate cross-department exception the admin has to opt into.
+  const [anyDeptManager, setAnyDeptManager] = useState(false);
+  const deptManagers = allManagers.filter((m) => m.department === form.department);
+  const managers = anyDeptManager || deptManagers.length === 0 ? allManagers : deptManagers;
 
   const roster = allUsers.length ? allUsers : s.users;
 
@@ -428,15 +434,48 @@ export function AdminConsole() {
               </Select>
             </Field>
             <Field label="Department">
-              <Select value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value })}>
+              <Select
+                value={form.department}
+                onChange={(e) => {
+                  // Changing department invalidates a manager from the old one.
+                  const dept = e.target.value;
+                  const stillValid = allManagers.some((m) => m.id === form.managerId && m.department === dept);
+                  setForm({ ...form, department: dept, managerId: stillValid ? form.managerId : '' });
+                  setAnyDeptManager(false);
+                }}
+              >
                 {DEPARTMENTS.map((d) => <option key={d}>{d}</option>)}
               </Select>
             </Field>
-            <Field label="Manager" hint="Required for approval routing">
+            <Field
+              label="Manager"
+              hint={
+                deptManagers.length === 0
+                  ? `No manager is registered for ${form.department} yet — showing all departments.`
+                  : anyDeptManager
+                    ? 'Showing managers from every department.'
+                    : `Managers in ${form.department}`
+              }
+            >
               <Select value={form.managerId} onChange={(e) => setForm({ ...form, managerId: e.target.value })}>
                 <option value="">— none yet —</option>
-                {managers.map((m) => <option key={m.id} value={m.id}>{m.name} ({m.department})</option>)}
+                {managers.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}{m.department !== form.department ? ` (${m.department})` : ''}
+                  </option>
+                ))}
               </Select>
+              {deptManagers.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setAnyDeptManager((v) => !v)}
+                  className="mt-1.5 text-xs font-semibold text-primary-text hover:underline underline-offset-2"
+                >
+                  {anyDeptManager
+                    ? `Only show ${form.department} managers`
+                    : 'Choose a manager from another department'}
+                </button>
+              )}
             </Field>
             <Field label="Campus">
               <TextInput value={form.campus} onChange={(e) => setForm({ ...form, campus: e.target.value })} placeholder="MBRDI Bengaluru Hub" />

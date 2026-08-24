@@ -3,37 +3,48 @@ import { Star, Zap, KeyRound, Award, Cpu, X, Plus, Camera, Trash2 } from 'lucide
 import { useStore } from '../lib/store';
 import { api } from '../lib/api';
 import { processImageFile } from '../lib/imageCompressor';
+import { searchSkills, ALL_SKILLS } from '../data/skills';
 import { Drawer, Button, Field, TextInput, Chip, Avatar, Select } from '../components/ui';
 
-/** Common stacks offered as one-tap additions. */
-const SKILL_SUGGESTIONS = [
-  'AWS', 'Azure', 'Kubernetes', 'Terraform', 'Docker', 'CI/CD', 'Python', 'Java',
-  'React', 'TypeScript', 'Node.js', 'Go', 'C++', 'Embedded C', 'AUTOSAR', 'CAN Bus',
-  'MATLAB', 'Simulink', 'LLMs', 'RAG Architecture', 'PyTorch', 'Kafka', 'Spark',
-  'SQL', 'Data Pipelines', 'ISO 26262', 'Functional Safety', 'dSPACE',
-  'Hardware-in-the-Loop', 'INCA / CANape', 'ECU Calibration', 'Security', 'Figma'
-];
-
-/** Chip-based tag editor: type + Enter to add, click × to remove. */
-function TagEditor({ tags, onChange, placeholder, suggestions = [] }: {
+/**
+ * Chip-based tag editor with a typeahead over the skill catalogue.
+ *
+ * Typing filters on canonical names *and* aliases, so "full" surfaces
+ * "Full Stack Developer" alongside the stack that usually comes with it, and
+ * "k8s" finds Kubernetes. Arrow keys move through the list, Enter accepts the
+ * highlighted suggestion (or the raw text, so anything not in the catalogue can
+ * still be added).
+ */
+function TagEditor({ tags, onChange, placeholder, useCatalogue = false, suggestions = [] }: {
   tags: string[];
   onChange: (next: string[]) => void;
   placeholder: string;
+  useCatalogue?: boolean;
   suggestions?: string[];
 }) {
   const [draft, setDraft] = useState('');
+  const [active, setActive] = useState(0);
+  const [focused, setFocused] = useState(false);
+
   const add = (value: string) => {
     const v = value.trim();
     if (!v || tags.some((t) => t.toLowerCase() === v.toLowerCase())) { setDraft(''); return; }
     onChange([...tags, v]);
     setDraft('');
+    setActive(0);
   };
-  const unused = suggestions.filter(
-    (sug) => !tags.some((t) => t.toLowerCase() === sug.toLowerCase())
-  );
-  const filtered = draft
-    ? unused.filter((sug) => sug.toLowerCase().includes(draft.toLowerCase())).slice(0, 6)
-    : unused.slice(0, 8);
+
+  // Ranked matches from the catalogue while typing; a starter set when idle.
+  const matches = useCatalogue && draft.trim()
+    ? searchSkills(draft, tags, 8)
+    : [];
+
+  const idleChips = (useCatalogue ? ALL_SKILLS : suggestions)
+    .filter((sug) => !tags.some((t) => t.toLowerCase() === sug.toLowerCase()))
+    .filter((sug) => !draft || sug.toLowerCase().includes(draft.toLowerCase()))
+    .slice(0, 8);
+
+  const showList = focused && matches.length > 0;
 
   return (
     <div>
@@ -52,23 +63,64 @@ function TagEditor({ tags, onChange, placeholder, suggestions = [] }: {
         ))}
         {tags.length === 0 && <span className="text-xs text-ink-3">Nothing added yet.</span>}
       </div>
-      <div className="flex gap-2">
-        <TextInput
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') { e.preventDefault(); add(draft); }
-            if (e.key === 'Backspace' && !draft && tags.length) onChange(tags.slice(0, -1));
-          }}
-          placeholder={placeholder}
-        />
-        <Button size="sm" variant="secondary" onClick={() => add(draft)} disabled={!draft.trim()} aria-label="Add">
-          <Plus className="w-3.5 h-3.5" />
-        </Button>
+
+      <div className="relative">
+        <div className="flex gap-2">
+          <TextInput
+            value={draft}
+            onChange={(e) => { setDraft(e.target.value); setActive(0); }}
+            onFocus={() => setFocused(true)}
+            // Delayed so a click on a suggestion lands before the list unmounts.
+            onBlur={() => setTimeout(() => setFocused(false), 120)}
+            onKeyDown={(e) => {
+              if (showList && e.key === 'ArrowDown') { e.preventDefault(); setActive((i) => (i + 1) % matches.length); return; }
+              if (showList && e.key === 'ArrowUp') { e.preventDefault(); setActive((i) => (i - 1 + matches.length) % matches.length); return; }
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                add(showList ? matches[active].name : draft);
+                return;
+              }
+              if (e.key === 'Escape') { setFocused(false); return; }
+              if (e.key === 'Backspace' && !draft && tags.length) onChange(tags.slice(0, -1));
+            }}
+            placeholder={placeholder}
+            role="combobox"
+            aria-expanded={showList}
+            aria-autocomplete="list"
+          />
+          <Button size="sm" variant="secondary" onClick={() => add(draft)} disabled={!draft.trim()} aria-label="Add">
+            <Plus className="w-3.5 h-3.5" />
+          </Button>
+        </div>
+
+        {showList && (
+          <ul
+            role="listbox"
+            className="absolute z-20 left-0 right-0 top-full mt-1 panel-overlay rounded-xl shadow-pop p-1 max-h-60 overflow-y-auto"
+          >
+            {matches.map((m, i) => (
+              <li key={m.name}>
+                <button
+                  role="option"
+                  aria-selected={i === active}
+                  onMouseEnter={() => setActive(i)}
+                  onClick={() => add(m.name)}
+                  className={`w-full flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg text-left transition-colors ${
+                    i === active ? 'bg-primary-soft text-primary-text' : 'text-ink hover:bg-surface-2'
+                  }`}
+                >
+                  <span className="text-xs font-semibold truncate">{m.name}</span>
+                  <span className="text-xs text-ink-3 shrink-0">{m.group}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
-      {filtered.length > 0 && (
+
+      {!showList && idleChips.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mt-2">
-          {filtered.map((sug) => (
+          {idleChips.map((sug) => (
             <button
               key={sug}
               onClick={() => add(sug)}
@@ -369,8 +421,8 @@ export function ProfileDrawer() {
                 <TagEditor
                   tags={stack.skills}
                   onChange={(skills) => setStack({ ...stack, skills })}
-                  placeholder="Add a technology and press Enter"
-                  suggestions={SKILL_SUGGESTIONS}
+                  placeholder="Search a technology or role — try “full”, “k8s”, “safety”"
+                  useCatalogue
                 />
               </div>
               <div>
@@ -378,7 +430,8 @@ export function ProfileDrawer() {
                 <TagEditor
                   tags={stack.interests}
                   onChange={(interests) => setStack({ ...stack, interests })}
-                  placeholder="Add an interest and press Enter"
+                  placeholder="Search an interest — try “ai”, “design”, “mentoring”"
+                  useCatalogue
                 />
               </div>
               <div className="flex gap-2 justify-end">

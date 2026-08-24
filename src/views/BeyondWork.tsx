@@ -371,7 +371,7 @@ function Carpool() {
           const seatsLeft = t.seatsTotal - t.seatsBooked;
           const isDriver = t.driverId === s.user?.id;
           return (
-            <Card key={t.id} className="p-5">
+            <Card key={t.id} className="p-5 h-full flex flex-col">
               <div className="flex items-start justify-between gap-2">
                 <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold ${
                   t.direction === 'to_office' ? 'bg-amber-soft text-amber' : 'bg-violet-soft text-violet'
@@ -399,7 +399,7 @@ function Carpool() {
                 <span className="truncate">{t.destination}</span>
               </div>
 
-              <div className="flex flex-wrap gap-1.5 mt-2.5">
+              <div className="flex flex-wrap gap-1.5 mt-2.5 mb-4">
                 {t.days.map((d) => <Chip key={d}>{d}</Chip>)}
                 <Chip tone="primary">{t.costPerRide}</Chip>
                 {t.womenOnly && <Chip>Women only</Chip>}
@@ -407,7 +407,7 @@ function Carpool() {
 
               {t.vehicleModel && <p className="text-xs text-ink-3 mt-2">{t.vehicleModel}</p>}
 
-              <div className="flex items-center justify-between mt-4 pt-3.5 border-t border-line">
+              <div className="flex items-center justify-between mt-auto pt-3.5 border-t border-line">
                 <span className="flex items-center gap-2 min-w-0">
                   <Avatar initials={t.driverInitials} size="sm" name={t.driverName} />
                   <span className="min-w-0">
