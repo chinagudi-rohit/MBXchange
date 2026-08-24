@@ -5,7 +5,10 @@ import {
   requireAuth, requireRole, requireRealAdmin, signToken,
   getUserById, generateTempPassword, PUBLIC_USER_FIELDS, type AuthedRequest
 } from './auth.ts';
-import { computeRecommendation, parseHoursRange, computeTier, nextTierProgress, TIERS } from './rules.ts';
+import {
+  computeRecommendation, parseHoursRange, computeTier, nextTierProgress, TIERS,
+  computeMatch, remainingBandwidth, type MatchResult
+} from './rules.ts';
 import { SEED_USER_PASSWORD, SEED_ADMIN_PASSWORD } from './seed.ts';
 
 export const api = Router();
@@ -26,11 +29,22 @@ async function notify(recipientId: string | null, recipientRole: string | null, 
   );
 }
 
-/** Hours an applicant already has committed via pending/approved applications. */
+/**
+ * Hours an applicant has tied up in work that has not finished yet.
+ *
+ * Applications on a Completed requirement are excluded: those hours were
+ * already settled into `hours_consumed` when the post completed, and counting
+ * them here as well would charge the same work against capacity twice.
+ */
 async function committedHours(applicantId: string, excludeAppId?: string): Promise<number> {
   const { rows } = await q(
-    `SELECT commitment FROM applications
-     WHERE applicant_id = $1 AND status IN ('pending','approved') AND ($2::text IS NULL OR id <> $2)`,
+    `SELECT a.commitment
+       FROM applications a
+       JOIN work_posts p ON p.id = a.post_id
+      WHERE a.applicant_id = $1
+        AND a.status IN ('pending','approved')
+        AND p.status NOT IN ('Completed','Cancelled')
+        AND ($2::text IS NULL OR a.id <> $2)`,
     [applicantId, excludeAppId || null]
   );
   return rows.reduce((sum, r) => sum + parseHoursRange(r.commitment || '')[1], 0);
@@ -125,6 +139,44 @@ async function refreshTier(userId: string): Promise<void> {
     await notify(userId, null, 'feedback_received', `New tier reached: ${earned.name}`,
       `${earned.icon} You are now a ${earned.name} — ${earned.blurb}.`, 'insights', null);
   }
+}
+
+
+/**
+ * Build a match scorer bound to one user, so a list of posts can be scored
+ * without re-reading the user or their commitments per row.
+ */
+async function matcherFor(userId: string) {
+  const me = await one(`SELECT * FROM users WHERE id = $1`, [userId]);
+  const committed = await committedHours(userId);
+  const remaining = remainingBandwidth(
+    Number(me?.available_hours_week || 0),
+    Number(me?.hours_consumed || 0),
+    committed
+  );
+  const stack: string[] = [
+    ...(me?.primary_skills || []),
+    ...(me?.interests || []),
+    ...(me?.specialisation ? [me.specialisation] : [])
+  ];
+  const configured = stack.filter(Boolean).length > 0;
+
+  return {
+    configured,
+    remaining,
+    score(post: any): MatchResult {
+      return computeMatch({
+        stack,
+        userDepartment: me?.department || '',
+        remainingHours: remaining,
+        postTags: post.tags || [],
+        postTitle: post.title || '',
+        postDepartment: post.department || '',
+        effortMin: Number(post.effortMin ?? post.effort_min ?? 0),
+        effortMax: Number(post.effortMax ?? post.effort_max ?? 0)
+      });
+    }
+  };
 }
 
 async function recommendFor(applicant: any, post: any, excludeAppId?: string) {
@@ -362,7 +414,24 @@ api.get('/work-posts', requireAuth(), async (req, res) => {
     [user.id]
   );
   const mineByPost = new Map(mine.map((a: any) => [a.postId, a]));
-  res.json({ posts: rows.map((p: any) => ({ ...p, myApplication: mineByPost.get(p.id) || null })) });
+  const matcher = await matcherFor(user.id);
+  res.json({
+    posts: rows.map((p: any) => {
+      // Own posts are not scored — you cannot apply to them.
+      const m = p.authorId === user.id ? null : matcher.score(p);
+      return {
+        ...p,
+        myApplication: mineByPost.get(p.id) || null,
+        matchScore: m?.score ?? null,
+        skillFit: m?.skillFit ?? null,
+        capacityFit: m?.capacityFit ?? null,
+        matchedSkills: m?.matchedSkills ?? [],
+        crossDepartment: m?.crossDepartment ?? false,
+        matchReason: m?.reason ?? null
+      };
+    }),
+    stackConfigured: matcher.configured
+  });
 });
 
 api.post('/work-posts', requireAuth(), async (req, res) => {
@@ -411,7 +480,22 @@ api.get('/work-posts/:id', requireAuth(), async (req, res) => {
     `SELECT id, status, note, commitment FROM applications WHERE post_id = $1 AND applicant_id = $2 AND status <> 'withdrawn'`,
     [req.params.id, user.id]
   );
-  res.json({ post, comments, applications, myApplication: myApp || null });
+  const matcher = await matcherFor(user.id);
+  const m = post.authorId === user.id ? null : matcher.score(post);
+  res.json({
+    post: {
+      ...post,
+      matchScore: m?.score ?? null,
+      skillFit: m?.skillFit ?? null,
+      capacityFit: m?.capacityFit ?? null,
+      matchedSkills: m?.matchedSkills ?? [],
+      crossDepartment: m?.crossDepartment ?? false,
+      matchReason: m?.reason ?? null
+    },
+    comments, applications,
+    myApplication: myApp || null,
+    remainingHours: matcher.remaining
+  });
 });
 
 api.patch('/work-posts/:id', requireAuth(), async (req, res) => {
@@ -1262,13 +1346,7 @@ function tokenise(values: string[]): string[] {
 
 api.get('/recommendations', requireAuth(), async (req, res) => {
   const { user } = req as AuthedRequest;
-  const me = await one(`SELECT * FROM users WHERE id = $1`, [user.id]);
-  const stack: string[] = [
-    ...(me.primary_skills || []),
-    ...(me.interests || []),
-    ...(me.specialisation ? [me.specialisation] : [])
-  ];
-  const tokens = new Set(tokenise(stack));
+  const matcher = await matcherFor(user.id);
 
   const { rows: posts } = await q(
     `SELECT ${POST_SELECT} FROM work_posts p
@@ -1285,22 +1363,25 @@ api.get('/recommendations', requireAuth(), async (req, res) => {
   const scored = posts
     .filter((p: any) => !appliedTo.has(p.id) && p.seatsFilled < p.seats)
     .map((p: any) => {
-      const postTokens = tokenise([...(p.tags || []), p.title, p.department]);
-      const matched = (p.tags || []).filter((t: string) =>
-        tokenise([t]).some((tok) => tokens.has(tok))
-      );
-      const tokenHits = postTokens.filter((t) => tokens.has(t)).length;
-      const sameDept = p.department === me.department;
-      // Skill overlap dominates; a small nudge for own-department context.
-      const score = matched.length * 10 + tokenHits * 2 + (sameDept ? 1 : 0);
-      return { ...p, matchedSkills: matched, score };
+      const m = matcher.score(p);
+      return {
+        ...p,
+        matchScore: m.score,
+        skillFit: m.skillFit,
+        capacityFit: m.capacityFit,
+        matchedSkills: m.matchedSkills,
+        crossDepartment: m.crossDepartment,
+        matchReason: m.reason
+      };
     })
-    .sort((a: any, b: any) => b.score - a.score || +new Date(b.createdAt) - +new Date(a.createdAt));
+    .sort((a: any, b: any) => b.matchScore - a.matchScore || +new Date(b.createdAt) - +new Date(a.createdAt));
 
+  const me = await one(`SELECT specialisation, primary_skills FROM users WHERE id = $1`, [user.id]);
   res.json({
     recommendations: scored.slice(0, 12),
-    stackConfigured: tokens.size > 0,
-    stack: { specialisation: me.specialisation || '', skills: me.primary_skills || [] }
+    stackConfigured: matcher.configured,
+    remainingHours: matcher.remaining,
+    stack: { specialisation: me?.specialisation || '', skills: me?.primary_skills || [] }
   });
 });
 

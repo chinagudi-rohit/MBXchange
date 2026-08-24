@@ -2,13 +2,13 @@ import React, { useState } from 'react';
 import {
   Home, Briefcase, Users, ListChecks, Compass, ShieldCheck, Settings2, BarChart3,
   Bell, MessageSquare, Bookmark, Sun, Moon, LogOut, KeyRound, ChevronDown, Search,
-  UserRound, X, PanelLeftClose, PanelLeftOpen, Menu
+  UserRound, X, PanelLeftClose, PanelLeftOpen, Menu, Plus, Zap
 } from 'lucide-react';
 import { StoreProvider, useStore, type MainTab } from './lib/store';
 import { Toasts, Avatar, MercedesStar } from './components/ui';
 import { LoginScreen } from './views/LoginScreen';
 import { HomeDashboard } from './views/HomeDashboard';
-import { WorkExchange } from './views/WorkExchange';
+import { WorkExchange, WorkFormModal } from './views/WorkExchange';
 import { PeopleView } from './views/PeopleView';
 import { MyRequests } from './views/MyRequests';
 import { InsightsView } from './views/InsightsView';
@@ -54,6 +54,7 @@ function Shell() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [createMenuOpen, setCreateMenuOpen] = useState(false);
 
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -81,18 +82,18 @@ function Shell() {
 
   if (!s.user) return <><div className="bg-mesh" /><LoginScreen /></>;
 
-  const navItems: Array<{ id: MainTab; label: string; icon: React.ReactNode; badge?: number; show: boolean }> = [
-    { id: 'home', label: 'Home', icon: <Home className="w-4.5 h-4.5" />, show: true },
-    { id: 'work', label: 'Work Exchange', icon: <Briefcase className="w-4.5 h-4.5" />, show: true },
-    { id: 'people', label: 'People & Skills', icon: <Users className="w-4.5 h-4.5" />, show: true },
-    { id: 'requests', label: 'My Requests', icon: <ListChecks className="w-4.5 h-4.5" />, show: true },
-    { id: 'insights', label: 'Insights', icon: <BarChart3 className="w-4.5 h-4.5" />, show: true },
-    { id: 'beyond', label: 'Beyond Work', icon: <Compass className="w-4.5 h-4.5" />, show: true },
+  const navItems: Array<{ id: MainTab; label: string; hint: string; icon: React.ReactNode; badge?: number; show: boolean }> = [
+    { id: 'home', label: 'Home', hint: 'Matches, activity & quick actions', icon: <Home className="w-4.5 h-4.5" />, show: true },
+    { id: 'work', label: 'Work Exchange', hint: 'Requirements & bandwidth offers', icon: <Briefcase className="w-4.5 h-4.5" />, show: true },
+    { id: 'people', label: 'People & Skills', hint: 'Skill directory & collaboration', icon: <Users className="w-4.5 h-4.5" />, show: true },
+    { id: 'requests', label: 'My Requests', hint: 'Everything you sent and received', icon: <ListChecks className="w-4.5 h-4.5" />, show: true },
+    { id: 'insights', label: 'Insights', hint: 'Skill heatmap & org analytics', icon: <BarChart3 className="w-4.5 h-4.5" />, show: true },
+    { id: 'beyond', label: 'Beyond Work', hint: 'Marketplace, carpool & communities', icon: <Compass className="w-4.5 h-4.5" />, show: true },
     {
-      id: 'manager', label: 'Approvals', icon: <ShieldCheck className="w-4.5 h-4.5" />,
+      id: 'manager', label: 'Approvals', hint: 'Capacity-checked team requests', icon: <ShieldCheck className="w-4.5 h-4.5" />,
       badge: s.counts.pendingApprovals, show: s.user.systemRole === 'manager' || s.user.systemRole === 'admin'
     },
-    { id: 'admin', label: 'Admin Console', icon: <Settings2 className="w-4.5 h-4.5" />, show: s.user.systemRole === 'admin' }
+    { id: 'admin', label: 'Admin Console', hint: 'Accounts, registrations & audit', icon: <Settings2 className="w-4.5 h-4.5" />, show: s.user.systemRole === 'admin' }
   ];
 
   // Five slots is the most that stays tappable on a 375px screen, so the tab bar
@@ -108,6 +109,78 @@ function Shell() {
   ];
 
   const collapsed = s.sidebarCollapsed;
+
+  /**
+   * Post / Request — the platform's primary action, so it sits at the top of
+   * the navigation on every surface rather than only on the home page.
+   */
+  const CreateMenu = ({ onNavigate, mini = false }: { onNavigate?: () => void; mini?: boolean }) => (
+    <div className="relative">
+      <button
+        onClick={() => setCreateMenuOpen((v) => !v)}
+        aria-expanded={createMenuOpen}
+        aria-haspopup="menu"
+        title={mini ? 'Post / Request' : undefined}
+        className={
+          mini
+            ? 'mx-auto w-11 h-11 flex items-center justify-center rounded-2xl bg-primary text-on-primary shadow-card hover:bg-primary-strong transition-colors'
+            : 'w-full flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-primary text-on-primary text-sm font-semibold shadow-card hover:bg-primary-strong transition-colors'
+        }
+      >
+        <Plus className="w-4.5 h-4.5 shrink-0" />
+        {!mini && <span>Post / Request</span>}
+      </button>
+
+      {createMenuOpen && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setCreateMenuOpen(false)} />
+          <div
+            role="menu"
+            className={`absolute z-50 mt-2 w-64 panel-overlay rounded-2xl shadow-pop p-1.5 anim-pop-in ${
+              mini ? 'left-full top-0 ml-2' : 'left-0 right-0 top-full'
+            }`}
+          >
+            <p className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-ink-3">Create</p>
+            {[
+              {
+                label: 'Post a requirement', hint: 'Ask another squad for help',
+                icon: <Briefcase className="w-4 h-4" />, tone: 'bg-primary-soft text-primary-text',
+                run: () => s.setCreateWorkOpen(true)
+              },
+              {
+                label: 'Offer bandwidth', hint: 'List hours and skills you can lend',
+                icon: <Zap className="w-4 h-4" />, tone: 'bg-green-soft text-green',
+                run: () => { s.setTab('work'); s.setBeyondSection('market'); window.dispatchEvent(new CustomEvent('mbx:offer-bandwidth')); }
+              },
+              {
+                label: 'Offer a ride', hint: 'Share your commute',
+                icon: <Compass className="w-4 h-4" />, tone: 'bg-violet-soft text-violet',
+                run: () => { s.setTab('beyond'); s.setBeyondSection('carpool'); }
+              },
+              {
+                label: 'List an item', hint: 'Sell or give away equipment',
+                icon: <Bookmark className="w-4 h-4" />, tone: 'bg-amber-soft text-amber',
+                run: () => { s.setTab('beyond'); s.setBeyondSection('market'); }
+              }
+            ].map((a) => (
+              <button
+                key={a.label}
+                role="menuitem"
+                onClick={() => { setCreateMenuOpen(false); a.run(); onNavigate?.(); }}
+                className="w-full flex items-start gap-2.5 px-3 py-2 rounded-xl hover:bg-surface-2 text-left transition-colors"
+              >
+                <span className={`p-1.5 rounded-lg shrink-0 mt-0.5 ${a.tone}`}>{a.icon}</span>
+                <span className="min-w-0">
+                  <span className="block text-xs font-semibold text-ink">{a.label}</span>
+                  <span className="block text-xs text-ink-3 mt-0.5">{a.hint}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
 
   const NavLinks = ({ onNavigate, mini = false }: { onNavigate?: () => void; mini?: boolean }) => (
     <nav className="flex flex-col gap-1" aria-label="Primary">
@@ -127,7 +200,7 @@ function Shell() {
                       ? 'bg-primary text-on-primary shadow-card'
                       : 'text-ink-2 hover:bg-surface-2 hover:text-ink'
                   }`
-                : `relative flex items-center gap-3 pl-3.5 pr-3 py-2.5 rounded-xl text-sm font-semibold transition-colors duration-200 ${
+                : `relative flex items-center gap-3 pl-3.5 pr-3 py-2 rounded-xl text-sm font-semibold transition-colors duration-200 ${
                     active ? 'bg-primary-soft text-primary-text' : 'text-ink-2 hover:bg-surface-2 hover:text-ink'
                   }`
             }
@@ -136,7 +209,14 @@ function Shell() {
               <span className="absolute left-1 top-2.5 bottom-2.5 w-1 rounded-full bg-primary" />
             )}
             <span className="shrink-0">{n.icon}</span>
-            {!mini && <span className="flex-1 text-left truncate">{n.label}</span>}
+            {!mini && (
+              <span className="flex-1 min-w-0 text-left">
+                <span className="block truncate">{n.label}</span>
+                <span className={`block text-xs font-medium truncate mt-0.5 ${active ? 'text-primary-text/70' : 'text-ink-3'}`}>
+                  {n.hint}
+                </span>
+              </span>
+            )}
             {!!n.badge && (
               mini ? (
                 <span className="absolute -top-0.5 -right-0.5 min-w-4.5 h-4.5 px-1 rounded-full bg-red text-on-red text-xs font-semibold flex items-center justify-center ring-2 ring-(--surface-solid)">
@@ -323,6 +403,9 @@ function Shell() {
             collapsed ? 'w-[4.5rem] px-2.5 items-center' : 'w-60 px-3'
           }`}
         >
+          <div className={collapsed ? 'mb-3' : 'mb-4'}>
+            <CreateMenu mini={collapsed} />
+          </div>
           <NavLinks mini={collapsed} />
 
           {collapsed ? (
@@ -362,6 +445,9 @@ function Shell() {
                 <button onClick={() => setMobileNavOpen(false)} aria-label="Close navigation" className="p-2 rounded-xl text-ink-3 hover:bg-surface-2">
                   <X className="w-4.5 h-4.5" />
                 </button>
+              </div>
+              <div className="mb-4">
+                <CreateMenu onNavigate={() => setMobileNavOpen(false)} />
               </div>
               <NavLinks onNavigate={() => setMobileNavOpen(false)} />
             </aside>
@@ -418,6 +504,7 @@ function Shell() {
       </nav>
 
       {/* Overlays */}
+      <WorkFormModal open={s.createWorkOpen} onClose={() => { s.setCreateWorkOpen(false); s.loadPosts(); }} />
       <MessagesDrawer />
       <NotificationsPanel />
       <SavedDrawer />

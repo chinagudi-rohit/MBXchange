@@ -84,6 +84,13 @@ export interface User {
 export interface WorkPost {
   id: string;
   title: string;
+  /** Explainable fit, computed server-side against the viewer's declared stack. */
+  matchScore?: number | null;
+  skillFit?: number | null;
+  capacityFit?: number | null;
+  matchedSkills?: string[];
+  crossDepartment?: boolean;
+  matchReason?: string | null;
   department: string;
   team: string;
   status: 'Open' | 'In Progress' | 'Completed' | 'Cancelled';

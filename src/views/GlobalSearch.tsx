@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Search, Briefcase, UserRound, X } from 'lucide-react';
 import { useStore } from '../lib/store';
+import { MatchBadge } from '../components/Match';
 import { Avatar, Chip, StatusBadge } from '../components/ui';
 
 export function GlobalSearch({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -81,6 +82,7 @@ export function GlobalSearch({ open, onClose }: { open: boolean; onClose: () => 
                     <span className="block text-sm font-semibold text-ink truncate">{p.title}</span>
                     <span className="block text-xs text-ink-3">{p.department} · {p.effortHours || p.duration}</span>
                   </span>
+                  <MatchBadge score={p.matchScore} />
                   <StatusBadge status={p.status} />
                 </button>
               ))}

@@ -95,6 +95,101 @@ export function nextTierProgress(input: TierInput): { next: Tier | null; needs: 
   return { next, needs };
 }
 
+/* ── Opportunity match scoring ─────────────────────────────────────────────
+ * A single, explainable fit number for an opportunity, broken into the two
+ * things that actually decide whether someone can help: do they have the
+ * skills, and do they have the hours. Every component is derived from data the
+ * user entered or the platform recorded — nothing is invented, and the reason
+ * string says exactly what drove the number.
+ */
+
+export interface MatchInput {
+  /** Declared stack: skills + interests + specialisation. */
+  stack: string[];
+  userDepartment: string;
+  remainingHours: number;
+  postTags: string[];
+  postTitle: string;
+  postDepartment: string;
+  effortMin: number;
+  effortMax: number;
+}
+
+export interface MatchResult {
+  score: number;        // 0–100 overall fit
+  skillFit: number;     // 0–100 share of the requirement's skills you hold
+  capacityFit: number;  // 0–100 how well your free hours cover the ask
+  matchedSkills: string[];
+  crossDepartment: boolean;
+  reason: string;
+}
+
+/** Lowercased word tokens, ignoring very short filler words. */
+export function tokeniseTerms(values: string[]): string[] {
+  return values
+    .flatMap((v) => String(v || '').toLowerCase().split(/[^a-z0-9+#.]+/))
+    .filter((t) => t.length > 2);
+}
+
+export function computeMatch(input: MatchInput): MatchResult {
+  const {
+    stack, userDepartment, remainingHours,
+    postTags, postTitle, postDepartment, effortMin, effortMax
+  } = input;
+
+  const stackTokens = new Set(tokeniseTerms(stack));
+  const tags = postTags.filter(Boolean);
+
+  const matchedSkills = tags.filter((t) =>
+    tokeniseTerms([t]).some((tok) => stackTokens.has(tok))
+  );
+
+  // Skill fit: how much of what the requirement asks for you actually hold.
+  // With no tags to compare, fall back to title-word overlap rather than
+  // claiming a perfect match on no evidence.
+  let skillFit: number;
+  if (tags.length > 0) {
+    skillFit = Math.round((matchedSkills.length / tags.length) * 100);
+  } else {
+    const titleTokens = tokeniseTerms([postTitle]);
+    const hits = titleTokens.filter((t) => stackTokens.has(t)).length;
+    skillFit = titleTokens.length ? Math.min(60, Math.round((hits / titleTokens.length) * 100)) : 0;
+  }
+
+  // Capacity fit: full marks when your free hours cover the upper estimate,
+  // partial when they cover the minimum, zero when you have nothing left.
+  const need = effortMax || effortMin || 0;
+  let capacityFit: number;
+  if (remainingHours <= 0) capacityFit = 0;
+  else if (need <= 0) capacityFit = 60;                       // unknown effort — neutral
+  else if (remainingHours >= need) capacityFit = 100;
+  else if (remainingHours >= effortMin) capacityFit = 70;
+  else capacityFit = Math.round((remainingHours / need) * 60);
+
+  const crossDepartment = !!postDepartment && postDepartment !== userDepartment;
+
+  // Skills weigh more than hours: hours can be rescheduled, expertise cannot.
+  // Crossing a department boundary is the behaviour the platform exists to
+  // encourage, so it earns a small, capped bonus.
+  const base = skillFit * 0.65 + capacityFit * 0.35;
+  const score = Math.max(0, Math.min(100, Math.round(base + (crossDepartment ? 5 : 0))));
+
+  const parts: string[] = [];
+  if (matchedSkills.length > 0) {
+    parts.push(`you have ${matchedSkills.slice(0, 3).join(', ')}${matchedSkills.length > 3 ? ` +${matchedSkills.length - 3} more` : ''}`);
+  } else {
+    parts.push('no declared skill overlap yet');
+  }
+  if (remainingHours <= 0) parts.push('no bandwidth left this period');
+  else if (need > 0 && remainingHours >= need) parts.push(`${remainingHours}h free covers the ${need}h needed`);
+  else if (need > 0) parts.push(`${remainingHours}h free against ${need}h needed`);
+  if (crossDepartment) parts.push(`it is outside ${userDepartment}`);
+
+  const reason = parts.join(' · ').replace(/^./, (c) => c.toUpperCase()) + '.';
+
+  return { score, skillFit, capacityFit, matchedSkills, crossDepartment, reason };
+}
+
 /* ── Bandwidth ─────────────────────────────────────────────────────────── */
 
 export type BandwidthPeriod = 'week' | 'month';

@@ -63,6 +63,9 @@ interface Store {
   setSavedOpen: (v: boolean) => void;
   profileOpen: boolean;
   setProfileOpen: (v: boolean) => void;
+  /** Global "post a requirement" composer, reachable from the nav anywhere. */
+  createWorkOpen: boolean;
+  setCreateWorkOpen: (v: boolean) => void;
 }
 
 const Ctx = createContext<Store>(null as any);
@@ -93,6 +96,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [savedOpen, setSavedOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [createWorkOpen, setCreateWorkOpen] = useState(false);
 
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -259,7 +263,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     toasts, toast, dismissToast, dark, toggleDark: () => setDark((d) => !d),
     sidebarCollapsed, toggleSidebar: () => setSidebarCollapsed((c) => !c),
     messagesOpen, setMessagesOpen, messagePartnerId, setMessagePartnerId,
-    notificationsOpen, setNotificationsOpen, savedOpen, setSavedOpen, profileOpen, setProfileOpen
+    notificationsOpen, setNotificationsOpen, savedOpen, setSavedOpen, profileOpen, setProfileOpen,
+    createWorkOpen, setCreateWorkOpen
   };
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

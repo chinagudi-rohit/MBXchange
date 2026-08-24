@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { useStore } from '../lib/store';
 import { TiltCard } from '../components/TiltCard';
+import { MatchBadge, MatchBreakdown } from '../components/Match';
 import { api, timeAgo, type WorkPost, type User } from '../lib/api';
 import {
   Button, Modal, Field, TextInput, TextArea, Select, StatusBadge, UrgencyBadge, Chip, Avatar, SaveButton, EmptyState, Card, SeatsIndicator, Reveal, SkeletonGrid
@@ -346,6 +347,19 @@ function WorkDetail({ postId, onBack }: { postId: string; onBack: () => void }) 
               <p className="text-xs text-ink-3">{post.authorRole} · {timeAgo(post.createdAt)}</p>
             </div>
           </div>
+
+          {post.matchScore != null && (
+            <div className="mt-4">
+              <MatchBreakdown
+                score={post.matchScore}
+                skillFit={post.skillFit}
+                capacityFit={post.capacityFit}
+                reason={post.matchReason}
+                matchedSkills={post.matchedSkills}
+                crossDepartment={post.crossDepartment}
+              />
+            </div>
+          )}
         </div>
       </Card>
 
@@ -521,7 +535,8 @@ export function WorkExchange() {
                     <Card className="p-7 h-full flex flex-col" onClick={() => s.setOpenWorkId(p.id)}>
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <div className="flex flex-wrap gap-1.5 mb-2">
+                          <div className="flex flex-wrap items-center gap-1.5 mb-2">
+                            <MatchBadge score={p.matchScore} />
                             <Chip>{p.department}</Chip>
                             <StatusBadge status={p.status} />
                             <UrgencyBadge urgency={p.urgency} />

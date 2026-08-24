@@ -11,6 +11,7 @@ import {
 import { WorkFormModal } from './WorkExchange';
 import { ActivityTelemetry } from './ActivityTelemetry';
 import { TiltCard } from '../components/TiltCard';
+import { MatchBadge } from '../components/Match';
 
 export function HomeDashboard() {
   const s = useStore();
@@ -207,15 +208,14 @@ export function HomeDashboard() {
             <TiltCard key={p.id}>
             <Card className="p-5 h-full flex flex-col" onClick={() => { s.setTab('work'); s.setOpenWorkId(p.id); }}>
               <div className="flex items-center gap-1.5 flex-wrap mb-2">
+                <MatchBadge score={p.matchScore} />
                 <Chip>{p.department}</Chip>
                 <UrgencyBadge urgency={p.urgency} />
               </div>
               <h3 className="text-base font-semibold text-ink leading-snug">{p.title}</h3>
-              {p.matchedSkills?.length > 0 && (
-                <p className="text-xs text-ink-2 mt-2">
-                  <span className="font-medium text-ink-2">Matches your stack:</span>{' '}
-                  {p.matchedSkills.slice(0, 3).join(', ')}
-                  {p.matchedSkills.length > 3 && ` +${p.matchedSkills.length - 3}`}
+              {p.matchReason && (
+                <p className="text-xs text-ink-2 mt-2 leading-relaxed line-clamp-2" title={p.matchReason}>
+                  {p.matchReason}
                 </p>
               )}
               <div className="flex items-center justify-between mt-auto pt-3">
