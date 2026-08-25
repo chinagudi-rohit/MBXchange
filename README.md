@@ -11,6 +11,156 @@ container serves both.
 
 ---
 
+## Running it on your own computer
+
+This section is for a person setting the project up on their own laptop — on
+either macOS or Windows — to develop, demo, or just try it out. No database
+to install, no Docker, no accounts to create up front.
+
+### 1. Install Node.js
+
+The project needs **Node.js version 22**. If you're not sure whether you have
+it, open a terminal and run:
+
+```bash
+node -v
+```
+
+If that prints `v22.x.x`, skip to step 2. Otherwise:
+
+**On a Mac:**
+Download the "LTS" installer from [nodejs.org](https://nodejs.org) and run
+it like any other `.pkg` installer — Next, Next, Install. If you use
+[Homebrew](https://brew.sh), `brew install node@22` works too.
+
+**On Windows:**
+Download the "LTS" Windows installer from [nodejs.org](https://nodejs.org)
+and run it. Accept the defaults; it's a normal `.msi` install. Once it
+finishes, close and reopen any terminal windows you had open, since Windows
+only picks up the new install path in fresh terminal sessions.
+
+Either way, close your terminal and open a new one afterwards, then run
+`node -v` again to confirm it worked.
+
+### 2. Get the code
+
+If you already have the repository, skip this. Otherwise, from a terminal:
+
+```bash
+git clone https://github.com/chinagudi-rohit/MBXchange.git
+cd MBXchange
+```
+
+This works identically on macOS and Windows — use Terminal on a Mac, and
+either **PowerShell** or **Command Prompt** on Windows (PowerShell is the
+better default on modern Windows).
+
+### 3. Install the project's dependencies
+
+From inside the `MBXchange` folder:
+
+```bash
+npm install
+```
+
+This downloads everything the app needs into a `node_modules` folder. It
+takes a minute or two the first time. Same command on both platforms.
+
+> **Windows note:** if this fails with a permissions error, you don't need
+> to run it "as Administrator" — that usually points to antivirus software
+> scanning `node_modules` while npm is writing to it. Excluding the project
+> folder from real-time scanning, or simply retrying, usually clears it.
+
+### 4. Start the app
+
+```bash
+npm run dev
+```
+
+This single command starts both halves of the app at once: the API server
+and the web frontend. Watch the terminal for a line like:
+
+```
+[server] MBXchange API listening on http://localhost:8787
+```
+
+Once you see that, open your browser to:
+
+```
+http://localhost:3000
+```
+
+and you should see the sign-in screen. The very first time you do this, the
+app quietly creates a small local database file under `.data/` in the
+project folder and fills it with realistic demo data — people, projects,
+carpool rides, the lot — so there's something to look at immediately. No
+setup step required; it just happens.
+
+### 5. Sign in
+
+Use the **"Sign in as any user (pilot environment)"** panel on the sign-in
+screen — it lists every demo account, and clicking one fills in the
+credentials for you. If you'd rather type them in by hand:
+
+| Role | Email | Password |
+|---|---|---|
+| Admin | `markus.becker@mercedes-benz.com` | `MBXAdmin@2026` |
+| Manager | `elena.rostova@mercedes-benz.com` | `Mbx@2026` |
+| Employee | `rakesh.kumar@mercedes-benz.com` | `Mbx@2026` |
+
+### 6. Stopping the app
+
+Click into the terminal window running `npm run dev` and press:
+
+- **Mac:** `Ctrl + C`
+- **Windows:** `Ctrl + C` (same key combination in both PowerShell and
+  Command Prompt)
+
+### 7. Starting over with a fresh database
+
+Everything the app has stored — every account, project, and message — lives
+in one folder: `.data/`. Deleting it and restarting gives you a completely
+clean copy of the demo data, as if you'd just cloned the repository.
+
+Stop the app first (step 6) — deleting the folder while it's still running
+can crash the dev server.
+
+**On a Mac**, from the project folder:
+
+```bash
+rm -rf .data
+```
+
+**On Windows**, using PowerShell, from the project folder:
+
+```powershell
+Remove-Item -Recurse -Force .data
+```
+
+**On Windows**, using Command Prompt instead:
+
+```cmd
+rmdir /s /q .data
+```
+
+Then run `npm run dev` again and it re-creates everything from scratch.
+
+### If something doesn't work
+
+| Problem | What's likely happening | Fix |
+|---|---|---|
+| `node: command not found` (Mac) or `'node' is not recognized...` (Windows) | Node.js isn't installed, or your terminal was open before you installed it | Reopen your terminal, or revisit step 1 |
+| "Port 3000 is already in use" (or 8787) | Another copy of the app — or something else — is already using that port | **Mac:** `lsof -ti:3000 \| xargs kill`  **Windows (PowerShell):** `Get-Process -Id (Get-NetTCPConnection -LocalPort 3000).OwningProcess \| Stop-Process` |
+| `npm install` hangs or fails partway | A flaky network, or a half-finished previous install | Delete the `node_modules` folder (leave `package-lock.json` alone) and run `npm install` again |
+| Blank white page in the browser | The frontend hasn't finished compiling yet, especially on the very first run | Wait a few seconds and refresh |
+| Windows: a script "cannot be loaded because running scripts is disabled" | PowerShell's default execution policy blocks npm's helper scripts | Use Command Prompt instead, or run PowerShell as Administrator once and execute `Set-ExecutionPolicy RemoteSigned -Scope CurrentUser` |
+
+Everything past this point is written for automated deployment rather than a
+person setting the project up to develop or demo it locally — read on only
+if you're deploying this somewhere real.
+
+---
+
 ## For an automated agent deploying this
 
 This section is written to be executed top-to-bottom. Every command is
