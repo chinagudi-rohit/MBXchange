@@ -285,7 +285,7 @@ function Shell() {
                     Internal
                   </span>
                 </span>
-                <span className="hidden xl:block text-xs text-ink-3 font-medium">{TAGLINE}</span>
+                <span className="block text-xs text-ink-3 font-medium">{TAGLINE}</span>
               </span>
             </button>
           </div>
