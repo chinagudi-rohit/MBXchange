@@ -212,6 +212,24 @@
     backdrop-filter: blur(8px) saturate(1.1);
   }
 
+  /* TiltCard rotates its contents in 3D (perspective + rotateY). Chromium/
+     WebKit mis-sample backdrop-filter under that transform, smearing the
+     panel's own text toward the receding edge. Drop the blur while tilted —
+     the background is already 97% opaque, so losing the backdrop hint for
+     ~200ms is invisible; keeping the smear is not.
+     The !important pair overrides Card's own `transition-all duration-200`
+     (a Tailwind utility, so it outranks this layer on cascade order alone):
+     without it, backdrop-filter still eases from blur(8px) to none over
+     200ms right as the tilt ramps up, smearing text for that whole window
+     instead of skipping the blur entirely. box-shadow/transform keep their
+     200ms so Card's own hover:shadow-pop / hover:-translate-y-0.5 stay smooth. */
+  .tilt-active .panel {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    transition-property: box-shadow, transform, backdrop-filter, -webkit-backdrop-filter !important;
+    transition-duration: 200ms, 200ms, 0s, 0s !important;
+  }
+
   /* OVERLAY panel — modals and drawers. Fully opaque so nothing behind them
      shows through the text they carry. The scrim supplies the depth instead. */
   .panel-overlay {

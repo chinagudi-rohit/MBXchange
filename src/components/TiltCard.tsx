@@ -65,7 +65,7 @@ export function TiltCard({
       onMouseMove={onMove}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={reset}
-      className={`relative h-full ${className}`}
+      className={`relative h-full ${lifted ? 'tilt-active' : ''} ${className}`}
       style={{
         zIndex: lifted ? 20 : 1,
         transition: 'transform 200ms cubic-bezier(0.16, 1, 0.3, 1)',
