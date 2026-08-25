@@ -97,7 +97,7 @@ export function LoginScreen() {
             {[
               'Post a requirement and get matched with the right people',
               'Apply to opportunities that match your declared skills',
-              'Capacity-aware approvals routed to the right manager'
+              'Build a portfolio of gigs, badges and recognition'
             ].map((line) => (
               <li key={line} className="flex items-start gap-2.5 text-sm text-white/85">
                 <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-[#d97757] shrink-0" />
