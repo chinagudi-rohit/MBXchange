@@ -87,18 +87,17 @@ export function LoginScreen() {
 
         <div className="max-w-md">
           <h2 className="text-3xl xl:text-4xl font-semibold leading-tight">
-            The best work you do this year might not be on your roadmap.
+            Projects beyond your day-to-day work.
           </h2>
           <p className="text-sm text-white/70 mt-4 leading-relaxed">
-            Somewhere in the organisation, a team is stuck on exactly the thing you are good at.
-            MBXchange is where you find them — and where the hours you give come back
-            as skills, reach and a record of what you contributed.
+            Find help across departments, lend your skills where they are needed, and keep
+            every request moving through the right approvals — in one place.
           </p>
           <ul className="mt-8 space-y-3">
             {[
-              'Work on something outside your team, for a few hours or a few days',
-              'Build a reputation your manager can actually see at review time',
-              'Earn tiers, milestones and recognition from the people you helped'
+              'Post a requirement and get matched with the right people',
+              'Apply to opportunities that match your declared skills',
+              'Capacity-aware approvals routed to the right manager'
             ].map((line) => (
               <li key={line} className="flex items-start gap-2.5 text-sm text-white/85">
                 <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-[#d97757] shrink-0" />
