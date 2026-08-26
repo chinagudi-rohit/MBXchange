@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
+import { RecognitionAdmin } from './RecognitionAdmin';
 import {
-  Users, UserPlus, ClipboardList, ScrollText, KeyRound, Eye, Copy, RefreshCw, CheckCircle2
+  Users, UserPlus, ClipboardList, ScrollText, KeyRound, Eye, Copy, RefreshCw, CheckCircle2, Award
 } from 'lucide-react';
 import { useStore } from '../lib/store';
 import { api, timeAgo, type User } from '../lib/api';
@@ -50,7 +51,7 @@ function TempPasswordReveal({ email, password, onDone }: { email: string; passwo
 
 export function AdminConsole() {
   const s = useStore();
-  const [section, setSection] = useState<'overview' | 'users' | 'registrations' | 'audit'>('overview');
+  const [section, setSection] = useState<'overview' | 'users' | 'registrations' | 'recognition' | 'audit'>('overview');
   const [overview, setOverview] = useState<any>(null);
   const [regRequests, setRegRequests] = useState<any[] | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
@@ -181,6 +182,7 @@ export function AdminConsole() {
     { id: 'overview' as const, label: 'Overview', icon: <ClipboardList className="w-4 h-4" /> },
     { id: 'users' as const, label: 'Users', icon: <Users className="w-4 h-4" /> },
     { id: 'registrations' as const, label: `Registrations${pendingReg.length ? ` (${pendingReg.length})` : ''}`, icon: <UserPlus className="w-4 h-4" /> },
+    { id: 'recognition' as const, label: 'Badges & Tiers', icon: <Award className="w-4 h-4" /> },
     { id: 'audit' as const, label: 'Audit Log', icon: <ScrollText className="w-4 h-4" /> }
   ];
 
@@ -388,6 +390,8 @@ export function AdminConsole() {
       )}
 
       {/* ── Audit ── */}
+      {section === 'recognition' && <RecognitionAdmin />}
+
       {section === 'audit' && (
         overview ? (
           <Card className="divide-y divide-line/60">
