@@ -77,7 +77,7 @@ export function InsightsView() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-ink">Capability Insights</h1>
         <p className="text-xs text-ink-2 mt-0.5">
-          Where the organisation needs skills, where it has spare capacity — open to everyone
+          Where the organisation needs skills, and who has bandwidth to offer — open to everyone
         </p>
       </div>
 
@@ -143,7 +143,7 @@ export function InsightsView() {
             {([
               ['all', `All capabilities (${heatmap.length})`],
               ['gaps', `Skill gaps (${gaps.length})`],
-              ['surplus', 'Spare capacity']
+              ['surplus', 'Well covered']
             ] as const).map(([v, label]) => (
               <button
                 key={v} onClick={() => setFilter(v)}

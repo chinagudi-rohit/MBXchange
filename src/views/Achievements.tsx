@@ -111,7 +111,7 @@ export function Achievements() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-ink">Achievements</h1>
         <p className="text-xs text-ink-2 mt-0.5">
-          What you have earned by helping other teams — and who you can recognise in return
+          What you have picked up by working with other teams — and who you can recognise in return
         </p>
       </div>
 

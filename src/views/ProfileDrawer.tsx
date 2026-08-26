@@ -198,7 +198,7 @@ export function ProfileDrawer() {
             )}
           </div>
           <p className="text-xs text-ink-3 mb-3">
-            The AI capacity check compares this against every request's required effort.
+            The bandwidth check compares this against what a request asks for, so nobody is matched to more than they offered.
           </p>
           {editingBandwidth ? (
             <div className="space-y-3">

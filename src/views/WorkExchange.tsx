@@ -208,14 +208,14 @@ function ApplyModal({ open, onClose, post }: { open: boolean; onClose: () => voi
         </div>
 
         <div className="flex items-center justify-between gap-3 p-3.5 rounded-xl bg-surface-2 text-xs">
-          <span className="text-ink-2">Your remaining capacity</span>
+          <span className="text-ink-2">Bandwidth you have left this week</span>
           <span className="font-semibold text-ink">
             {s.user?.availableHoursWeek ?? 0}h / week
             <span className="text-ink-3 font-medium"> · this asks for {post.effortHours || '—'} in total</span>
           </span>
         </div>
 
-        <Field label="Note to your manager" hint="Optional — context on availability, motivation, or timing">
+        <Field label="Note to your manager" hint="Optional — context on timing or how you would approach it">
           <TextArea value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Sprint commitments are on track; available Tue–Thu afternoons." />
         </Field>
       </div>
@@ -488,7 +488,7 @@ export function WorkExchange() {
       <div className="flex flex-wrap items-end justify-between gap-3 mb-5">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-ink">Opportunities</h1>
-          <p className="text-xs text-ink-2 mt-0.5">Projects and proofs of concept you can take on alongside your day-to-day work</p>
+          <p className="text-xs text-ink-2 mt-0.5">Projects and proofs of concept from any team or MB unit, alongside your day-to-day work</p>
         </div>
         <div className="flex gap-2">
           <Button variant="soft" onClick={() => setOfferModal(true)}>

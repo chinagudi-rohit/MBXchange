@@ -90,7 +90,7 @@ export function HomeDashboard() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-ink">Welcome back, {firstName}</h1>
           <p className="text-sm text-ink-2 mt-1">
-            Find help, lend your skills, and keep cross-department work moving.
+            Find help, lend your skills, and keep work moving across teams and MB units.
           </p>
         </div>
         <div className="flex gap-2">

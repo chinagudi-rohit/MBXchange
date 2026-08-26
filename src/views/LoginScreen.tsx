@@ -95,9 +95,9 @@ export function LoginScreen() {
           </p>
           <ul className="mt-8 space-y-3">
             {[
-              'Post a requirement and get matched with the right people',
-              'Apply to opportunities that match your declared skills',
-              'Build a portfolio of gigs, badges and recognition'
+              'Post a requirement and reach people beyond your own team',
+              'Contribute where your skills are genuinely needed',
+              'Learn where the demand is, and pick up the skills behind it'
             ].map((line) => (
               <li key={line} className="flex items-start gap-2.5 text-sm text-white/85">
                 <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-[#5aa2f0] shrink-0" />

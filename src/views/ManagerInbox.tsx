@@ -135,7 +135,7 @@ export function ManagerInbox() {
           )}
         </div>
 
-        {/* The AI capacity check is a manager-stage thing — it compares
+        {/* The bandwidth check is a manager-stage thing — it compares
             declared bandwidth against required effort, which is exactly what
             a manager (not a requirement's author) needs to weigh. */}
         {a.kind === 'application' && a.stage === 'manager' && (
@@ -239,7 +239,7 @@ export function ManagerInbox() {
           )}
           {decide?.decision === 'approved' && decide.item.aiRecommendation === 'Not Recommended' && (
             <p className="text-xs font-medium text-amber bg-amber-soft rounded-xl px-3 py-2.5">
-              Heads-up: the capacity check advises against this. Approving anyway will overallocate the employee's declared hours.
+              Heads-up: this asks for more than they offered. Approving anyway commits them beyond the bandwidth they put forward.
             </p>
           )}
           <Field
@@ -255,7 +255,7 @@ export function ManagerInbox() {
               value={notes} onChange={(e) => setNotes(e.target.value)}
               placeholder={decide?.decision === 'approved'
                 ? 'e.g. Approved for up to 6 hours; keep Thursday HiL run unaffected.'
-                : 'e.g. Sprint capacity is fully committed this iteration.'}
+                : 'e.g. Fully committed this sprint — happy to revisit next one.'}
             />
           </Field>
         </div>

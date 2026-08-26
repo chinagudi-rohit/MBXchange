@@ -5,10 +5,11 @@ import type { ScoreResponse } from '../lib/api';
 /**
  * The contribution score, out of 5, with the working shown.
  *
- * The number on its own is a scoreboard. What makes it motivating is the
- * breakdown underneath: each bar is a lever the person can actually pull, and
- * the copy names the next one worth pulling. That is why the components are
- * rendered here rather than hidden behind a tooltip.
+ * This measures participation in the exchange — nothing else. It is not a
+ * performance rating, it feeds no review, and it is visible only to the
+ * person it belongs to and the manager they report to. The breakdown is
+ * shown rather than hidden so it reads as "here is what you have taken part
+ * in", with each bar a concrete thing to do next.
  */
 export function ScoreCard({
   data, compact = false, onOpenDetail
@@ -54,11 +55,12 @@ export function ScoreCard({
         <div className="min-w-0 flex-1">
           <p className="text-xs font-semibold uppercase tracking-wide text-ink-3 flex items-center gap-1.5">
             <Star className="w-3.5 h-3.5 text-amber fill-amber" /> Contribution score
+            <span className="normal-case tracking-normal font-medium text-ink-3">· only you see this</span>
           </p>
           <p className="text-base font-semibold text-ink mt-1.5 leading-snug">{data.tier}</p>
           <p className="text-xs text-ink-2 mt-1 leading-relaxed">
             {weakest && weakest.ratio < 1 ? (
-              <>Biggest gain right now: <b className="text-ink">{weakest.label.toLowerCase()}</b> — {weakest.hint.toLowerCase()}.</>
+              <>Easiest next step: <b className="text-ink">{weakest.label.toLowerCase()}</b> — {weakest.hint.toLowerCase()}.</>
             ) : (
               <>Every component is maxed out. You are at the top of the scale.</>
             )}
