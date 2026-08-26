@@ -11,7 +11,15 @@ import React, { useRef, useState, useEffect, type ReactNode } from 'react';
  * The z-index lift is what actually separates a hovered card from its
  * neighbours in a dense grid; without it the raised card is overlapped by the
  * ones after it in DOM order.
+ *
+ * That lift only has to beat sibling cards (which rest at z-index 1), so it
+ * stays deliberately low. It previously used 20 — the same layer as
+ * `.sticky-bar` — and on a tie the later DOM element wins, so a hovered card
+ * scrolled up under the sticky filter bar painted straight over it. See the
+ * layer scale documented above `.sticky-bar` in index.css.
  */
+const RESTING_Z = 1;
+const LIFTED_Z = 5;
 export function TiltCard({
   children,
   className = '',
@@ -67,7 +75,7 @@ export function TiltCard({
       onMouseLeave={reset}
       className={`relative h-full ${lifted ? 'tilt-active' : ''} ${className}`}
       style={{
-        zIndex: lifted ? 20 : 1,
+        zIndex: lifted ? LIFTED_Z : RESTING_Z,
         transition: 'transform 200ms cubic-bezier(0.16, 1, 0.3, 1)',
         transform: lifted
           ? `perspective(1200px) translateY(-6px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) scale(${scale})`

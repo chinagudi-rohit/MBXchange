@@ -236,6 +236,17 @@
 
   /* In-view sticky toolbars park just under the 4rem top bar and frost
      whatever scrolls beneath them (reference: Dashboard Drafts scroll UX) */
+  /* ── Layer scale ──────────────────────────────────────────────────────
+     Every stacking decision in the app uses one of these. Keep the gaps:
+     equal z-index falls back to DOM order, which is how a hovered card
+     (once also 20) ended up painting over this bar.
+
+        1   content card at rest
+        5   content card lifted on hover  (TiltCard)
+       20   in-page sticky bar           (this rule)
+       30   app header
+       40   impersonation banner, mobile bottom nav
+       50   menus, drawers, modals                                        */
   .sticky-bar {
     position: sticky;
     top: 4rem;
