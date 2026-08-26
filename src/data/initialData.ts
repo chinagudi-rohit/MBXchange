@@ -19,13 +19,13 @@ import {
 
 /* ── PT-THIF engineering org ──────────────────────────────────────────────
  *
- *  Naresh Tated — Head of Engineering
- *  ├── Sanila Sanal
- *  │   ├── Kalyan Thirupathi ── 9 engineers (core product squad)
- *  │   └── Swati Bansal ─────── 2 engineers
- *  └── Irfan Jamal
- *      ├── Nitin Chitransh ──── 2 engineers
- *      └── Prabhat Sharma ───── 2 engineers
+ *  Rajesh Deshmukh — Head of Engineering
+ *  ├── Meenakshi Pillai
+ *  │   ├── Vikram Subramanian ── 9 engineers (core product squad)
+ *  │   └── Priya Malhotra ─────── 2 engineers
+ *  └── Sameer Qureshi
+ *      ├── Ajay Bhatnagar ──── 2 engineers
+ *      └── Vivek Agarwal ───── 2 engineers
  *
  *  Platform administration is a dedicated service account, not a hat worn by
  *  somebody's staff account — see ADMIN_USER below for why.
@@ -76,8 +76,8 @@ export const ADMIN_USER: UserAccount = {
 
 export const MANAGER_NARESH: UserAccount = {
   id: 'usr_naresh',
-  name: 'Naresh Tated',
-  email: 'naresh.tated@mercedes-benz.com',
+  name: 'Rajesh Deshmukh',
+  email: 'rajesh.deshmukh@mercedes-benz.com',
   role: 'Head of Engineering',
   systemRole: 'manager',
   status: 'active',
@@ -85,7 +85,7 @@ export const MANAGER_NARESH: UserAccount = {
   managerName: undefined,
   directReportIds: ['usr_sanila', 'usr_irfan'],
   campus: 'MBRDI Bengaluru Hub',
-  initials: 'NT',
+  initials: 'RD',
   experienceYears: 21,
   primarySkills: ['Engineering Leadership', 'Org Design', 'Platform Strategy', 'Delivery Governance', 'Capacity Planning', 'Stakeholder Management'],
   interests: ['Talent Mobility', 'Engineering Culture', 'Platform Modernisation', 'Cross-Team Enablement'],
@@ -109,17 +109,17 @@ export const MANAGER_NARESH: UserAccount = {
 
 export const MANAGER_SANILA: UserAccount = {
   id: 'usr_sanila',
-  name: 'Sanila Sanal',
-  email: 'sanila.sanal@mercedes-benz.com',
+  name: 'Meenakshi Pillai',
+  email: 'meenakshi.pillai@mercedes-benz.com',
   role: 'Senior Engineering Manager',
   systemRole: 'manager',
   status: 'active',
   department: 'PT-THIF',
   managerId: 'usr_naresh',
-  managerName: 'Naresh Tated',
+  managerName: 'Rajesh Deshmukh',
   directReportIds: ['usr_kalyan', 'usr_swati'],
   campus: 'MBRDI Bengaluru Hub',
-  initials: 'SS',
+  initials: 'MP',
   experienceYears: 17,
   primarySkills: ['People Leadership', 'Programme Delivery', 'Agile at Scale', 'Capacity Management', 'Architecture Governance', 'Risk Management'],
   interests: ['Team Topologies', 'Developer Experience', 'Succession Planning', 'Delivery Metrics'],
@@ -141,17 +141,17 @@ export const MANAGER_SANILA: UserAccount = {
 
 export const MANAGER_IRFAN: UserAccount = {
   id: 'usr_irfan',
-  name: 'Irfan Jamal',
-  email: 'irfan.jamal@mercedes-benz.com',
+  name: 'Sameer Qureshi',
+  email: 'sameer.qureshi@mercedes-benz.com',
   role: 'Senior Engineering Manager',
   systemRole: 'manager',
   status: 'active',
   department: 'PT-THIF',
   managerId: 'usr_naresh',
-  managerName: 'Naresh Tated',
+  managerName: 'Rajesh Deshmukh',
   directReportIds: ['usr_nitin', 'usr_prabhat'],
   campus: 'MBRDI Whitefield Hub',
-  initials: 'IJ',
+  initials: 'SQ',
   experienceYears: 16,
   primarySkills: ['People Leadership', 'Platform Engineering', 'Reliability Strategy', 'Vendor Management', 'Cost Optimisation', 'Data Governance'],
   interests: ['SRE Practice', 'Observability Culture', 'Cloud Economics', 'Engineering Onboarding'],
@@ -174,20 +174,20 @@ export const MANAGER_IRFAN: UserAccount = {
 
 export const MANAGER_KALYAN: UserAccount = {
   id: 'usr_kalyan',
-  name: 'Kalyan Thirupathi',
-  email: 'kalyan.thirupathi@mercedes-benz.com',
+  name: 'Vikram Subramanian',
+  email: 'vikram.subramanian@mercedes-benz.com',
   role: 'Engineering Manager',
   systemRole: 'manager',
   status: 'active',
   department: 'PT-THIF',
   managerId: 'usr_sanila',
-  managerName: 'Sanila Sanal',
+  managerName: 'Meenakshi Pillai',
   directReportIds: [
     'usr_rohit', 'usr_rakesh', 'usr_sangeeta', 'usr_upasana', 'usr_ishana',
     'usr_sunil', 'usr_rashmi', 'usr_shital', 'usr_aman'
   ],
   campus: 'MBRDI Bengaluru Hub',
-  initials: 'KT',
+  initials: 'VS',
   experienceYears: 14,
   primarySkills: ['People Leadership', 'Delivery Management', 'Capacity Planning', '.NET Ecosystem', 'Solution Architecture', 'Stakeholder Management'],
   interests: ['Team Health', 'Engineering Craft', 'Cross-Team Mobility', 'Release Predictability'],
@@ -209,17 +209,17 @@ export const MANAGER_KALYAN: UserAccount = {
 
 export const MANAGER_SWATI: UserAccount = {
   id: 'usr_swati',
-  name: 'Swati Bansal',
-  email: 'swati.bansal@mercedes-benz.com',
+  name: 'Priya Malhotra',
+  email: 'priya.malhotra@mercedes-benz.com',
   role: 'Engineering Manager',
   systemRole: 'manager',
   status: 'active',
   department: 'PT-THIF',
   managerId: 'usr_sanila',
-  managerName: 'Sanila Sanal',
+  managerName: 'Meenakshi Pillai',
   directReportIds: ['usr_amith', 'usr_rohitshet'],
   campus: 'MBRDI Bengaluru Hub',
-  initials: 'SB',
+  initials: 'PM',
   experienceYears: 13,
   primarySkills: ['People Leadership', 'Backend Architecture', 'API Strategy', 'Integration Patterns', 'Agile Delivery', 'Code Quality'],
   interests: ['Domain-Driven Design', 'Contract Testing', 'Developer Onboarding', 'Technical Debt Strategy'],
@@ -240,17 +240,17 @@ export const MANAGER_SWATI: UserAccount = {
 
 export const MANAGER_NITIN: UserAccount = {
   id: 'usr_nitin',
-  name: 'Nitin Chitransh',
-  email: 'nitin.chitransh@mercedes-benz.com',
+  name: 'Ajay Bhatnagar',
+  email: 'ajay.bhatnagar@mercedes-benz.com',
   role: 'Engineering Manager',
   systemRole: 'manager',
   status: 'active',
   department: 'PT-THIF',
   managerId: 'usr_irfan',
-  managerName: 'Irfan Jamal',
+  managerName: 'Sameer Qureshi',
   directReportIds: ['usr_avinash', 'usr_soumya'],
   campus: 'MBRDI Whitefield Hub',
-  initials: 'NC',
+  initials: 'AB',
   experienceYears: 15,
   primarySkills: ['People Leadership', 'Data Platform Strategy', 'Analytics Engineering', 'Front-End Architecture', 'Design Systems', 'Agile Delivery'],
   interests: ['Data Quality', 'Self-Service Analytics', 'Accessibility', 'Design Tokens'],
@@ -271,17 +271,17 @@ export const MANAGER_NITIN: UserAccount = {
 
 export const MANAGER_PRABHAT: UserAccount = {
   id: 'usr_prabhat',
-  name: 'Prabhat Sharma',
-  email: 'prabhat.sharma@mercedes-benz.com',
+  name: 'Vivek Agarwal',
+  email: 'vivek.agarwal@mercedes-benz.com',
   role: 'Engineering Manager',
   systemRole: 'manager',
   status: 'active',
   department: 'PT-THIF',
   managerId: 'usr_irfan',
-  managerName: 'Irfan Jamal',
+  managerName: 'Sameer Qureshi',
   directReportIds: ['usr_pawan', 'usr_raghav'],
   campus: 'MBRDI Whitefield Hub',
-  initials: 'PS',
+  initials: 'VA',
   experienceYears: 14,
   primarySkills: ['People Leadership', 'Site Reliability', 'Release Engineering', 'Quality Strategy', 'Incident Management', 'Automation'],
   interests: ['Progressive Delivery', 'Chaos Engineering', 'Shift-Left Testing', 'On-Call Health'],
@@ -300,7 +300,7 @@ export const MANAGER_PRABHAT: UserAccount = {
   bio: 'Engineering manager for reliability and quality. Owns the release gate and the on-call rotation that keeps PT-THIF services healthy.'
 };
 
-/* ── Kalyan Thirupathi's squad (9) ─────────────────────────────────────── */
+/* ── Vikram Subramanian's squad (9) ─────────────────────────────────────── */
 
 /**
  * Rohit and Rakesh built MBXchange and look after it, but they hold no
@@ -311,16 +311,16 @@ export const MANAGER_PRABHAT: UserAccount = {
  */
 export const CURRENT_USER: UserAccount = {
   id: 'usr_rohit',
-  name: 'Rohit Chinagudi',
-  email: 'rohit.chinagudi@mercedes-benz.com',
+  name: 'Arjun Mehta',
+  email: 'arjun.mehta@mercedes-benz.com',
   role: 'Full Stack Developer',
   systemRole: 'employee',
   status: 'active',
   department: 'PT-THIF',
   managerId: 'usr_kalyan',
-  managerName: 'Kalyan Thirupathi',
+  managerName: 'Vikram Subramanian',
   campus: 'MBRDI Bengaluru Hub',
-  initials: 'RC',
+  initials: 'AM',
   experienceYears: 8,
   primarySkills: ['C#', '.NET Core', 'ASP.NET Web API', 'Angular', 'TypeScript', 'RxJS', 'Entity Framework', 'SQL Server', 'Azure'],
   interests: ['Clean Architecture', 'Micro Frontends', 'Performance Tuning', 'Developer Tooling'],
@@ -343,16 +343,16 @@ export const CURRENT_USER: UserAccount = {
 
 export const EMP_RAKESH: UserAccount = {
   id: 'usr_rakesh',
-  name: 'Rakesh Kumar',
-  email: 'rakesh.kumar@mercedes-benz.com',
+  name: 'Karthik Iyer',
+  email: 'karthik.iyer@mercedes-benz.com',
   role: 'Lead DevOps Engineer',
   systemRole: 'employee',
   status: 'active',
   department: 'PT-THIF',
   managerId: 'usr_kalyan',
-  managerName: 'Kalyan Thirupathi',
+  managerName: 'Vikram Subramanian',
   campus: 'MBRDI Bengaluru Hub',
-  initials: 'RK',
+  initials: 'KI',
   experienceYears: 14,
   primarySkills: ['AWS', 'Azure', 'Kubernetes', 'Terraform', 'Docker', 'CI/CD', 'GitHub Actions', 'AIOps'],
   interests: ['AIOps', 'Cloud Architecture', 'Observability', 'Automation', 'EV Tech'],
@@ -377,16 +377,16 @@ export const EMP_RAKESH: UserAccount = {
 
 export const EMP_SANGEETA: UserAccount = {
   id: 'usr_sangeeta',
-  name: 'Sangeeta Bhaskaran',
-  email: 'sangeeta.bhaskaran@mercedes-benz.com',
+  name: 'Neha Kulkarni',
+  email: 'neha.kulkarni@mercedes-benz.com',
   role: 'Product Owner',
   systemRole: 'employee',
   status: 'active',
   department: 'PT-THIF',
   managerId: 'usr_kalyan',
-  managerName: 'Kalyan Thirupathi',
+  managerName: 'Vikram Subramanian',
   campus: 'MBRDI Bengaluru Hub',
-  initials: 'SB',
+  initials: 'NK',
   experienceYears: 11,
   primarySkills: ['Product Discovery', 'Backlog Management', 'User Story Mapping', 'Roadmapping', 'Stakeholder Management', 'OKRs', 'Jira'],
   interests: ['Outcome-Driven Roadmaps', 'Customer Journey Mapping', 'Product Analytics', 'Continuous Discovery'],
@@ -408,16 +408,16 @@ export const EMP_SANGEETA: UserAccount = {
 
 export const EMP_UPASANA: UserAccount = {
   id: 'usr_upasana',
-  name: 'Upasana Ghosh',
-  email: 'upasana.ghosh@mercedes-benz.com',
+  name: 'Divya Krishnan',
+  email: 'divya.krishnan@mercedes-benz.com',
   role: 'Full Stack Developer',
   systemRole: 'employee',
   status: 'active',
   department: 'PT-THIF',
   managerId: 'usr_kalyan',
-  managerName: 'Kalyan Thirupathi',
+  managerName: 'Vikram Subramanian',
   campus: 'MBRDI Bengaluru Hub',
-  initials: 'UG',
+  initials: 'DK',
   experienceYears: 7,
   primarySkills: ['C#', '.NET Core', 'Angular', 'TypeScript', 'REST APIs', 'PostgreSQL', 'xUnit', 'Docker'],
   interests: ['Test-Driven Development', 'API Design', 'Refactoring', 'Database Performance'],
@@ -438,16 +438,16 @@ export const EMP_UPASANA: UserAccount = {
 
 export const EMP_ISHANA: UserAccount = {
   id: 'usr_ishana',
-  name: 'Ishana Kumar',
-  email: 'ishana.kumar@mercedes-benz.com',
+  name: 'Ananya Reddy',
+  email: 'ananya.reddy@mercedes-benz.com',
   role: 'Full Stack Developer',
   systemRole: 'employee',
   status: 'active',
   department: 'PT-THIF',
   managerId: 'usr_kalyan',
-  managerName: 'Kalyan Thirupathi',
+  managerName: 'Vikram Subramanian',
   campus: 'MBRDI Whitefield Hub',
-  initials: 'IK',
+  initials: 'AR',
   experienceYears: 6,
   primarySkills: ['Angular', 'TypeScript', '.NET Core', 'ASP.NET Web API', 'SCSS', 'Cypress', 'Git', 'SQL'],
   interests: ['Component Architecture', 'Front-End Testing', 'Accessibility', 'State Management'],
@@ -468,16 +468,16 @@ export const EMP_ISHANA: UserAccount = {
 
 export const EMP_SUNIL: UserAccount = {
   id: 'usr_sunil',
-  name: 'Sunil Naik',
-  email: 'sunil.naik@mercedes-benz.com',
+  name: 'Suresh Pillai',
+  email: 'suresh.pillai@mercedes-benz.com',
   role: 'Senior Developer & Team Lead',
   systemRole: 'employee',
   status: 'active',
   department: 'PT-THIF',
   managerId: 'usr_kalyan',
-  managerName: 'Kalyan Thirupathi',
+  managerName: 'Vikram Subramanian',
   campus: 'MBRDI Bengaluru Hub',
-  initials: 'SN',
+  initials: 'SP',
   experienceYears: 13,
   primarySkills: ['.NET Core', 'Angular', 'System Design', 'Microservices', 'Azure DevOps', 'Performance Tuning', 'Code Review', 'Mentoring'],
   interests: ['Distributed Systems', 'Technical Mentoring', 'Architecture Decision Records', 'Build Pipeline Speed'],
@@ -499,16 +499,16 @@ export const EMP_SUNIL: UserAccount = {
 
 export const EMP_RASHMI: UserAccount = {
   id: 'usr_rashmi',
-  name: 'Rashmi Puttaswamachary',
-  email: 'rashmi.puttaswamachary@mercedes-benz.com',
+  name: 'Kavya Nair',
+  email: 'kavya.nair@mercedes-benz.com',
   role: 'Business Analyst & Scrum Master',
   systemRole: 'employee',
   status: 'active',
   department: 'PT-THIF',
   managerId: 'usr_kalyan',
-  managerName: 'Kalyan Thirupathi',
+  managerName: 'Vikram Subramanian',
   campus: 'MBRDI Bengaluru Hub',
-  initials: 'RP',
+  initials: 'KN',
   experienceYears: 10,
   primarySkills: ['Requirements Engineering', 'Agile / Scrum', 'Sprint Facilitation', 'Process Mapping', 'Jira', 'Confluence', 'UAT Coordination'],
   interests: ['Team Facilitation', 'Flow Efficiency', 'Retrospective Formats', 'Requirement Traceability'],
@@ -529,16 +529,16 @@ export const EMP_RASHMI: UserAccount = {
 
 export const EMP_SHITAL: UserAccount = {
   id: 'usr_shital',
-  name: 'Shital Honde',
-  email: 'shital.honde@mercedes-benz.com',
+  name: 'Pooja Joshi',
+  email: 'pooja.joshi@mercedes-benz.com',
   role: 'Testing Lead',
   systemRole: 'employee',
   status: 'active',
   department: 'PT-THIF',
   managerId: 'usr_kalyan',
-  managerName: 'Kalyan Thirupathi',
+  managerName: 'Vikram Subramanian',
   campus: 'MBRDI Bengaluru Hub',
-  initials: 'SH',
+  initials: 'PJ',
   experienceYears: 12,
   primarySkills: ['Test Strategy', 'Selenium', 'Playwright', 'API Testing', 'Test Automation', 'Performance Testing', 'Defect Management'],
   interests: ['Shift-Left Testing', 'Risk-Based Test Design', 'Automation ROI', 'Quality Coaching'],
@@ -559,16 +559,16 @@ export const EMP_SHITAL: UserAccount = {
 
 export const EMP_AMAN: UserAccount = {
   id: 'usr_aman',
-  name: 'Aman Yadav',
-  email: 'aman.yadav@mercedes-benz.com',
+  name: 'Rohan Chauhan',
+  email: 'rohan.chauhan@mercedes-benz.com',
   role: 'Junior Developer',
   systemRole: 'employee',
   status: 'active',
   department: 'PT-THIF',
   managerId: 'usr_kalyan',
-  managerName: 'Kalyan Thirupathi',
+  managerName: 'Vikram Subramanian',
   campus: 'MBRDI Bengaluru Hub',
-  initials: 'AY',
+  initials: 'RC',
   experienceYears: 2,
   primarySkills: ['C#', '.NET Core', 'Angular', 'JavaScript', 'HTML/CSS', 'SQL', 'Git'],
   interests: ['Learning Clean Code', 'Debugging Techniques', 'Unit Testing', 'Open Source'],
@@ -587,20 +587,20 @@ export const EMP_AMAN: UserAccount = {
   bio: 'Junior developer, two years in. Picking up .NET and Angular on the core squad, and actively looking for small cross-team gigs to widen his exposure.'
 };
 
-/* ── Swati Bansal's squad (2) ──────────────────────────────────────────── */
+/* ── Priya Malhotra's squad (2) ──────────────────────────────────────────── */
 
 export const EMP_AMITH: UserAccount = {
   id: 'usr_amith',
-  name: 'Amith Kashyap',
-  email: 'amith.kashyap@mercedes-benz.com',
+  name: 'Nikhil Rao',
+  email: 'nikhil.rao@mercedes-benz.com',
   role: 'Backend Developer',
   systemRole: 'employee',
   status: 'active',
   department: 'PT-THIF',
   managerId: 'usr_swati',
-  managerName: 'Swati Bansal',
+  managerName: 'Priya Malhotra',
   campus: 'MBRDI Bengaluru Hub',
-  initials: 'AK',
+  initials: 'NR',
   experienceYears: 9,
   primarySkills: ['C#', '.NET Core', 'Microservices', 'REST APIs', 'SQL Server', 'Redis', 'RabbitMQ', 'Domain-Driven Design'],
   interests: ['Event-Driven Architecture', 'Caching Strategy', 'API Versioning', 'Database Design'],
@@ -621,16 +621,16 @@ export const EMP_AMITH: UserAccount = {
 
 export const EMP_ROHIT_SHET: UserAccount = {
   id: 'usr_rohitshet',
-  name: 'Rohit Shet',
-  email: 'rohit.shet@mercedes-benz.com',
+  name: 'Varun Prabhu',
+  email: 'varun.prabhu@mercedes-benz.com',
   role: 'Cloud & Integration Engineer',
   systemRole: 'employee',
   status: 'active',
   department: 'PT-THIF',
   managerId: 'usr_swati',
-  managerName: 'Swati Bansal',
+  managerName: 'Priya Malhotra',
   campus: 'MBRDI Whitefield Hub',
-  initials: 'RS',
+  initials: 'VP',
   experienceYears: 8,
   primarySkills: ['Azure', 'API Management', 'Logic Apps', '.NET Core', 'Integration Patterns', 'OAuth / OIDC', 'Bicep'],
   interests: ['Hybrid Integration', 'API Gateways', 'Zero-Trust Networking', 'Cost Optimisation'],
@@ -649,20 +649,20 @@ export const EMP_ROHIT_SHET: UserAccount = {
   bio: 'Cloud and integration engineer. The person to call when two systems need to talk to each other securely and nobody is sure whose token is expiring.'
 };
 
-/* ── Nitin Chitransh's squad (2) ───────────────────────────────────────── */
+/* ── Ajay Bhatnagar's squad (2) ───────────────────────────────────────── */
 
 export const EMP_AVINASH: UserAccount = {
   id: 'usr_avinash',
-  name: 'Avinash Koppal',
-  email: 'avinash.koppal@mercedes-benz.com',
+  name: 'Harish Menon',
+  email: 'harish.menon@mercedes-benz.com',
   role: 'Data Engineer',
   systemRole: 'employee',
   status: 'active',
   department: 'PT-THIF',
   managerId: 'usr_nitin',
-  managerName: 'Nitin Chitransh',
+  managerName: 'Ajay Bhatnagar',
   campus: 'MBRDI Whitefield Hub',
-  initials: 'AK',
+  initials: 'HM',
   experienceYears: 9,
   primarySkills: ['SQL', 'Python', 'ETL', 'Azure Data Factory', 'Databricks', 'Power BI', 'Data Modelling'],
   interests: ['Data Quality', 'Lakehouse Architecture', 'Pipeline Observability', 'Self-Service BI'],
@@ -683,16 +683,16 @@ export const EMP_AVINASH: UserAccount = {
 
 export const EMP_SOUMYA: UserAccount = {
   id: 'usr_soumya',
-  name: 'Soumya Mehta',
-  email: 'soumya.mehta@mercedes-benz.com',
+  name: 'Anjali Desai',
+  email: 'anjali.desai@mercedes-benz.com',
   role: 'UI / UX Engineer',
   systemRole: 'employee',
   status: 'active',
   department: 'PT-THIF',
   managerId: 'usr_nitin',
-  managerName: 'Nitin Chitransh',
+  managerName: 'Ajay Bhatnagar',
   campus: 'MBRDI Bengaluru Hub',
-  initials: 'SM',
+  initials: 'AD',
   experienceYears: 7,
   primarySkills: ['Angular', 'TypeScript', 'Design Systems', 'Figma', 'SCSS', 'Accessibility (WCAG)', 'Usability Testing'],
   interests: ['Design Tokens', 'Inclusive Design', 'Motion Design', 'Front-End Performance'],
@@ -712,20 +712,20 @@ export const EMP_SOUMYA: UserAccount = {
   bio: 'UI/UX engineer bridging design and Angular implementation. Owns the shared design tokens and runs the accessibility audits other squads book her for.'
 };
 
-/* ── Prabhat Sharma's squad (2) ────────────────────────────────────────── */
+/* ── Vivek Agarwal's squad (2) ────────────────────────────────────────── */
 
 export const EMP_PAWAN: UserAccount = {
   id: 'usr_pawan',
-  name: 'Pawan Hegde',
-  email: 'pawan.hegde@mercedes-benz.com',
+  name: 'Girish Kulkarni',
+  email: 'girish.kulkarni@mercedes-benz.com',
   role: 'Site Reliability Engineer',
   systemRole: 'employee',
   status: 'active',
   department: 'PT-THIF',
   managerId: 'usr_prabhat',
-  managerName: 'Prabhat Sharma',
+  managerName: 'Vivek Agarwal',
   campus: 'MBRDI Whitefield Hub',
-  initials: 'PH',
+  initials: 'GK',
   experienceYears: 10,
   primarySkills: ['Kubernetes', 'Terraform', 'Prometheus', 'Grafana', 'Incident Response', 'Linux', 'Go', 'CI/CD'],
   interests: ['Observability', 'Error Budgets', 'Chaos Engineering', 'Capacity Forecasting'],
@@ -746,16 +746,16 @@ export const EMP_PAWAN: UserAccount = {
 
 export const EMP_RAGHAV: UserAccount = {
   id: 'usr_raghav',
-  name: 'Raghav Singh',
-  email: 'raghav.singh@mercedes-benz.com',
+  name: 'Tarun Malviya',
+  email: 'tarun.malviya@mercedes-benz.com',
   role: 'QA Automation Engineer',
   systemRole: 'employee',
   status: 'active',
   department: 'PT-THIF',
   managerId: 'usr_prabhat',
-  managerName: 'Prabhat Sharma',
+  managerName: 'Vivek Agarwal',
   campus: 'MBRDI Bengaluru Hub',
-  initials: 'RS',
+  initials: 'TM',
   experienceYears: 6,
   primarySkills: ['Playwright', 'TypeScript', 'API Testing', 'CI Pipelines', 'Test Data Management', 'Postman', 'SQL'],
   interests: ['Contract Testing', 'Flaky Test Elimination', 'Test Reporting', 'Shift-Left Quality'],
@@ -814,12 +814,12 @@ export const INITIAL_DIRECT_MESSAGES: DirectMessage[] = [
   {
     id: 'msg_1',
     senderId: 'usr_sangeeta',
-    senderName: 'Sangeeta Bhaskaran',
-    senderInitials: 'PS',
+    senderName: 'Neha Kulkarni',
+    senderInitials: 'NK',
     senderRole: 'Senior AI / Data Architect',
     recipientId: 'usr_rakesh',
-    recipientName: 'Rakesh Kumar',
-    recipientInitials: 'RK',
+    recipientName: 'Karthik Iyer',
+    recipientInitials: 'KI',
     recipientRole: 'Lead DevOps Engineer',
     text: 'Hi Rakesh, thank you for the tips on AKS private cluster DNS. The GenAI copilot search latency dropped from 420ms to 65ms after we configured internal endpoint caching!',
     timestamp: Date.now() - 3600000 * 3,
@@ -832,12 +832,12 @@ export const INITIAL_DIRECT_MESSAGES: DirectMessage[] = [
   {
     id: 'msg_2',
     senderId: 'usr_rakesh',
-    senderName: 'Rakesh Kumar',
-    senderInitials: 'RK',
+    senderName: 'Karthik Iyer',
+    senderInitials: 'KI',
     senderRole: 'Lead DevOps Engineer',
     recipientId: 'usr_sangeeta',
-    recipientName: 'Sangeeta Bhaskaran',
-    recipientInitials: 'PS',
+    recipientName: 'Neha Kulkarni',
+    recipientInitials: 'NK',
     recipientRole: 'Senior AI / Data Architect',
     text: 'That is fantastic news, Priya! Let me know if you need automated Helm charts for the semantic vector indexing pipeline.',
     timestamp: Date.now() - 3600000 * 2,
@@ -850,12 +850,12 @@ export const INITIAL_DIRECT_MESSAGES: DirectMessage[] = [
   {
     id: 'msg_3',
     senderId: 'usr_kalyan',
-    senderName: 'Kalyan Thirupathi',
-    senderInitials: 'ER',
+    senderName: 'Vikram Subramanian',
+    senderInitials: 'VS',
     senderRole: 'Engineering Manager & Tech Lead',
     recipientId: 'usr_rakesh',
-    recipientName: 'Rakesh Kumar',
-    recipientInitials: 'RK',
+    recipientName: 'Karthik Iyer',
+    recipientInitials: 'KI',
     recipientRole: 'Lead DevOps Engineer',
     text: 'Hi Rakesh, I approved your 8-hour cross-department collaboration request for PT-THIA. Great to see our cloud patterns being leveraged by AI squads.',
     timestamp: Date.now() - 3600000 * 5,
@@ -867,12 +867,12 @@ export const INITIAL_DIRECT_MESSAGES: DirectMessage[] = [
   {
     id: 'msg_4',
     senderId: 'usr_rohit',
-    senderName: 'Rohit Chinagudi',
+    senderName: 'Arjun Mehta',
     senderInitials: 'AM',
     senderRole: 'Data Engineering Specialist',
     recipientId: 'usr_kalyan',
-    recipientName: 'Kalyan Thirupathi',
-    recipientInitials: 'ER',
+    recipientName: 'Vikram Subramanian',
+    recipientInitials: 'VS',
     recipientRole: 'Engineering Manager & Tech Lead',
     text: 'Hi Elena, I submitted a request to support the Powertrain Telemetry Pipeline gig for 6 hours next week. My sprint commitments for MBRDI Kafka streaming are on track.',
     timestamp: Date.now() - 3600000 * 1,
@@ -884,12 +884,12 @@ export const INITIAL_DIRECT_MESSAGES: DirectMessage[] = [
   {
     id: 'msg_5',
     senderId: 'usr_upasana',
-    senderName: 'Upasana Ghosh',
-    senderInitials: 'SR',
+    senderName: 'Divya Krishnan',
+    senderInitials: 'DK',
     senderRole: 'Embedded & AUTOSAR Engineer',
     recipientId: 'usr_nitin',
-    recipientName: 'Nitin Chitransh',
-    recipientInitials: 'JB',
+    recipientName: 'Ajay Bhatnagar',
+    recipientInitials: 'AB',
     recipientRole: 'Principal Functional Safety & Tech Lead',
     text: 'Dr. Brandner, the ECU CAN-FD stack validation on the Sindelfingen test bench is ready for your safety sign-off.',
     timestamp: Date.now() - 3600000 * 4,
@@ -901,8 +901,8 @@ export const INITIAL_DIRECT_MESSAGES: DirectMessage[] = [
   {
     id: 'msg_6',
     senderId: 'usr_ishana',
-    senderName: 'Ishana Kumar',
-    senderInitials: 'AV',
+    senderName: 'Ananya Reddy',
+    senderInitials: 'AR',
     senderRole: 'Cloud Security & Compliance Engineer',
     recipientId: 'usr_swati',
     recipientName: 'Chitra Subramaniam',
@@ -918,12 +918,12 @@ export const INITIAL_DIRECT_MESSAGES: DirectMessage[] = [
   {
     id: 'msg_7',
     senderId: 'usr_nitin',
-    senderName: 'Nitin Chitransh',
-    senderInitials: 'JB',
+    senderName: 'Ajay Bhatnagar',
+    senderInitials: 'AB',
     senderRole: 'Principal Functional Safety & Tech Lead',
     recipientId: 'usr_naresh',
-    recipientName: 'Naresh Tated',
-    recipientInitials: 'MB',
+    recipientName: 'Rajesh Deshmukh',
+    recipientInitials: 'RD',
     recipientRole: 'Head of Enterprise Platform',
     text: 'Markus, the cross-department HiL test validation sharing between PT-THIG and PT-THIE has saved approximately 180 engineering hours this quarter.',
     timestamp: Date.now() - 3600000 * 24,
@@ -977,11 +977,11 @@ export const INITIAL_COLLABORATION_REQUESTS: CollaborationRequest[] = [
   {
     id: 'collab_1',
     requesterId: 'usr_sangeeta',
-    requesterName: 'Sangeeta Bhaskaran',
+    requesterName: 'Neha Kulkarni',
     requesterRole: 'Senior AI / Data Architect',
     requesterDepartment: 'PT-THIA',
     targetTalentId: 'usr_rakesh',
-    targetTalentName: 'Rakesh Kumar',
+    targetTalentName: 'Karthik Iyer',
     targetDepartment: 'PT-THIS',
     taskTitle: 'Terraform & EKS Automation for GenAI Knowledge Graph Cluster',
     estimatedHours: '8 hours (2 sessions)',
@@ -994,11 +994,11 @@ export const INITIAL_COLLABORATION_REQUESTS: CollaborationRequest[] = [
   {
     id: 'collab_2',
     requesterId: 'usr_ishana',
-    requesterName: 'Ishana Kumar',
+    requesterName: 'Ananya Reddy',
     requesterRole: 'Simulation & CAE Engineer',
     requesterDepartment: 'PT-THIM',
     targetTalentId: 'usr_upasana',
-    targetTalentName: 'Upasana Ghosh',
+    targetTalentName: 'Divya Krishnan',
     targetDepartment: 'PT-THIE',
     taskTitle: 'Simulink to AUTOSAR C Code Generation Verification',
     estimatedHours: '6 hours',
@@ -1041,9 +1041,9 @@ export const INITIAL_WORK_POSTS: WorkPost[] = [
     comments: [
       {
         id: 'c101_1',
-        author: 'Rakesh Kumar',
+        author: 'Karthik Iyer',
         role: 'Lead DevOps Engineer',
-        initials: 'RK',
+        initials: 'KI',
         time: '1 hour ago',
         timestamp: Date.now() - 3600000,
         text: 'I have standard Terraform modules for AWS OIDC authentication with GitHub Actions that we deployed in PT-THIS Cloud Infra. Happy to pair on this!'
@@ -1080,9 +1080,9 @@ export const INITIAL_WORK_POSTS: WorkPost[] = [
     comments: [
       {
         id: 'c102_1',
-        author: 'Sangeeta Bhaskaran',
+        author: 'Neha Kulkarni',
         role: 'Senior AI / Data Architect',
-        initials: 'PS',
+        initials: 'NK',
         time: '3 hours ago',
         timestamp: Date.now() - 10800000,
         text: 'I built the semantic search pipeline in PT-THIA last quarter. Let me know if you want to reuse our vector indexer.'
@@ -1132,7 +1132,7 @@ export const INITIAL_WORK_POSTS: WorkPost[] = [
     votes: 19,
     voteState: 0,
     tags: ['Kafka', 'Spark', 'Python', 'Databricks', 'Data Pipelines'],
-    author: 'Rohit Chinagudi',
+    author: 'Arjun Mehta',
     role: 'Data Engineering Specialist',
     initials: 'AM',
     time: '1 day ago',
@@ -1188,9 +1188,9 @@ export const INITIAL_WORK_POSTS: WorkPost[] = [
     votes: 12,
     voteState: 0,
     tags: ['AUTOSAR', 'Embedded C', 'CAN Bus', 'C++', 'ECU Software'],
-    author: 'Upasana Ghosh',
+    author: 'Divya Krishnan',
     role: 'Embedded & AUTOSAR Engineer',
-    initials: 'SR',
+    initials: 'DK',
     time: '3 hours ago',
     timestamp: Date.now() - 10800000,
     description: `Need an embedded systems peer to assist in debugging CAN-FD message timing delays during high-voltage inverter state transitions. Experience with Vector CANoe and AUTOSAR OS task prioritization needed.`,
@@ -1216,9 +1216,9 @@ export const INITIAL_WORK_POSTS: WorkPost[] = [
     votes: 7,
     voteState: 0,
     tags: ['Agile Transformation', 'Jira / Confluence', 'Release Governance', 'Product Strategy'],
-    author: 'Swati Bansal',
+    author: 'Priya Malhotra',
     role: 'Agile Product & Governance Lead',
-    initials: 'CW',
+    initials: 'PM',
     time: '5 hours ago',
     timestamp: Date.now() - 18000000,
     description: `Looking for agile champions across PT-TH squads to standardize quarterly PI planning dependency boards and automate release readiness checklists in Jira.`,
@@ -1245,9 +1245,9 @@ export const INITIAL_WORK_POSTS: WorkPost[] = [
     votes: 11,
     voteState: 0,
     tags: ['Hardware-in-the-Loop', 'dSPACE', 'Python Automation', 'CAPL', 'CANoe'],
-    author: 'Sunil Naik',
+    author: 'Suresh Pillai',
     role: 'Lead HiL & Test Bench Architect',
-    initials: 'VS',
+    initials: 'SP',
     time: '2 hours ago',
     timestamp: Date.now() - 7200000,
     description: `Setting up automated regression test harnesses on our dSPACE Scalexio HiL benches for the new generation electric drive unit. Seeking a testing or automation engineer from PT-THIG, PT-THIE, or PT-THIS to pair on CAPL scripts, automated fault-injection pipelines, and test bench health monitoring.`,
@@ -1274,9 +1274,9 @@ export const INITIAL_WORK_POSTS: WorkPost[] = [
     votes: 15,
     voteState: 0,
     tags: ['INCA / CANape', 'ECU Calibration', 'Motor Control', 'MATLAB', 'Simulink'],
-    author: 'Rashmi Puttaswamachary',
+    author: 'Kavya Nair',
     role: 'Senior Powertrain Controls & Calibration Specialist',
-    initials: 'MK',
+    initials: 'KN',
     time: '4 hours ago',
     timestamp: Date.now() - 14400000,
     description: `Optimizing MTPA (Maximum Torque Per Ampere) calibration maps and field weakening algorithms under dynamic chassis dynamometer load profiles. Looking for a powertrain controls specialist from PT-THIC or PT-THIM for 2 days of data analysis, INCA curve tuning, and thermal boundary checks.`,
@@ -1303,9 +1303,9 @@ export const INITIAL_WORK_POSTS: WorkPost[] = [
     votes: 13,
     voteState: 0,
     tags: ['ISO 26262', 'Functional Safety', 'ASIL D', 'HARA', 'Safety Architecture'],
-    author: 'Nitin Chitransh',
+    author: 'Ajay Bhatnagar',
     role: 'Principal Functional Safety & Future Tech Lead',
-    initials: 'JB',
+    initials: 'AB',
     time: '1 day ago',
     timestamp: Date.now() - 86400000,
     description: `Conducting safety case reviews and quantitative FMEDA audits on the high-voltage pyrofuse and hydrogen fuel cell emergency isolation controllers. Need an experienced safety engineer or systems architect for cross-departmental peer review of our technical safety requirements (TSR).`,
@@ -1496,10 +1496,10 @@ export const INITIAL_WORK_POSTS: WorkPost[] = [
 export const INITIAL_BANDWIDTH_OFFERS: BandwidthOffer[] = [
   {
     id: 'bo_1',
-    author: 'Rakesh Kumar',
+    author: 'Karthik Iyer',
     role: 'Lead DevOps Engineer',
     department: 'PT-THIS',
-    initials: 'RK',
+    initials: 'KI',
     availableHours: '6 hours this month',
     skillsOffered: ['AWS', 'Kubernetes', 'Terraform', 'CI/CD Pipelines'],
     notes: 'Available for short architecture reviews, Terraform modularization, or EKS onboarding support across PT-TH departments.',
@@ -1508,10 +1508,10 @@ export const INITIAL_BANDWIDTH_OFFERS: BandwidthOffer[] = [
   },
   {
     id: 'bo_2',
-    author: 'Sangeeta Bhaskaran',
+    author: 'Neha Kulkarni',
     role: 'Senior AI / Data Architect',
     department: 'PT-THIA',
-    initials: 'PS',
+    initials: 'NK',
     availableHours: '8 hours this month',
     skillsOffered: ['Python', 'LLMs', 'RAG Architecture', 'Knowledge Graphs'],
     notes: 'Happy to help teams integrate GenAI copilots, evaluate embedding models, or review knowledge graph schemas.',
@@ -1520,7 +1520,7 @@ export const INITIAL_BANDWIDTH_OFFERS: BandwidthOffer[] = [
   },
   {
     id: 'bo_3',
-    author: 'Rohit Chinagudi',
+    author: 'Arjun Mehta',
     role: 'Data Engineering Specialist',
     department: 'PT-THID',
     initials: 'AM',
@@ -1532,10 +1532,10 @@ export const INITIAL_BANDWIDTH_OFFERS: BandwidthOffer[] = [
   },
   {
     id: 'bo_4',
-    author: 'Upasana Ghosh',
+    author: 'Divya Krishnan',
     role: 'Embedded & AUTOSAR Engineer',
     department: 'PT-THIE',
-    initials: 'SR',
+    initials: 'DK',
     availableHours: '5 hours this month',
     skillsOffered: ['AUTOSAR', 'Embedded C', 'CAN Bus', 'ECU Software'],
     notes: 'Available to support peer squads on CAN bus protocol debugging, RTOS task timing, and firmware code reviews.',
@@ -1544,10 +1544,10 @@ export const INITIAL_BANDWIDTH_OFFERS: BandwidthOffer[] = [
   },
   {
     id: 'bo_5',
-    author: 'Sunil Naik',
+    author: 'Suresh Pillai',
     role: 'Lead HiL & Test Bench Architect',
     department: 'PT-THIG',
-    initials: 'VS',
+    initials: 'SP',
     availableHours: '6 hours this month',
     skillsOffered: ['dSPACE', 'Hardware-in-the-Loop', 'Vector VT System', 'CAPL Scripting'],
     notes: 'Available to assist squads on automated test bench configuration, dSPACE Scalexio setup, and fault injection tests.',
@@ -1556,10 +1556,10 @@ export const INITIAL_BANDWIDTH_OFFERS: BandwidthOffer[] = [
   },
   {
     id: 'bo_6',
-    author: 'Rashmi Puttaswamachary',
+    author: 'Kavya Nair',
     role: 'Senior Powertrain Controls & Calibration Specialist',
     department: 'PT-THIC',
-    initials: 'MK',
+    initials: 'KN',
     availableHours: '5 hours this month',
     skillsOffered: ['INCA / CANape', 'ECU Calibration', 'Motor Control', 'Simulink'],
     notes: 'Available for motor drive tuning consultations, INCA calibration dataset reviews, and dynamometer data evaluations.',
@@ -1568,10 +1568,10 @@ export const INITIAL_BANDWIDTH_OFFERS: BandwidthOffer[] = [
   },
   {
     id: 'bo_7',
-    author: 'Nitin Chitransh',
+    author: 'Ajay Bhatnagar',
     role: 'Principal Functional Safety & Future Tech Lead',
     department: 'PT-THIF',
-    initials: 'JB',
+    initials: 'AB',
     availableHours: '4 hours this month',
     skillsOffered: ['ISO 26262', 'Functional Safety', 'ASIL D Concepts', 'HARA Analysis'],
     notes: 'Available for technical safety requirement audits, ISO 26262 stage-gate pre-checks, and fuel cell safety hazard assessments.',
@@ -1584,7 +1584,7 @@ export const INITIAL_MANAGER_APPROVALS: ManagerApprovalItem[] = [
   {
     id: 'mng_app_1',
     employeeId: 'usr_rakesh',
-    employeeName: 'Rakesh Kumar',
+    employeeName: 'Karthik Iyer',
     employeeRole: 'Lead DevOps Engineer',
     employeeDepartment: 'PT-THIS',
     managerId: 'usr_kalyan',
@@ -1602,7 +1602,7 @@ export const INITIAL_MANAGER_APPROVALS: ManagerApprovalItem[] = [
   {
     id: 'mng_app_2',
     employeeId: 'usr_rohit',
-    employeeName: 'Rohit Chinagudi',
+    employeeName: 'Arjun Mehta',
     employeeRole: 'Full Stack Developer',
     employeeDepartment: 'PT-THIS',
     managerId: 'usr_kalyan',
@@ -1620,7 +1620,7 @@ export const INITIAL_MANAGER_APPROVALS: ManagerApprovalItem[] = [
   {
     id: 'mng_app_3',
     employeeId: 'usr_sangeeta',
-    employeeName: 'Sangeeta Bhaskaran',
+    employeeName: 'Neha Kulkarni',
     employeeRole: 'Product Owner',
     employeeDepartment: 'PT-THIA',
     managerId: 'usr_kalyan',
@@ -1639,7 +1639,7 @@ export const INITIAL_MANAGER_APPROVALS: ManagerApprovalItem[] = [
   {
     id: 'mng_app_4',
     employeeId: 'usr_ishana',
-    employeeName: 'Ishana Kumar',
+    employeeName: 'Ananya Reddy',
     employeeRole: 'Full Stack Developer',
     employeeDepartment: 'PT-THIA',
     managerId: 'usr_kalyan',
@@ -1657,7 +1657,7 @@ export const INITIAL_MANAGER_APPROVALS: ManagerApprovalItem[] = [
   {
     id: 'mng_app_5',
     employeeId: 'usr_upasana',
-    employeeName: 'Upasana Ghosh',
+    employeeName: 'Divya Krishnan',
     employeeRole: 'Full Stack Developer',
     employeeDepartment: 'PT-THIG',
     managerId: 'usr_kalyan',
@@ -1675,7 +1675,7 @@ export const INITIAL_MANAGER_APPROVALS: ManagerApprovalItem[] = [
   {
     id: 'mng_app_6',
     employeeId: 'usr_sunil',
-    employeeName: 'Sunil Naik',
+    employeeName: 'Suresh Pillai',
     employeeRole: 'Senior Developer & Team Lead',
     employeeDepartment: 'PT-THIE',
     managerId: 'usr_kalyan',
@@ -1696,10 +1696,10 @@ export const INITIAL_CARPOOL_RIDES: CarpoolRide[] = [
   {
     id: 'ride_1',
     driverId: 'usr_rakesh',
-    driverName: 'Rakesh Kumar',
+    driverName: 'Karthik Iyer',
     driverRole: 'Lead DevOps Engineer',
     driverDepartment: 'PT-THIS',
-    driverInitials: 'RK',
+    driverInitials: 'KI',
     driverRating: 4.9,
     origin: 'Indiranagar 100ft Road (Metro Gate 1)',
     destination: 'MBRDI Whitefield Campus (Building 3)',
@@ -1714,7 +1714,7 @@ export const INITIAL_CARPOOL_RIDES: CarpoolRide[] = [
     passengers: [
       {
         id: 'usr_rohit',
-        name: 'Rohit Chinagudi',
+        name: 'Arjun Mehta',
         role: 'Data Engineering Specialist',
         department: 'PT-THIS',
         initials: 'AM',
@@ -1722,10 +1722,10 @@ export const INITIAL_CARPOOL_RIDES: CarpoolRide[] = [
       },
       {
         id: 'usr_sangeeta',
-        name: 'Sangeeta Bhaskaran',
+        name: 'Neha Kulkarni',
         role: 'Senior AI / Data Architect',
         department: 'PT-THIA',
-        initials: 'PS',
+        initials: 'NK',
         status: 'confirmed'
       }
     ],
@@ -1739,10 +1739,10 @@ export const INITIAL_CARPOOL_RIDES: CarpoolRide[] = [
   {
     id: 'ride_2',
     driverId: 'usr_kalyan',
-    driverName: 'Kalyan Thirupathi',
+    driverName: 'Vikram Subramanian',
     driverRole: 'Engineering Manager & Tech Lead',
     driverDepartment: 'PT-THIS',
-    driverInitials: 'ER',
+    driverInitials: 'VS',
     driverRating: 5.0,
     origin: 'Koramangala 4th Block (Sony World Signal)',
     destination: 'MBRDI Whitefield Campus (Building 1)',
@@ -1757,10 +1757,10 @@ export const INITIAL_CARPOOL_RIDES: CarpoolRide[] = [
     passengers: [
       {
         id: 'usr_ishana',
-        name: 'Ishana Kumar',
+        name: 'Ananya Reddy',
         role: 'Cloud Security Engineer',
         department: 'PT-THIA',
-        initials: 'AV',
+        initials: 'AR',
         status: 'confirmed'
       }
     ],
@@ -1774,10 +1774,10 @@ export const INITIAL_CARPOOL_RIDES: CarpoolRide[] = [
   {
     id: 'ride_3',
     driverId: 'usr_nitin',
-    driverName: 'Nitin Chitransh',
+    driverName: 'Ajay Bhatnagar',
     driverRole: 'Principal Functional Safety & Tech Lead',
     driverDepartment: 'PT-THIG',
-    driverInitials: 'JB',
+    driverInitials: 'AB',
     driverRating: 4.95,
     origin: 'Stuttgart Hbf / Charlottenplatz',
     destination: 'Sindelfingen Plant (Tor 3 R&D Center)',
@@ -1792,18 +1792,18 @@ export const INITIAL_CARPOOL_RIDES: CarpoolRide[] = [
     passengers: [
       {
         id: 'usr_upasana',
-        name: 'Upasana Ghosh',
+        name: 'Divya Krishnan',
         role: 'Embedded & AUTOSAR Engineer',
         department: 'PT-THIG',
-        initials: 'SR',
+        initials: 'DK',
         status: 'confirmed'
       },
       {
         id: 'usr_sunil',
-        name: 'Sunil Naik',
+        name: 'Suresh Pillai',
         role: 'HiL Test Specialist',
         department: 'PT-THIE',
-        initials: 'VJ',
+        initials: 'SP',
         status: 'confirmed'
       }
     ],
@@ -1843,10 +1843,10 @@ export const INITIAL_CARPOOL_RIDES: CarpoolRide[] = [
   {
     id: 'ride_5',
     driverId: 'usr_sangeeta',
-    driverName: 'Sangeeta Bhaskaran',
+    driverName: 'Neha Kulkarni',
     driverRole: 'Senior AI / Data Architect',
     driverDepartment: 'PT-THIA',
-    driverInitials: 'PS',
+    driverInitials: 'NK',
     driverRating: 4.88,
     origin: 'Electronic City Phase 1 (Wipro Gate)',
     destination: 'MBRDI Whitefield Campus',
@@ -1869,7 +1869,7 @@ export const INITIAL_CARPOOL_RIDES: CarpoolRide[] = [
   {
     id: 'ride_6',
     driverId: 'usr_rohit',
-    driverName: 'Rohit Chinagudi',
+    driverName: 'Arjun Mehta',
     driverRole: 'Data Engineering Specialist',
     driverDepartment: 'PT-THIS',
     driverInitials: 'AM',
@@ -1923,7 +1923,7 @@ export interface TrainingSeed {
 export const INITIAL_TRAINING_SESSIONS: TrainingSeed[] = [
   {
     id: 'trn_terraform',
-    host: 'Rohit Chinagudi',
+    host: 'Arjun Mehta',
     title: 'Terraform Modules That Survive a Second Team',
     description:
       'A hands-on walkthrough of how we structure reusable Terraform modules across MBRDI: versioning, remote state layout, and the review checklist we use before a module is shared org-wide. Bring a laptop — we refactor a real module together in the last 20 minutes.',
@@ -1935,11 +1935,11 @@ export const INITIAL_TRAINING_SESSIONS: TrainingSeed[] = [
     startTime: '02:00 PM',
     durationMins: 90,
     seatsTotal: 24,
-    attendees: ['Rakesh Kumar', 'Ishana Kumar', 'Upasana Ghosh', 'Pawan Hegde']
+    attendees: ['Karthik Iyer', 'Ananya Reddy', 'Divya Krishnan', 'Girish Kulkarni']
   },
   {
     id: 'trn_kafka',
-    host: 'Sangeeta Bhaskaran',
+    host: 'Neha Kulkarni',
     title: 'Tuning Kafka for Connected-Vehicle Telemetry',
     description:
       'Why our broker latency spikes at fleet scale and what actually fixes it. Covers partition sizing, consumer-group rebalancing, heap configuration and the three dashboards worth alerting on.',
@@ -1951,11 +1951,11 @@ export const INITIAL_TRAINING_SESSIONS: TrainingSeed[] = [
     startTime: '11:00 AM',
     durationMins: 60,
     seatsTotal: 40,
-    attendees: ['Rohit Chinagudi', 'Amith Kashyap', 'Sunil Naik']
+    attendees: ['Arjun Mehta', 'Nikhil Rao', 'Suresh Pillai']
   },
   {
     id: 'trn_hil',
-    host: 'Sunil Naik',
+    host: 'Suresh Pillai',
     title: 'HiL Bench Basics for Software Engineers',
     description:
       'A gentle introduction to hardware-in-the-loop testing for people who have only ever run things in CI. What the rig does, how to read a failing trace, and how to book bench time without blocking the validation team.',
@@ -1967,11 +1967,11 @@ export const INITIAL_TRAINING_SESSIONS: TrainingSeed[] = [
     startTime: '10:00 AM',
     durationMins: 120,
     seatsTotal: 12,
-    attendees: ['Raghav Singh', 'Soumya Mehta']
+    attendees: ['Tarun Malviya', 'Anjali Desai']
   },
   {
     id: 'trn_llm',
-    host: 'Upasana Ghosh',
+    host: 'Divya Krishnan',
     title: 'Practical Retrieval-Augmented Generation on Internal Docs',
     description:
       'Building a RAG pipeline against Mercedes-internal documentation: chunking strategies that respect engineering docs, embedding choices, evaluation without a labelled set, and the failure modes we hit in the first pilot.',
@@ -1983,11 +1983,11 @@ export const INITIAL_TRAINING_SESSIONS: TrainingSeed[] = [
     startTime: '04:00 PM',
     durationMins: 75,
     seatsTotal: 50,
-    attendees: ['Rohit Chinagudi', 'Ishana Kumar', 'Rashmi Puttaswamachary', 'Aman Yadav', 'Shital Honde']
+    attendees: ['Arjun Mehta', 'Ananya Reddy', 'Kavya Nair', 'Rohan Chauhan', 'Pooja Joshi']
   },
   {
     id: 'trn_k8s',
-    host: 'Amith Kashyap',
+    host: 'Nikhil Rao',
     title: 'Kubernetes Debugging: From CrashLoopBackOff to Root Cause',
     description:
       'A live-debugging session. We break a cluster on purpose four times and work through each failure with nothing but kubectl and logs — no dashboards allowed.',
@@ -1999,11 +1999,11 @@ export const INITIAL_TRAINING_SESSIONS: TrainingSeed[] = [
     startTime: '03:30 PM',
     durationMins: 90,
     seatsTotal: 60,
-    attendees: ['Pawan Hegde', 'Avinash Koppal']
+    attendees: ['Girish Kulkarni', 'Harish Menon']
   },
   {
     id: 'trn_functional_safety',
-    host: 'Ishana Kumar',
+    host: 'Ananya Reddy',
     title: 'ISO 26262 for the Impatient: ASIL Decomposition in Practice',
     description:
       'What ASIL decomposition actually means when you are the one writing the safety case, using a real fuel-cell HARA as the running example.',
@@ -2015,7 +2015,7 @@ export const INITIAL_TRAINING_SESSIONS: TrainingSeed[] = [
     startTime: '02:00 PM',
     durationMins: 120,
     seatsTotal: 20,
-    attendees: ['Sunil Naik', 'Sangeeta Bhaskaran', 'Rakesh Kumar']
+    attendees: ['Suresh Pillai', 'Neha Kulkarni', 'Karthik Iyer']
   }
 ];
 
@@ -2105,9 +2105,9 @@ export const INITIAL_KNOWLEDGE_QUESTIONS: KnowledgeQuestion[] = [
     answers: [
       {
         id: 'ans_1',
-        author: 'Rakesh Kumar',
+        author: 'Karthik Iyer',
         role: 'Lead DevOps Engineer',
-        initials: 'RK',
+        initials: 'KI',
         time: '18 hours ago',
         timestamp: Date.now() - 64800000,
         text: `We solved this in the Cloud Foundation Platform using private DNS zones linked directly to the Hub VNet. For certificate trust in pods, we deployed an admission controller webhook that mounts the corporate root CA bundle automatically at pod startup without modifying base Docker images. Here is our internal wiki link: go/cloud/aks-private-proxy`,
@@ -2116,9 +2116,9 @@ export const INITIAL_KNOWLEDGE_QUESTIONS: KnowledgeQuestion[] = [
       },
       {
         id: 'ans_2',
-        author: 'Kalyan Thirupathi',
+        author: 'Vikram Subramanian',
         role: 'Cloud Architect',
-        initials: 'ER',
+        initials: 'VS',
         time: '14 hours ago',
         timestamp: Date.now() - 50400000,
         text: `+1 to Rakesh's approach. Also make sure to configure the \`kubelet\` with \`--resolv-conf\` pointing to CoreDNS forwarders to avoid hairpin DNS timeouts.`,
@@ -2175,7 +2175,7 @@ export const INITIAL_NOTIFICATIONS: NotificationItem[] = [
     recipientId: 'usr_kalyan',
     recipientRole: 'manager',
     type: 'manager_approval',
-    title: 'Manager Approval: Rakesh Kumar',
+    title: 'Manager Approval: Karthik Iyer',
     description: 'Rakesh requested approval to allocate 8h to PT-THIA deployment automation on AWS & EKS.',
     time: '1h ago',
     timestamp: Date.now() - 3600000,
@@ -2187,7 +2187,7 @@ export const INITIAL_NOTIFICATIONS: NotificationItem[] = [
     recipientId: 'usr_kalyan',
     recipientRole: 'manager',
     type: 'manager_approval',
-    title: 'Manager Approval: Rohit Chinagudi',
+    title: 'Manager Approval: Arjun Mehta',
     description: 'Arjun requested approval for 6h powertrain Kafka streaming support for PT-THID.',
     time: '3h ago',
     timestamp: Date.now() - 10800000,
@@ -2201,7 +2201,7 @@ export const INITIAL_NOTIFICATIONS: NotificationItem[] = [
     recipientId: 'usr_swati',
     recipientRole: 'manager',
     type: 'manager_approval',
-    title: 'Manager Approval: Ishana Kumar',
+    title: 'Manager Approval: Ananya Reddy',
     description: 'Anand requested approval for 8h zero-trust VPC architecture assessment with PT-THIT.',
     time: '4h ago',
     timestamp: Date.now() - 14400000,
@@ -2215,7 +2215,7 @@ export const INITIAL_NOTIFICATIONS: NotificationItem[] = [
     recipientId: 'usr_nitin',
     recipientRole: 'manager',
     type: 'manager_approval',
-    title: 'Manager Approval: Upasana Ghosh',
+    title: 'Manager Approval: Divya Krishnan',
     description: 'Sneha requested approval for 10h AUTOSAR Classic migration with PT-THIB.',
     time: '2h ago',
     timestamp: Date.now() - 7200000,
@@ -2227,7 +2227,7 @@ export const INITIAL_NOTIFICATIONS: NotificationItem[] = [
     recipientId: 'usr_nitin',
     recipientRole: 'manager',
     type: 'manager_approval',
-    title: 'Manager Approval: Sunil Naik',
+    title: 'Manager Approval: Suresh Pillai',
     description: 'Vikram requested approval for 8h dSPACE HiL test automation with PT-THIC.',
     time: '5h ago',
     timestamp: Date.now() - 18000000,
@@ -2255,7 +2255,7 @@ export const INITIAL_NOTIFICATIONS: NotificationItem[] = [
     recipientRole: 'employee',
     type: 'feedback_received',
     title: '⭐ 5.0 Feedback Received',
-    description: 'Sangeeta Bhaskaran (PT-THIA) rated your AKS cluster optimization 5/5: "Super fast response and clean IaC!"',
+    description: 'Neha Kulkarni (PT-THIA) rated your AKS cluster optimization 5/5: "Super fast response and clean IaC!"',
     time: 'Yesterday',
     timestamp: Date.now() - 86400000,
     read: true,
