@@ -5,6 +5,7 @@ import { api } from '../lib/api';
 import { processImageFile } from '../lib/imageCompressor';
 import { Drawer, Button, Field, TextInput, Chip, Avatar } from '../components/ui';
 import { TagEditor } from '../components/TagEditor';
+import { CvSkillImport } from '../components/CvSkillImport';
 
 export function ProfileDrawer() {
   const s = useStore();
@@ -269,6 +270,15 @@ export function ProfileDrawer() {
                   onChange={(skills) => setStack({ ...stack, skills })}
                   placeholder="Search a technology or role — try “full”, “k8s”, “safety”"
                   useCatalogue
+                />
+                {/* Faster than typing twelve skills one at a time, and the
+                    review step keeps a bad guess off the profile. */}
+                <CvSkillImport
+                  existing={stack.skills}
+                  onAdd={(found) => setStack((prev) => ({
+                    ...prev,
+                    skills: [...prev.skills, ...found.filter((f) => !prev.skills.includes(f))]
+                  }))}
                 />
               </div>
               <div>
