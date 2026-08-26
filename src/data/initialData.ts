@@ -27,16 +27,52 @@ import {
  *      ├── Nitin Chitransh ──── 2 engineers
  *      └── Prabhat Sharma ───── 2 engineers
  *
- *  Platform administration does not follow the reporting line. MBXchange was
- *  built by Rohit Chinagudi and Rakesh Kumar on Kalyan's squad, and they run
- *  it, so those two hold `systemRole: 'admin'` while sitting where they
- *  actually sit in the org — as engineers reporting to their line manager.
+ *  Platform administration is a dedicated service account, not a hat worn by
+ *  somebody's staff account — see ADMIN_USER below for why.
  *
  *  Every account sits in PT-THIF: this is a single-department org chart, so
  *  `department` is uniform by design. Cross-department reach still shows up
  *  through the work people take on for *other* departments, which is what
  *  `departmentsSupportedCount` and the opportunity feed measure.
  */
+
+/**
+ * Platform administration runs through this account rather than through any
+ * employee's or manager's own login.
+ *
+ * Two properties of the admin role make that the wrong thing to attach to a
+ * staff account: admins are filtered out of the People directory, so granting
+ * it to an engineer hides them from the colleagues who need to find them; and
+ * admins can act on any request, which puts a person who also applies for work
+ * next to their own approvals. Rohit and Rakesh built MBXchange and operate it
+ * — they do that by signing into this account, and stay ordinary engineers in
+ * the directory and in the approval chain.
+ */
+export const ADMIN_USER: UserAccount = {
+  id: 'usr_admin',
+  name: 'MBXchange Administrator',
+  email: 'mbxchange.admin@mercedes-benz.com',
+  role: 'Platform Administrator',
+  systemRole: 'admin',
+  status: 'active',
+  department: 'PT-THIF',
+  campus: 'MBRDI Bengaluru Hub',
+  initials: 'MX',
+  experienceYears: 0,
+  primarySkills: [],
+  interests: [],
+  availableFor: [],
+  typicalAvailability: 'Not available for gigs',
+  currentAvailabilityHoursThisWeek: 0,
+  contributionScore: 0,
+  ratingBreakdown: { helping: 0, technicalExpertise: 0, collaboration: 0, reliability: 0 },
+  badges: [],
+  collaborationsCount: 0,
+  departmentsSupportedCount: 0,
+  peopleHelpedCount: 0,
+  hoursContributed: 0,
+  bio: 'Service account for MBXchange platform administration — account provisioning, registration requests and the audit trail. Operated by the engineers who built the platform; it does not post or apply for work itself.'
+};
 
 export const MANAGER_NARESH: UserAccount = {
   id: 'usr_naresh',
@@ -267,17 +303,18 @@ export const MANAGER_PRABHAT: UserAccount = {
 /* ── Kalyan Thirupathi's squad (9) ─────────────────────────────────────── */
 
 /**
- * Rohit and Rakesh built MBXchange and operate it for the department, so both
- * carry `systemRole: 'admin'` while remaining engineers on Kalyan's squad.
- * Platform rights and the reporting line are deliberately independent here:
- * their own requests still route to Kalyan for approval like anyone else's.
+ * Rohit and Rakesh built MBXchange and look after it, but they hold no
+ * elevated rights on their own accounts — they administer it through
+ * ADMIN_USER. Here they are ordinary engineers on Kalyan's squad, visible in
+ * the People directory and routed through Kalyan for approvals like everyone
+ * else.
  */
 export const CURRENT_USER: UserAccount = {
   id: 'usr_rohit',
   name: 'Rohit Chinagudi',
   email: 'rohit.chinagudi@mercedes-benz.com',
   role: 'Full Stack Developer',
-  systemRole: 'admin',
+  systemRole: 'employee',
   status: 'active',
   department: 'PT-THIF',
   managerId: 'usr_kalyan',
@@ -293,7 +330,7 @@ export const CURRENT_USER: UserAccount = {
   contributionScore: 4.86,
   ratingBreakdown: { helping: 4.85, technicalExpertise: 4.9, collaboration: 4.85, reliability: 4.85 },
   badges: [
-    { id: 'b_rc1', name: 'Platform Author', icon: '🏛️', description: 'Co-built MBXchange and administers it for PT-THIF', dateEarned: 'Aug 2026' },
+    { id: 'b_rc1', name: 'Platform Author', icon: '🏛️', description: 'Co-built MBXchange and keeps it running for PT-THIF', dateEarned: 'Aug 2026' },
     { id: 'b_rc2', name: 'Full Stack Finisher', icon: '🧱', description: 'Shipped 15+ end-to-end features across API and Angular layers', dateEarned: 'Nov 2025' },
     { id: 'b_rc3', name: 'Cross-Team Contributor', icon: '🏆', description: 'Supported four squads outside the core product backlog', dateEarned: 'Feb 2026' }
   ],
@@ -301,7 +338,7 @@ export const CURRENT_USER: UserAccount = {
   departmentsSupportedCount: 5,
   peopleHelpedCount: 22,
   hoursContributed: 52,
-  bio: 'Full stack developer on the core PT-THIF product squad, working across .NET Core services and Angular front ends. Co-built MBXchange and runs it day to day with Rakesh — happy to pair on RxJS, EF Core query tuning, or untangling a slow endpoint.'
+  bio: 'Full stack developer on the core PT-THIF product squad, working across .NET Core services and Angular front ends. Co-built MBXchange and keeps it running day to day with Rakesh — happy to pair on RxJS, EF Core query tuning, or untangling a slow endpoint.'
 };
 
 export const EMP_RAKESH: UserAccount = {
@@ -309,7 +346,7 @@ export const EMP_RAKESH: UserAccount = {
   name: 'Rakesh Kumar',
   email: 'rakesh.kumar@mercedes-benz.com',
   role: 'Lead DevOps Engineer',
-  systemRole: 'admin',
+  systemRole: 'employee',
   status: 'active',
   department: 'PT-THIF',
   managerId: 'usr_kalyan',
@@ -325,7 +362,7 @@ export const EMP_RAKESH: UserAccount = {
   contributionScore: 4.82,
   ratingBreakdown: { helping: 4.8, technicalExpertise: 4.9, collaboration: 4.7, reliability: 4.9 },
   badges: [
-    { id: 'b0', name: 'Platform Author', icon: '🏛️', description: 'Co-built MBXchange and administers it for PT-THIF', dateEarned: 'Aug 2026' },
+    { id: 'b0', name: 'Platform Author', icon: '🏛️', description: 'Co-built MBXchange and keeps it running for PT-THIF', dateEarned: 'Aug 2026' },
     { id: 'b1', name: 'Cross-Team Contributor', icon: '🏆', description: 'Completed 20+ cross-department collaborations', dateEarned: 'Oct 2025' },
     { id: 'b2', name: 'Collaboration Champion', icon: '🤝', description: 'Supported every squad in PT-THIF', dateEarned: 'Dec 2025' },
     { id: 'b3', name: 'Knowledge Sharer', icon: '🧠', description: 'Top verified answer author in Cloud & Kubernetes communities', dateEarned: 'Jan 2026' },
@@ -335,7 +372,7 @@ export const EMP_RAKESH: UserAccount = {
   departmentsSupportedCount: 7,
   peopleHelpedCount: 31,
   hoursContributed: 82,
-  bio: 'Lead DevOps engineer on the core PT-THIF squad, focused on developer productivity, immutable infrastructure, and helping other teams scale safely on AWS/Azure Kubernetes. Co-built MBXchange and owns its deployment and operations alongside Rohit.'
+  bio: 'Lead DevOps engineer on the core PT-THIF squad, focused on developer productivity, immutable infrastructure, and helping other teams scale safely on AWS/Azure Kubernetes. Co-built MBXchange and looks after its deployment and operations alongside Rohit.'
 };
 
 export const EMP_SANGEETA: UserAccount = {
@@ -738,6 +775,8 @@ export const EMP_RAGHAV: UserAccount = {
 };
 
 export const INITIAL_USER_ACCOUNTS: UserAccount[] = [
+  // Platform service account
+  ADMIN_USER,
   // Leadership
   MANAGER_NARESH,
   MANAGER_SANILA,
