@@ -2046,6 +2046,157 @@ api.get('/insights', requireAuth(), async (_req, res) => {
   res.json({ heatmap, departmentLoad, topDemand });
 });
 
+/**
+ * Leaderboard, scoped three ways.
+ *
+ * `organisation` is everyone; `department` is the viewer's own department;
+ * `team` is the people who report to the same manager the viewer does — plus
+ * that manager. For a manager viewing it, "team" naturally means their own
+ * reports, which is what they asked for without needing a fourth scope.
+ */
+api.get('/leaderboard', requireAuth(), async (req, res) => {
+  const { user } = req as AuthedRequest;
+  const scope = String(req.query.scope || 'organisation');
+  const metric = String(req.query.metric || 'badges');
+
+  const ORDER: Record<string, string> = {
+    badges: 'u.contribution_score',
+    hours: 'u.hours_contributed',
+    engagements: 'u.collaborations_count',
+    departments: 'u.departments_supported'
+  };
+  const orderBy = ORDER[metric] || ORDER.badges;
+
+  let where = `u.status = 'active'`;
+  const params: any[] = [];
+  if (scope === 'department') {
+    params.push(user.department);
+    where += ` AND u.department = $${params.length}`;
+  } else if (scope === 'team') {
+    // A manager sees their own reports; everybody else sees their peer group
+    // (same manager) with that manager included.
+    const anchor = user.systemRole === 'manager' ? user.id : user.managerId;
+    if (!anchor) return res.json({ scope, metric, rows: [], me: null, unavailable: 'no-manager' });
+    params.push(anchor);
+    where += ` AND (u.manager_id = $${params.length} OR u.id = $${params.length})`;
+  }
+
+  const { rows } = await q(
+    `SELECT u.id, u.name, u.initials, u.role, u.department, u.avatar_url AS "avatarUrl",
+       u.contribution_score AS badges, u.hours_contributed AS hours,
+       u.collaborations_count AS engagements, u.departments_supported AS departments,
+       u.tier
+     FROM users u
+     WHERE ${where}
+     ORDER BY ${orderBy} DESC, u.name ASC`,
+    params
+  );
+
+  // Ranks are dense, so equal scores share a place rather than being split
+  // by an arbitrary tiebreak the viewer cannot see.
+  let lastValue: number | null = null;
+  let lastRank = 0;
+  const ranked = rows.map((r: any, i: number) => {
+    const value = Number(r[metric] ?? 0);
+    if (lastValue === null || value !== lastValue) { lastRank = i + 1; lastValue = value; }
+    return { ...r, rank: lastRank, value };
+  });
+
+  res.json({
+    scope, metric,
+    rows: ranked.slice(0, 25),
+    me: ranked.find((r: any) => r.id === user.id) || null,
+    total: ranked.length
+  });
+});
+
+/**
+ * Reporting for managers and admins.
+ *
+ * A manager can only ever pull their own reports — the scope is forced to
+ * their own id regardless of what the query asks for. An admin can pull the
+ * whole organisation, one department, or one manager's team.
+ */
+api.get('/reports', requireAuth(), requireRole('manager', 'admin'), async (req, res) => {
+  const { user } = req as AuthedRequest;
+  const isAdmin = user.systemRole === 'admin';
+  const requested = String(req.query.scope || (isAdmin ? 'organisation' : 'manager'));
+  const scope = isAdmin ? requested : 'manager';
+  const department = String(req.query.department || user.department);
+  // The forced fallback is what stops a manager widening their own scope.
+  const managerId = isAdmin ? String(req.query.managerId || user.id) : user.id;
+
+  let peopleWhere = `u.status = 'active'`;
+  const params: any[] = [];
+  if (scope === 'department') {
+    params.push(department);
+    peopleWhere += ` AND u.department = $${params.length}`;
+  } else if (scope === 'manager') {
+    params.push(managerId);
+    peopleWhere += ` AND u.manager_id = $${params.length}`;
+  }
+
+  const { rows: people } = await q(
+    `SELECT u.id, u.name, u.initials, u.role, u.department, u.avatar_url AS "avatarUrl",
+       u.tier, u.available_hours_week AS "availableHoursWeek", u.hours_consumed AS "hoursConsumed",
+       u.hours_contributed AS "hoursContributed", u.collaborations_count AS "engagements",
+       u.departments_supported AS "departmentsSupported",
+       u.contribution_score AS "badges",
+       (SELECT COUNT(*)::int FROM applications a
+         WHERE a.applicant_id = u.id AND a.status IN ('pending_author','pending_manager')) AS "openRequests",
+       (SELECT COUNT(*)::int FROM applications a JOIN work_posts p ON p.id = a.post_id
+         WHERE a.applicant_id = u.id AND a.status = 'approved'
+           AND p.status NOT IN ('Completed','Cancelled')) AS "activeEngagements",
+       (SELECT COUNT(*)::int FROM training_registrations r
+         WHERE r.attendee_id = u.id AND r.status = 'registered') AS "trainingsBooked"
+     FROM users u
+     WHERE ${peopleWhere}
+     ORDER BY u.hours_contributed DESC, u.name ASC`,
+    params
+  );
+
+  const ids = people.map((p: any) => p.id);
+  const totals = {
+    people: people.length,
+    hoursContributed: people.reduce((n: number, p: any) => n + Number(p.hoursContributed || 0), 0),
+    engagements: people.reduce((n: number, p: any) => n + Number(p.engagements || 0), 0),
+    badges: people.reduce((n: number, p: any) => n + Number(p.badges || 0), 0),
+    declaredHours: people.reduce((n: number, p: any) => n + Number(p.availableHoursWeek || 0), 0),
+    committedHours: people.reduce((n: number, p: any) => n + Number(p.hoursConsumed || 0), 0),
+    openRequests: people.reduce((n: number, p: any) => n + Number(p.openRequests || 0), 0),
+    activeEngagements: people.reduce((n: number, p: any) => n + Number(p.activeEngagements || 0), 0)
+  };
+
+  // Where this group's help actually went, and which skills it was asked for.
+  const { rows: byDepartment } = ids.length ? await q(
+    `SELECT p.department, COUNT(*)::int AS engagements, COALESCE(SUM(bl.hours),0)::int AS hours
+       FROM applications a
+       JOIN work_posts p ON p.id = a.post_id
+       LEFT JOIN bandwidth_ledger bl ON bl.application_id = a.id
+      WHERE a.applicant_id = ANY($1) AND a.status = 'approved' AND p.status = 'Completed'
+      GROUP BY p.department ORDER BY hours DESC`, [ids]) : { rows: [] };
+
+  const { rows: topSkills } = ids.length ? await q(
+    `SELECT t.tag AS skill, COUNT(*)::int AS mentions
+       FROM applications a
+       JOIN work_posts p ON p.id = a.post_id, jsonb_array_elements_text(p.tags) AS t(tag)
+      WHERE a.applicant_id = ANY($1) AND a.status = 'approved'
+      GROUP BY t.tag ORDER BY mentions DESC LIMIT 8`, [ids]) : { rows: [] };
+
+  // Admins pick a manager or department from these; managers never see them.
+  const { rows: managers } = isAdmin ? await q(
+    `SELECT id, name, department FROM users
+      WHERE system_role IN ('manager','admin') AND status = 'active' ORDER BY name`) : { rows: [] };
+  const { rows: departments } = isAdmin ? await q(
+    `SELECT DISTINCT department FROM users WHERE status = 'active' ORDER BY department`) : { rows: [] };
+
+  res.json({
+    scope, department, managerId, isAdmin,
+    people, totals, byDepartment, topSkills,
+    filters: { managers, departments: departments.map((d: any) => d.department) }
+  });
+});
+
 api.get('/admin/overview', requireAuth(), requireRole('manager', 'admin'), async (_req, res) => {
   const counts = async (sql: string) => {
     const r = await one<{ n: string }>(sql);

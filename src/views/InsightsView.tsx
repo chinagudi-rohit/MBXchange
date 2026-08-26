@@ -11,6 +11,8 @@ const SkillGlobe3D = React.lazy(() =>
 import {
   Card, Chip, Button, EmptyState, RowSkeleton, Reveal
 } from '../components/ui';
+import { Leaderboard } from './Leaderboard';
+import { TeamReport } from './TeamReport';
 
 interface HeatmapRow {
   skill: string;
@@ -94,6 +96,12 @@ export function InsightsView() {
           </Card>
         ))}
       </div>
+
+      <Leaderboard />
+
+      {/* Reporting is a manager/admin tool, so it only renders for them; the
+          server enforces the same boundary regardless of what is asked for. */}
+      {(s.user?.systemRole === 'manager' || s.user?.systemRole === 'admin') && <TeamReport />}
 
       {/* Personal upskilling callout */}
       {upskill.length > 0 && (

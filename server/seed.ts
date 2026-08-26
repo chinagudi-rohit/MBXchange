@@ -383,12 +383,12 @@ export async function seedIfEmpty(): Promise<void> {
     await q(`UPDATE users SET tier = $1 WHERE id = $2`, [earned.name, t.id]);
   }
 
-  // Roll the awarded badges up into contribution_score and rating_breakdown,
-  // using the same routine the live award path calls.
-  const { rows: recognised } = await q<{ to_user_id: string }>(
-    `SELECT DISTINCT to_user_id FROM appreciations`
-  );
-  for (const r of recognised) await recomputeRecognition(r.to_user_id);
+  // Roll awarded badges up into contribution_score and rating_breakdown using
+  // the same routine the live award path calls. This runs for EVERY user, not
+  // just those with awards: the fixture file still carries the old 1–5 star
+  // averages, and anyone left un-recomputed would read as "4.97 badges".
+  const { rows: allUsers } = await q<{ id: string }>(`SELECT id FROM users`);
+  for (const u of allUsers) await recomputeRecognition(u.id);
 
   // ---- Bandwidth offers
   for (const b of INITIAL_BANDWIDTH_OFFERS) {
