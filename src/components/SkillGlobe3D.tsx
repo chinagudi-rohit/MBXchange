@@ -289,68 +289,74 @@ export function SkillGlobe3D({
 
   return (
     <div className={`panel rounded-2xl shadow-card p-5 sm:p-6 ${className}`}>
-      <div className="flex items-start justify-between gap-3 mb-1">
-        <div>
-          <h3 className="text-base font-semibold text-ink">Capability constellation</h3>
-          <p className="text-xs text-ink-2 mt-0.5">
-            {webgl
-              ? 'Drag to rotate · tap a node for its numbers · larger means more requested'
-              : 'Top capabilities by demand'}
-          </p>
+      {/* Two columns from lg up: the capability list reads on the left, the
+          globe visualises the same rows on the right. Stacks on narrow screens
+          where a half-width globe would be too small to aim at. */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 lg:gap-8 items-center">
+        <div className="min-w-0">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h3 className="text-base font-semibold text-ink">Capability constellation</h3>
+              <p className="text-xs text-ink-2 mt-0.5">
+                {webgl
+                  ? 'Drag to rotate · pick a capability to inspect it'
+                  : 'Top capabilities by demand'}
+              </p>
+            </div>
+            <span className="shrink-0 flex items-center gap-1.5 text-xs text-ink-3">
+              <span className="w-2 h-2 rounded-full bg-primary" /> short on experts
+            </span>
+          </div>
+
+          {/* Every capability, not just the six that used to fit under the globe. */}
+          <ul className="mt-4 space-y-0.5 max-h-64 overflow-y-auto -mx-1.5 pr-1">
+            {nodes.map((s) => {
+              const on = active?.skill === s.skill;
+              return (
+                <li key={s.skill}>
+                  <button
+                    onClick={() => { setActive(s); onSelectSkill?.(s.skill); }}
+                    aria-current={on ? 'true' : undefined}
+                    className={`w-full flex items-center gap-2.5 text-left px-1.5 py-2 rounded-lg transition-colors ${
+                      on ? 'bg-primary-soft' : 'hover:bg-surface-2'
+                    }`}
+                  >
+                    <span className={`w-2 h-2 rounded-full shrink-0 ${isGap(s) ? 'bg-primary' : 'bg-ink-3'}`} />
+                    <span className={`text-sm truncate flex-1 ${on ? 'text-ink font-semibold' : 'text-ink-2'}`}>
+                      {s.skill}
+                    </span>
+                    <span className="text-xs text-ink-3 shrink-0 tabular-nums">
+                      {s.requestsCount}/{s.expertsCount}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+
+          {active && (
+            <div className="mt-4 pt-3.5 border-t border-line">
+              <div className="flex items-baseline justify-between gap-3">
+                <p className="text-sm font-semibold text-ink truncate">{active.skill}</p>
+                <p className={`text-xs font-semibold shrink-0 ${isGap(active) ? 'text-primary-text' : 'text-ink-2'}`}>
+                  {isGap(active) ? 'Short on experts' : 'Balanced'}
+                </p>
+              </div>
+              <p className="text-xs text-ink-2 mt-1">
+                {active.requestsCount} requests across the org · {active.expertsCount} available experts
+              </p>
+            </div>
+          )}
         </div>
-        <span className="shrink-0 flex items-center gap-1.5 text-xs text-ink-3">
-          <span className="w-2 h-2 rounded-full bg-primary" /> short on experts
-        </span>
+
+        {webgl ? (
+          <div
+            ref={containerRef}
+            className="w-full h-64 lg:h-80 cursor-grab active:cursor-grabbing touch-none"
+            aria-hidden="true"
+          />
+        ) : null}
       </div>
-
-      {webgl ? (
-        <div
-          ref={containerRef}
-          className="w-full h-64 sm:h-72 my-2 cursor-grab active:cursor-grabbing touch-none"
-          aria-hidden="true"
-        />
-      ) : (
-        <ul className="my-3 space-y-1.5">
-          {nodes.map((s) => (
-            <li key={s.skill} className="flex items-center justify-between gap-3 text-sm">
-              <span className="text-ink truncate">{s.skill}</span>
-              <span className="text-xs text-ink-3 shrink-0">{s.requestsCount} requests · {s.expertsCount} experts</span>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {active && (
-        <div className="pt-3 border-t border-line">
-          <div className="flex items-baseline justify-between gap-3">
-            <p className="text-sm font-semibold text-ink truncate">{active.skill}</p>
-            <p className={`text-xs font-semibold shrink-0 ${isGap(active) ? 'text-primary-text' : 'text-ink-2'}`}>
-              {isGap(active) ? 'Short on experts' : 'Balanced'}
-            </p>
-          </div>
-          <p className="text-xs text-ink-2 mt-1">
-            {active.requestsCount} requests across the org · {active.expertsCount} available experts
-          </p>
-          <div className="flex flex-wrap gap-1.5 mt-3">
-            {nodes.slice(0, 6).map((s) => (
-              <button
-                key={s.skill}
-                onClick={() => { setActive(s); onSelectSkill?.(s.skill); }}
-                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${
-                  active.skill === s.skill
-                    ? 'bg-primary text-white'
-                    : 'bg-surface-2 text-ink-2 hover:text-ink'
-                }`}
-              >
-                <span className={`w-1.5 h-1.5 rounded-full ${
-                  active.skill === s.skill ? 'bg-white/70' : isGap(s) ? 'bg-primary' : 'bg-ink-3'
-                }`} />
-                <span className="truncate max-w-[10rem]">{s.skill}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

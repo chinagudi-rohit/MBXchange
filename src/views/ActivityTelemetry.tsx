@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Activity, TrendingUp, HelpCircle } from 'lucide-react';
 import { api } from '../lib/api';
 import { Card, Skeleton } from '../components/ui';
@@ -34,6 +34,24 @@ export function ActivityTelemetry() {
   const [active, setActive] = useState<number | null>(null);
   const [explain, setExplain] = useState(false);
 
+  // The plot is drawn in real pixels rather than in a fixed 700-unit box.
+  // A fixed viewBox stretched to a ~1900px card squashed the geometry ~2.8:1
+  // horizontally, which turned the month markers into ovals and flattened the
+  // curve. Measuring keeps one SVG unit equal to one CSS pixel at every width.
+  const [plotW, setPlotW] = useState(700);
+  const roRef = useRef<ResizeObserver | null>(null);
+  const measureRef = useCallback((node: HTMLDivElement | null) => {
+    roRef.current?.disconnect();
+    if (!node) return;
+    const ro = new ResizeObserver(([entry]) => {
+      const w = Math.round(entry.contentRect.width);
+      if (w > 0) setPlotW(w);
+    });
+    ro.observe(node);
+    roRef.current = ro;
+  }, []);
+  useEffect(() => () => roRef.current?.disconnect(), []);
+
   useEffect(() => {
     let cancelled = false;
     api.get(`/telemetry?scope=${scope}`).then((d) => { if (!cancelled) setData(d); });
@@ -54,9 +72,9 @@ export function ActivityTelemetry() {
   const max = Math.max(1, ...values);
   const suffix = METRICS.find((m) => m.id === metric)!.suffix;
 
-  // Geometry — a plain polyline through the real values.
-  const W = 700;
-  const H = 150;
+  // Geometry — a plain polyline through the real values, in CSS pixels.
+  const W = plotW;
+  const H = 144; // matches the h-36 the svg is rendered at
   const padY = 14;
   const stepX = series.length > 1 ? W / (series.length - 1) : W;
   const pts = values.map((v, i) => ({
@@ -138,11 +156,10 @@ export function ActivityTelemetry() {
         </div>
       </div>
 
-      <div className="relative">
+      <div className="relative" ref={measureRef}>
         <svg
           viewBox={`0 0 ${W} ${H}`}
           className="w-full h-36 overflow-visible"
-          preserveAspectRatio="none"
           role="img"
           aria-label={`${metric} by month`}
         >

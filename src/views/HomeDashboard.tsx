@@ -18,6 +18,9 @@ import { MatchBadge } from '../components/Match';
 const Hero3DCanvas = React.lazy(() =>
   import('../components/Hero3DCanvas').then((m) => ({ default: m.Hero3DCanvas }))
 );
+const TierCrystal3D = React.lazy(() =>
+  import('../components/TierCrystal3D').then((m) => ({ default: m.TierCrystal3D }))
+);
 
 export function HomeDashboard() {
   const s = useStore();
@@ -161,8 +164,17 @@ export function HomeDashboard() {
             <Award className="w-4 h-4 text-amber" /> Your tier
           </h2>
           <div className="flex items-center gap-3 mt-3.5">
-            <span className="w-12 h-12 rounded-2xl bg-amber-soft text-amber flex items-center justify-center text-xl shrink-0">
-              {tierIcon}
+            {/* The solid gains a face count per rung of the ladder, so the badge
+                shows the tier rather than just sitting next to its name. Falls
+                back to the flat glyph wherever WebGL is unavailable. */}
+            <span className="w-12 h-12 rounded-2xl bg-amber-soft text-amber flex items-center justify-center text-xl shrink-0 overflow-hidden">
+              <React.Suspense fallback={<span>{tierIcon}</span>}>
+                <TierCrystal3D
+                  tier={s.user?.tier || 'Contributor'}
+                  className="w-full h-full"
+                  fallback={<span>{tierIcon}</span>}
+                />
+              </React.Suspense>
             </span>
             <div className="min-w-0">
               <p className="text-base font-semibold text-ink leading-tight">{s.user?.tier || 'Contributor'}</p>
