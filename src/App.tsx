@@ -285,7 +285,11 @@ function Shell() {
                     Internal
                   </span>
                 </span>
-                <span className="block text-xs text-ink-3 font-medium">{TAGLINE}</span>
+                {/* Sized to end flush with the INTERNAL chip above it, so the
+                    wordmark lockup reads as one block with a straight right
+                    edge. Below the 12px floor the type scale sets, which is
+                    deliberate and matches the 9px chip it aligns to. */}
+                <span className="block text-[9.5px] leading-[1.35] tracking-[-0.002em] text-ink-3 font-medium">{TAGLINE}</span>
               </span>
             </button>
           </div>

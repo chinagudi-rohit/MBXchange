@@ -11,6 +11,12 @@ import {
   Button, Modal, Field, TextInput, TextArea, Select, StatusBadge, UrgencyBadge, Chip, Avatar, SaveButton, EmptyState, Card, SeatsIndicator, Reveal, SkeletonGrid
 } from '../components/ui';
 
+// Decorative header accent; three.js stays lazy so it never blocks first paint.
+const PageArtifact3D = React.lazy(() =>
+  import('../components/PageArtifact3D').then((m) => ({ default: m.PageArtifact3D }))
+);
+
+
 const DEPARTMENTS = ['PT-THIA', 'PT-THIS', 'PT-THIT', 'PT-THID', 'PT-THIE', 'PT-THIM', 'PT-THIP', 'PT-THIG', 'PT-THIC', 'PT-THIF'];
 const STATUSES = ['Open', 'In Progress', 'Completed', 'Cancelled'];
 const URGENCIES = ['Low', 'Medium', 'High', 'Critical'];
@@ -486,7 +492,10 @@ export function WorkExchange() {
 
   return (
     <div className="anim-fade-up">
-      <div className="flex flex-wrap items-end justify-between gap-3 mb-5">
+      <div className="relative flex flex-wrap items-end justify-between gap-3 mb-5">
+        <React.Suspense fallback={null}>
+          <PageArtifact3D variant="orbit" className="hidden lg:block absolute -top-12 right-0 w-56 h-40 opacity-50 -z-10" />
+        </React.Suspense>
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-ink">Opportunities</h1>
           <p className="text-xs text-ink-2 mt-0.5">Projects and proofs of concept you can take on alongside your day-to-day work</p>

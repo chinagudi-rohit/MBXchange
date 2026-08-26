@@ -6,6 +6,13 @@ import {
   Card, Button, Avatar, Modal, Field, TextArea, Select, EmptyState, RowSkeleton, Reveal, Chip
 } from '../components/ui';
 
+// The tier solid is the page's single accent — lazy so three.js stays off
+// the critical path.
+const TierCrystal3D = React.lazy(() =>
+  import('../components/TierCrystal3D').then((m) => ({ default: m.TierCrystal3D }))
+);
+
+
 interface Milestone {
   id: string; label: string; hint: string; icon: string;
   value: number; goal: number; achieved: boolean; progress: number;
@@ -127,14 +134,22 @@ export function Achievements() {
 
       {/* Tier + headline totals */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3.5">
-        <Card className="p-5 lg:col-span-1 flex flex-col">
-          <p className="text-xs font-semibold uppercase tracking-wide text-ink-3 flex items-center gap-1.5">
-            <Trophy className="w-3.5 h-3.5" /> Current tier
-          </p>
-          <p className="text-2xl font-bold tracking-tight text-ink mt-2.5">{milestones.totals.tier}</p>
-          <p className="text-xs text-ink-2 mt-1">
-            {milestones.achievedCount} of {milestones.milestones.length} milestones reached
-          </p>
+        {/* This page is about the tier, so the tier itself is the one bold thing
+            on it — the solid gains a face count per rung, and everything around
+            it stays flat. No separate header ornament here for that reason. */}
+        <Card className="p-5 lg:col-span-1 flex items-center gap-4">
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold uppercase tracking-wide text-ink-3 flex items-center gap-1.5">
+              <Trophy className="w-3.5 h-3.5" /> Current tier
+            </p>
+            <p className="text-2xl font-bold tracking-tight text-ink mt-2.5">{milestones.totals.tier}</p>
+            <p className="text-xs text-ink-2 mt-1">
+              {milestones.achievedCount} of {milestones.milestones.length} milestones reached
+            </p>
+          </div>
+          <React.Suspense fallback={null}>
+            <TierCrystal3D tier={milestones.totals.tier} className="hidden sm:block w-20 h-20 shrink-0" />
+          </React.Suspense>
         </Card>
         {[
           { label: 'Hours given', value: `${milestones.totals.hours}h` },

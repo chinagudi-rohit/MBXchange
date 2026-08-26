@@ -129,9 +129,14 @@ export function HomeDashboard() {
       {/* Post a requirement is the product's core action, so it gets a permanent
           home on the dashboard rather than living only in the header. */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3.5">
-        <Card className="p-5 lg:col-span-2">
+        {/* The tier card beside this one is naturally tall, and short tiles left
+            a dead band across the bottom of this card. The tiles stretch to the
+            shared row height instead — filling it with the action itself rather
+            than with decoration, since the accent in this row is already spent
+            on the tier solid next door. */}
+        <Card className="p-5 lg:col-span-2 flex flex-col">
           <h2 className="text-sm font-semibold text-ink mb-3.5">Quick actions</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 flex-1">
             {[
               { label: 'Post a requirement', hint: 'Ask for help', icon: <Plus className="w-4 h-4" />, tone: 'primary', onClick: () => setNewOpen(true) },
               { label: 'Offer bandwidth', hint: 'Lend your time', icon: <Zap className="w-4 h-4" />, tone: 'green', onClick: () => { s.setTab('work'); } },
@@ -141,9 +146,9 @@ export function HomeDashboard() {
               <button
                 key={a.label}
                 onClick={a.onClick}
-                className="p-3.5 rounded-xl bg-surface-2 hover:bg-surface border border-transparent hover:border-line-strong text-left transition-all group"
+                className="p-3.5 rounded-xl bg-surface-2 hover:bg-surface border border-transparent hover:border-line-strong text-left transition-all group flex flex-col"
               >
-                <span className={`w-8 h-8 rounded-xl flex items-center justify-center mb-2.5 transition-transform group-hover:scale-110 ${
+                <span className={`w-9 h-9 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110 ${
                   a.tone === 'primary' ? 'bg-primary text-on-primary'
                   : a.tone === 'green' ? 'bg-green-soft text-green'
                   : a.tone === 'violet' ? 'bg-violet-soft text-violet'
@@ -151,7 +156,9 @@ export function HomeDashboard() {
                 }`}>
                   {a.icon}
                 </span>
-                <span className="block text-xs font-semibold text-ink leading-tight">{a.label}</span>
+                {/* Label sits on the floor of the tile, so a taller tile reads as
+                    deliberate rather than as a short label floating in a box. */}
+                <span className="block text-xs font-semibold text-ink leading-tight mt-auto pt-3">{a.label}</span>
                 <span className="block text-xs text-ink-3 mt-0.5">{a.hint}</span>
               </button>
             ))}
