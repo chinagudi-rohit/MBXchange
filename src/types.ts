@@ -213,7 +213,7 @@ export interface TalentProfile {
   primarySkills: string[];
   interests: string[];
   availableFor: string[]; // e.g. ['Short Gigs', 'Architecture Review', 'Mentoring', 'DevOps Support']
-  typicalAvailability: string; // e.g. '4–8 hours/month'
+  typicalAvailability: string; // e.g. '4–8 hours/week'
   currentAvailabilityHoursThisWeek: number;
   contributionScore: number; // e.g. 4.82
   ratingBreakdown: RatingBreakdown;
