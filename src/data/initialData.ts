@@ -19,7 +19,7 @@ import {
 
 /* ── PT-THIF engineering org ──────────────────────────────────────────────
  *
- *  Naresh Tated — Head of Engineering (platform admin)
+ *  Naresh Tated — Head of Engineering
  *  ├── Sanila Sanal
  *  │   ├── Kalyan Thirupathi ── 9 engineers (core product squad)
  *  │   └── Swati Bansal ─────── 2 engineers
@@ -27,18 +27,23 @@ import {
  *      ├── Nitin Chitransh ──── 2 engineers
  *      └── Prabhat Sharma ───── 2 engineers
  *
+ *  Platform administration does not follow the reporting line. MBXchange was
+ *  built by Rohit Chinagudi and Rakesh Kumar on Kalyan's squad, and they run
+ *  it, so those two hold `systemRole: 'admin'` while sitting where they
+ *  actually sit in the org — as engineers reporting to their line manager.
+ *
  *  Every account sits in PT-THIF: this is a single-department org chart, so
  *  `department` is uniform by design. Cross-department reach still shows up
  *  through the work people take on for *other* departments, which is what
  *  `departmentsSupportedCount` and the opportunity feed measure.
  */
 
-export const ADMIN_USER: UserAccount = {
-  id: 'usr_admin',
+export const MANAGER_NARESH: UserAccount = {
+  id: 'usr_naresh',
   name: 'Naresh Tated',
   email: 'naresh.tated@mercedes-benz.com',
   role: 'Head of Engineering',
-  systemRole: 'admin',
+  systemRole: 'manager',
   status: 'active',
   department: 'PT-THIF',
   managerName: undefined,
@@ -54,8 +59,8 @@ export const ADMIN_USER: UserAccount = {
   contributionScore: 4.97,
   ratingBreakdown: { helping: 5.0, technicalExpertise: 4.9, collaboration: 5.0, reliability: 4.95 },
   badges: [
-    { id: 'b_adm1', name: 'System Administrator', icon: '🏛️', description: 'Owns the MBXchange platform and its governance model', dateEarned: 'Jan 2024' },
-    { id: 'b_adm2', name: 'Executive Sponsor', icon: '⭐', description: 'Championed cross-team engineering mobility across PT-THIF', dateEarned: 'Jun 2024' }
+    { id: 'b_adm1', name: 'Executive Sponsor', icon: '⭐', description: 'Championed cross-team engineering mobility across PT-THIF', dateEarned: 'Jun 2024' },
+    { id: 'b_adm2', name: 'Org Builder', icon: '🏛️', description: 'Grew PT-THIF engineering to four squads across two management lines', dateEarned: 'Jan 2024' }
   ],
   collaborationsCount: 41,
   departmentsSupportedCount: 9,
@@ -74,7 +79,7 @@ export const MANAGER_SANILA: UserAccount = {
   systemRole: 'manager',
   status: 'active',
   department: 'PT-THIF',
-  managerId: 'usr_admin',
+  managerId: 'usr_naresh',
   managerName: 'Naresh Tated',
   directReportIds: ['usr_kalyan', 'usr_swati'],
   campus: 'MBRDI Bengaluru Hub',
@@ -106,7 +111,7 @@ export const MANAGER_IRFAN: UserAccount = {
   systemRole: 'manager',
   status: 'active',
   department: 'PT-THIF',
-  managerId: 'usr_admin',
+  managerId: 'usr_naresh',
   managerName: 'Naresh Tated',
   directReportIds: ['usr_nitin', 'usr_prabhat'],
   campus: 'MBRDI Whitefield Hub',
@@ -261,12 +266,18 @@ export const MANAGER_PRABHAT: UserAccount = {
 
 /* ── Kalyan Thirupathi's squad (9) ─────────────────────────────────────── */
 
+/**
+ * Rohit and Rakesh built MBXchange and operate it for the department, so both
+ * carry `systemRole: 'admin'` while remaining engineers on Kalyan's squad.
+ * Platform rights and the reporting line are deliberately independent here:
+ * their own requests still route to Kalyan for approval like anyone else's.
+ */
 export const CURRENT_USER: UserAccount = {
   id: 'usr_rohit',
   name: 'Rohit Chinagudi',
   email: 'rohit.chinagudi@mercedes-benz.com',
   role: 'Full Stack Developer',
-  systemRole: 'employee',
+  systemRole: 'admin',
   status: 'active',
   department: 'PT-THIF',
   managerId: 'usr_kalyan',
@@ -282,14 +293,15 @@ export const CURRENT_USER: UserAccount = {
   contributionScore: 4.86,
   ratingBreakdown: { helping: 4.85, technicalExpertise: 4.9, collaboration: 4.85, reliability: 4.85 },
   badges: [
-    { id: 'b_rc1', name: 'Full Stack Finisher', icon: '🧱', description: 'Shipped 15+ end-to-end features across API and Angular layers', dateEarned: 'Nov 2025' },
-    { id: 'b_rc2', name: 'Cross-Team Contributor', icon: '🏆', description: 'Supported four squads outside the core product backlog', dateEarned: 'Feb 2026' }
+    { id: 'b_rc1', name: 'Platform Author', icon: '🏛️', description: 'Co-built MBXchange and administers it for PT-THIF', dateEarned: 'Aug 2026' },
+    { id: 'b_rc2', name: 'Full Stack Finisher', icon: '🧱', description: 'Shipped 15+ end-to-end features across API and Angular layers', dateEarned: 'Nov 2025' },
+    { id: 'b_rc3', name: 'Cross-Team Contributor', icon: '🏆', description: 'Supported four squads outside the core product backlog', dateEarned: 'Feb 2026' }
   ],
   collaborationsCount: 14,
   departmentsSupportedCount: 5,
   peopleHelpedCount: 22,
   hoursContributed: 52,
-  bio: 'Full stack developer on the core PT-THIF product squad, working across .NET Core services and Angular front ends. Happy to pair on RxJS, EF Core query tuning, or untangling a slow endpoint.'
+  bio: 'Full stack developer on the core PT-THIF product squad, working across .NET Core services and Angular front ends. Co-built MBXchange and runs it day to day with Rakesh — happy to pair on RxJS, EF Core query tuning, or untangling a slow endpoint.'
 };
 
 export const EMP_RAKESH: UserAccount = {
@@ -297,7 +309,7 @@ export const EMP_RAKESH: UserAccount = {
   name: 'Rakesh Kumar',
   email: 'rakesh.kumar@mercedes-benz.com',
   role: 'Lead DevOps Engineer',
-  systemRole: 'employee',
+  systemRole: 'admin',
   status: 'active',
   department: 'PT-THIF',
   managerId: 'usr_kalyan',
@@ -313,6 +325,7 @@ export const EMP_RAKESH: UserAccount = {
   contributionScore: 4.82,
   ratingBreakdown: { helping: 4.8, technicalExpertise: 4.9, collaboration: 4.7, reliability: 4.9 },
   badges: [
+    { id: 'b0', name: 'Platform Author', icon: '🏛️', description: 'Co-built MBXchange and administers it for PT-THIF', dateEarned: 'Aug 2026' },
     { id: 'b1', name: 'Cross-Team Contributor', icon: '🏆', description: 'Completed 20+ cross-department collaborations', dateEarned: 'Oct 2025' },
     { id: 'b2', name: 'Collaboration Champion', icon: '🤝', description: 'Supported every squad in PT-THIF', dateEarned: 'Dec 2025' },
     { id: 'b3', name: 'Knowledge Sharer', icon: '🧠', description: 'Top verified answer author in Cloud & Kubernetes communities', dateEarned: 'Jan 2026' },
@@ -322,7 +335,7 @@ export const EMP_RAKESH: UserAccount = {
   departmentsSupportedCount: 7,
   peopleHelpedCount: 31,
   hoursContributed: 82,
-  bio: 'Lead DevOps engineer on the core PT-THIF squad, focused on developer productivity, immutable infrastructure, and helping other teams scale safely on AWS/Azure Kubernetes.'
+  bio: 'Lead DevOps engineer on the core PT-THIF squad, focused on developer productivity, immutable infrastructure, and helping other teams scale safely on AWS/Azure Kubernetes. Co-built MBXchange and owns its deployment and operations alongside Rohit.'
 };
 
 export const EMP_SANGEETA: UserAccount = {
@@ -726,7 +739,7 @@ export const EMP_RAGHAV: UserAccount = {
 
 export const INITIAL_USER_ACCOUNTS: UserAccount[] = [
   // Leadership
-  ADMIN_USER,
+  MANAGER_NARESH,
   MANAGER_SANILA,
   MANAGER_IRFAN,
   // Line managers
@@ -869,7 +882,7 @@ export const INITIAL_DIRECT_MESSAGES: DirectMessage[] = [
     senderName: 'Nitin Chitransh',
     senderInitials: 'JB',
     senderRole: 'Principal Functional Safety & Tech Lead',
-    recipientId: 'usr_admin',
+    recipientId: 'usr_naresh',
     recipientName: 'Naresh Tated',
     recipientInitials: 'MB',
     recipientRole: 'Head of Enterprise Platform',
@@ -913,7 +926,7 @@ export const INITIAL_USER_SAVED_MAP: UserSavedMap = {
     communityIds: [303],
     carpoolIds: ['ride_3']
   },
-  usr_admin: {
+  usr_naresh: {
     workIds: [101, 108, 110],
     listingIds: [201, 202],
     communityIds: [301, 302],
@@ -2247,7 +2260,7 @@ export const INITIAL_NOTIFICATIONS: NotificationItem[] = [
   // Admin System Notifications
   {
     id: 'n_admin_1',
-    recipientId: 'usr_admin',
+    recipientId: 'usr_naresh',
     recipientRole: 'admin',
     type: 'system_alert',
     title: 'Quarterly Mobility Audit Generated',

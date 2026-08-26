@@ -746,6 +746,12 @@ api.post('/approvals/:id/decision', requireAuth(), requireRole('manager', 'admin
   if (user.systemRole !== 'admin' && app.manager_id !== user.id) {
     return res.status(403).json({ error: 'This request is routed to a different manager' });
   }
+  // Admins can decide any request, which would otherwise include their own.
+  // Platform administration is held by engineers who also apply for work here,
+  // so nobody approves their own capacity regardless of system role.
+  if (app.applicant_id === user.id) {
+    return res.status(403).json({ error: 'You cannot decide your own request' });
+  }
   if (app.status !== 'pending') return res.status(400).json({ error: 'This request has already been decided' });
 
   await q(`UPDATE applications SET status = $1, manager_notes = $2, decided_at = now() WHERE id = $3`, [decision, notes, req.params.id]);

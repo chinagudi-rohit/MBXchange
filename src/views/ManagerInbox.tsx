@@ -123,17 +123,26 @@ export function ManagerInbox() {
                 <p className="text-xs text-ink-2 leading-relaxed">{a.aiReason}</p>
               </div>
 
-              <div className="flex items-center justify-end gap-2 mt-4">
-                <Button variant="secondary" size="sm" onClick={() => { s.setMessagePartnerId(a.applicantId); s.setMessagesOpen(true); }}>
-                  <MessageSquare className="w-3.5 h-3.5" /> Message
-                </Button>
-                <Button variant="danger" size="sm" onClick={() => { setDecide({ app: a, decision: 'rejected' }); setNotes(''); }}>
-                  <X className="w-3.5 h-3.5" /> Decline
-                </Button>
-                <Button size="sm" onClick={() => { setDecide({ app: a, decision: 'approved' }); setNotes(''); }}>
-                  <Check className="w-3.5 h-3.5" /> Approve
-                </Button>
-              </div>
+              {/* Admins see every request, including their own — the platform is
+                  administered by engineers who also apply for work here. The server
+                  refuses a self-decision either way; this keeps the UI honest. */}
+              {a.applicantId === s.user?.id ? (
+                <div className="flex items-center justify-end gap-3 mt-4">
+                  <p className="text-xs text-ink-3">Your own request — {a.managerName || 'your manager'} decides this one.</p>
+                </div>
+              ) : (
+                <div className="flex items-center justify-end gap-2 mt-4">
+                  <Button variant="secondary" size="sm" onClick={() => { s.setMessagePartnerId(a.applicantId); s.setMessagesOpen(true); }}>
+                    <MessageSquare className="w-3.5 h-3.5" /> Message
+                  </Button>
+                  <Button variant="danger" size="sm" onClick={() => { setDecide({ app: a, decision: 'rejected' }); setNotes(''); }}>
+                    <X className="w-3.5 h-3.5" /> Decline
+                  </Button>
+                  <Button size="sm" onClick={() => { setDecide({ app: a, decision: 'approved' }); setNotes(''); }}>
+                    <Check className="w-3.5 h-3.5" /> Approve
+                  </Button>
+                </div>
+              )}
             </Card>
           ))}
         </div>
