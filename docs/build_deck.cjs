@@ -6,19 +6,19 @@ pres.author = 'MBXchange';
 pres.title = 'MBXchange Overview';
 
 // ── Palette lifted straight from the running app's design tokens ──────────
-const INK      = '16202C';   // --ink
-const INK2     = '48545F';   // --ink-2
-const INK3     = '6B7684';   // --ink-3
-const PAGE     = 'F3F5F9';   // --page
+const INK      = '1B2736';   // --ink
+const INK2     = '4D5A66';   // --ink-2
+const INK3     = '626D7A';   // --ink-3
+const PAGE     = 'F7F8FB';   // --page
 const WHITE    = 'FFFFFF';
-const PRIMARY  = '1565C0';   // --primary
-const PRIM_SFT = 'E4EDF8';   // --primary-soft flattened onto white
-const GREEN    = '10715A';
-const AMBER    = '8A5A0C';
-const TEAL     = '0E6D8C';
-const VIOLET   = '5B4BC4';
-const LINE     = 'D5DBE4';
-const ON_DARK  = 'C9D8EA';   // readable secondary on the dark ground
+const PRIMARY  = '176DD0';   // --primary
+const PRIM_SFT = 'E7EFFA';   // --primary-soft flattened onto white
+const GREEN    = '128166';
+const AMBER    = '9A650D';
+const TEAL     = '107A9C';
+const VIOLET   = '6758C8';
+const LINE     = 'CBD2DC';
+const ON_DARK  = 'CCDAEB';   // readable secondary on the dark ground
 const HEAD     = 'Calibri';
 const BODY     = 'Calibri';
 
@@ -55,14 +55,14 @@ function discRow(slide, { x, y, w, disc, discColor, discText, title, body, title
   const s = pres.addSlide();
   s.background = { color: INK };
 
-  s.addText('INTERNAL PLATFORM  ·  MERCEDES-BENZ R&D INDIA', {
+  s.addText('INTERNAL PLATFORM  ·  MERCEDES-BENZ', {
     x: M, y: 0.62, w: 8, h: 0.28, margin: 0,
-    fontFace: BODY, fontSize: 11, bold: true, charSpacing: 1.6, color: '7E93AC', isTextBox: true
+    fontFace: BODY, fontSize: 11, bold: true, charSpacing: 1.6, color: '8A9DB4', isTextBox: true
   });
 
   s.addText([
     { text: 'MB', options: { color: WHITE } },
-    { text: 'X', options: { color: '5AA2F0' } },
+    { text: 'X', options: { color: '69AAF2' } },
     { text: 'change', options: { color: WHITE } }
   ], {
     x: M, y: 1.02, w: 8, h: 0.95, margin: 0,
@@ -71,13 +71,14 @@ function discRow(slide, { x, y, w, disc, discColor, discText, title, body, title
 
   s.addText('Projects beyond your day-to-day work.', {
     x: M, y: 2.02, w: 7.6, h: 0.5, margin: 0,
-    fontFace: HEAD, fontSize: 23, color: '9FC5EC', isTextBox: true
+    fontFace: HEAD, fontSize: 23, color: 'A8CAEE', isTextBox: true
   });
 
   s.addText(
-    'One internal place where a team can post work it needs help with, and any '
-    + 'employee can lend the hours and skills they actually have — with every '
-    + 'request routed through the right approvals and recorded as a track record.',
+    'One internal place where any team can post work it needs help with, and '
+    + 'colleagues anywhere in the organisation can offer the bandwidth and skills '
+    + 'they want to bring to it — routed through the right approvals, and open '
+    + 'across departments and MB units rather than stopping at a team boundary.',
     {
       x: M, y: 2.62, w: 7.5, h: 1.1, margin: 0,
       fontFace: BODY, fontSize: 14.5, color: ON_DARK, lineSpacingMultiple: 1.3, isTextBox: true
@@ -86,16 +87,16 @@ function discRow(slide, { x, y, w, disc, discColor, discText, title, body, title
 
   // Three value props, evenly spaced, on their own tinted panels
   const props = [
-    ['1', 'Ask across teams', 'Post a requirement with the effort and skills it needs.', PRIMARY],
-    ['2', 'Match on real capacity', 'Fit is scored on declared skills and hours actually free.', TEAL],
-    ['3', 'Recognise the work', 'Completed hours become badges, tiers and a visible score.', AMBER]
+    ['1', 'Ask beyond your team', 'Post what you need, with the skills and total effort it takes.', PRIMARY],
+    ['2', 'Match on offered bandwidth', 'Fit is scored on declared skills and the hours people choose to offer.', TEAL],
+    ['3', 'Learn where demand is', 'Skill gaps surface from real requests, with sessions to close them.', AMBER]
   ];
   const cw = (W - M * 2 - 0.5) / 3;
   props.forEach(([n, title, body, color], i) => {
     const x = M + i * (cw + 0.25);
     s.addShape(pres.ShapeType.roundRect, {
       x, y: 4.28, w: cw, h: 1.72, rectRadius: 0.1,
-      fill: { color: '1E2C3C' }, line: { color: '2C3D50' }
+      fill: { color: '23323F' }, line: { color: '31414F' }
     });
     discRow(s, {
       x: x + 0.28, y: 4.6, w: cw - 0.56,
@@ -106,11 +107,12 @@ function discRow(slide, { x, y, w, disc, discColor, discText, title, body, title
 
   s.addText('Connect  ·  Collaborate  ·  Contribute', {
     x: M, y: 6.5, w: 6, h: 0.3, margin: 0,
-    fontFace: BODY, fontSize: 11.5, color: '6B819B', charSpacing: 0.8, isTextBox: true
+    fontFace: BODY, fontSize: 11.5, color: '76899F', charSpacing: 0.8, isTextBox: true
   });
 
-  s.addNotes('One-line framing: MBXchange turns spare capacity and cross-team '
-    + 'requests into a managed, visible process. Everything else follows from that.');
+  s.addNotes('One-line framing: MBXchange makes willing bandwidth and cross-team '
+    + 'requests findable across the whole organisation. Say "bandwidth people '
+    + 'choose to offer", never "spare capacity" — this is not a utilisation tool.');
 }
 
 /* ════════════════════════ 2 · Impact ════════════════════════ */
@@ -128,14 +130,14 @@ function discRow(slide, { x, y, w, disc, discColor, discText, title, body, title
   });
 
   const impacts = [
-    [PRIMARY, 'Idle capacity becomes visible',
-      'Spare hours are declared, not guessed at. Work goes to people who genuinely have room for it.'],
-    [TEAL, 'Cross-team help stops being informal',
-      'Favours asked over chat become tracked requests with an owner, an effort estimate and an outcome.'],
-    [GREEN, 'Capacity decisions carry evidence',
-      'A manager approves against declared hours and a capacity check, not against a feeling about workload.'],
-    [VIOLET, 'Skill growth becomes measurable',
-      'Gaps surface from real demand, and the sessions and badges that close them are recorded per person.']
+    [PRIMARY, 'Willing bandwidth becomes findable',
+      'People say what they want to contribute and where. That offer is visible to any team that needs it, instead of being invisible outside their own.'],
+    [TEAL, 'Collaboration reaches past the team boundary',
+      'A request is open to every department and MB unit, so the right person is found on capability rather than on who happens to be nearby.'],
+    [GREEN, 'Requests carry context, not guesswork',
+      'Effort, skills and the bandwidth someone offered are all on the request, so a manager decides with the facts in front of them.'],
+    [VIOLET, 'Upskilling follows genuine demand',
+      'Scarce skills surface from real requests across the organisation, and colleague-run sessions close the gap where it actually exists.']
   ];
 
   const cardW = (W - M * 2 - 0.4) / 2;
@@ -162,14 +164,15 @@ function discRow(slide, { x, y, w, disc, discColor, discText, title, body, title
     });
   });
 
-  s.addText('The common thread: work that already happens informally becomes '
-    + 'visible, approved and credited.', {
+  s.addText('The common thread: knowledge and effort move to where they are '
+    + 'needed, across the organisation rather than within one corner of it.', {
     x: M, y: 6.42, w: 11.4, h: 0.36, margin: 0,
     fontFace: BODY, fontSize: 13, italic: true, color: INK3, isTextBox: true
   });
 
-  s.addNotes('Lead with capacity visibility — it is the one leadership already '
-    + 'feels the absence of. The other three follow from it.');
+  s.addNotes('Lead with reach past the team boundary — that is the part leadership '
+    + 'already feels the absence of. Note the ceiling: this works the same way '
+    + 'between departments and between MB units.');
 }
 
 /* ════════════════════════ 3 · Features & workflow ════════════════════════ */
@@ -188,10 +191,10 @@ function discRow(slide, { x, y, w, disc, discColor, discText, title, body, title
 
   // ── The four-step spine ──
   const steps = [
-    ['Post', 'Effort, skills, seats'],
-    ['Apply', 'Fit scored on capacity'],
+    ['Post', 'Total effort, skills, seats'],
+    ['Apply', 'Fit scored on offered bandwidth'],
     ['Approve', 'Author, then manager'],
-    ['Recognise', 'Badges, tier, score']
+    ['Recognise', 'Optional badge from the team']
   ];
   const sw = (W - M * 2 - 0.66) / 4;
   steps.forEach(([label, sub], i) => {
@@ -216,7 +219,7 @@ function discRow(slide, { x, y, w, disc, discColor, discText, title, body, title
     if (i < 3) {
       s.addShape(pres.ShapeType.rightArrow, {
         x: x + sw + 0.045, y: 2.26, w: 0.13, h: 0.14,
-        fill: { color: 'A9B3C1' }, line: { color: 'A9B3C1' }
+        fill: { color: 'AEB8C5' }, line: { color: 'AEB8C5' }
       });
     }
   });
@@ -228,12 +231,12 @@ function discRow(slide, { x, y, w, disc, discColor, discText, title, body, title
   });
 
   const features = [
-    [PRIMARY, 'Opportunities', 'Open requirements, ranked by fit'],
-    [TEAL, 'People & Skills', 'Directory, and direct collaboration requests'],
-    [GREEN, 'Approvals', 'Two-stage sign-off with a capacity check'],
-    [AMBER, 'Learning', 'Colleague-run sessions, with sign-up'],
-    [VIOLET, 'Insights', 'Skill gaps, leaderboard, manager reports'],
-    ['0E6D8C', 'Achievements', 'Badges, tiers and the contribution score']
+    [PRIMARY, 'Opportunities', 'Open requirements from any team, ranked by fit'],
+    [TEAL, 'People & Skills', 'Find capability anywhere in the organisation'],
+    [GREEN, 'Approvals', 'Two-stage sign-off against offered bandwidth'],
+    [AMBER, 'Learning', 'Colleague-run sessions on the skills in demand'],
+    [VIOLET, 'Insights', 'Where skills are scarce, and who is contributing'],
+    ['0E6D8C', 'Achievements', 'Badges and tiers, configurable by an admin']
   ];
   const fw = (W - M * 2 - 0.5) / 3;
   features.forEach(([color, title, body], i) => {
@@ -273,14 +276,14 @@ function discRow(slide, { x, y, w, disc, discColor, discText, title, body, title
   });
   s.addText('Raised here deliberately — we will take these live.', {
     x: M, y: 1.3, w: 11, h: 0.34, margin: 0,
-    fontFace: BODY, fontSize: 14.5, color: '9FC5EC', isTextBox: true
+    fontFace: BODY, fontSize: 14.5, color: 'A8CAEE', isTextBox: true
   });
 
   const questions = [
     'How is this different from asking someone on Teams — and what stops it becoming another tool nobody opens after month two?',
-    'If an engineer gives eight hours to another department, whose budget absorbed that, and how do we stop capacity leaking away from the committed roadmap?',
-    'The capacity check and fit score are rule-based, not learned. When a manager disagrees with the recommendation, who owns the consequences of that approval?',
-    'What does adoption look like in the first 90 days, and what specifically would tell us this has failed?'
+    'If an engineer contributes to another department, whose budget carries that time, and how do we keep it from pulling against committed delivery?',
+    'The fit score and bandwidth check are rule-based, not learned. When a manager disagrees with the recommendation, who owns the consequences of that approval?',
+    'Recognition data sits against named people. How do we keep it from being read as a performance signal, and what does that mean for how we govern it?'
   ];
 
   const qh = 1.02;
@@ -288,7 +291,7 @@ function discRow(slide, { x, y, w, disc, discColor, discText, title, body, title
     const y = 1.96 + i * (qh + 0.22);
     s.addShape(pres.ShapeType.roundRect, {
       x: M, y, w: W - M * 2, h: qh, rectRadius: 0.08,
-      fill: { color: '1E2C3C' }, line: { color: '2C3D50' }
+      fill: { color: '23323F' }, line: { color: '31414F' }
     });
     s.addShape(pres.ShapeType.ellipse, {
       x: M + 0.32, y: y + 0.31, w: 0.4, h: 0.4,
@@ -301,12 +304,14 @@ function discRow(slide, { x, y, w, disc, discColor, discText, title, body, title
     });
     s.addText(qtext, {
       x: M + 0.94, y: y + 0.2, w: W - M * 2 - 1.3, h: 0.64, margin: 0, valign: 'middle',
-      fontFace: BODY, fontSize: 13.5, color: 'DCE7F3', lineSpacingMultiple: 1.2, isTextBox: true
+      fontFace: BODY, fontSize: 13.5, color: 'E0EAF4', lineSpacingMultiple: 1.2, isTextBox: true
     });
   });
 
-  s.addNotes('Answer live. Q2 (budget/capacity leakage) and Q4 (definition of '
-    + 'failure) are the two that decide the room.');
+  s.addNotes('Answer live. Q2 (whose budget) and Q4 (recognition data governance) '
+    + 'are the two that decide the room. On Q4: the score is private to the '
+    + 'person and their manager, it feeds no review, and the platform is '
+    + 'positioned for upskilling and collaboration, not advancement.');
 }
 
 pres.writeFile({ fileName: process.argv[2] })
