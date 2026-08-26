@@ -122,45 +122,11 @@ export function HomeDashboard() {
         ))}
       </Reveal>
 
-      {/* Score, actions and tier share one row. The score leads it: it is the
-          thing a returning user looks for first, and burying it in a sub-page
-          is what made it invisible. */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-3.5">
+      {/* Score and tier sit together on the left — both answer "how am I
+          doing", and splitting them around the actions made the middle column
+          read as unrelated. Actions take the narrower right-hand column. */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <ScoreCard data={score} onOpenDetail={() => s.setTab('achievements')} />
-
-        {/* Short tiles left a dead band across the bottom of this card, so they
-            stretch to the shared row height — filled with the action itself
-            rather than with decoration. */}
-        <Card className="p-5 lg:col-span-2 flex flex-col">
-          <h2 className="text-sm font-semibold text-ink mb-3.5">Quick actions</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 flex-1">
-            {[
-              { label: 'Post a requirement', hint: 'Ask for help', icon: <Plus className="w-4 h-4" />, tone: 'primary', onClick: () => setNewOpen(true) },
-              { label: 'Offer bandwidth', hint: 'Lend your time', icon: <Zap className="w-4 h-4" />, tone: 'green', onClick: () => { s.setTab('work'); } },
-              { label: 'Find experts', hint: 'Search people', icon: <Search className="w-4 h-4" />, tone: 'violet', onClick: () => s.setTab('people') },
-              { label: 'My requests', hint: 'Track progress', icon: <ListChecks className="w-4 h-4" />, tone: 'amber', onClick: () => s.setTab('requests') }
-            ].map((a) => (
-              <button
-                key={a.label}
-                onClick={a.onClick}
-                className="p-3.5 rounded-xl bg-surface-2 hover:bg-surface border border-transparent hover:border-line-strong text-left transition-all group flex flex-col"
-              >
-                <span className={`w-9 h-9 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110 ${
-                  a.tone === 'primary' ? 'bg-primary text-on-primary'
-                  : a.tone === 'green' ? 'bg-green-soft text-green'
-                  : a.tone === 'violet' ? 'bg-violet-soft text-violet'
-                  : 'bg-amber-soft text-amber'
-                }`}>
-                  {a.icon}
-                </span>
-                {/* Label sits on the floor of the tile, so a taller tile reads as
-                    deliberate rather than as a short label floating in a box. */}
-                <span className="block text-xs font-semibold text-ink leading-tight mt-auto pt-3">{a.label}</span>
-                <span className="block text-xs text-ink-3 mt-0.5">{a.hint}</span>
-              </button>
-            ))}
-          </div>
-        </Card>
 
         {/* Contribution tier — earned from completed work, not assigned */}
         <Card className="p-5 flex flex-col">
@@ -217,6 +183,39 @@ export function HomeDashboard() {
               </p>
             </div>
           )}
+        </Card>
+
+        {/* Compact action rows. As four large square tiles these dominated the
+            row visually while being the least informative thing in it. */}
+        <Card className="p-5 flex flex-col">
+          <h2 className="text-sm font-semibold text-ink mb-3.5">Quick actions</h2>
+          <div className="flex flex-col gap-1.5">
+            {[
+              { label: 'Post a requirement', hint: 'Ask for help', icon: <Plus className="w-4 h-4" />, tone: 'primary', onClick: () => setNewOpen(true) },
+              { label: 'Offer bandwidth', hint: 'Lend your time', icon: <Zap className="w-4 h-4" />, tone: 'green', onClick: () => { s.setTab('work'); } },
+              { label: 'Find experts', hint: 'Search people', icon: <Search className="w-4 h-4" />, tone: 'violet', onClick: () => s.setTab('people') },
+              { label: 'My requests', hint: 'Track progress', icon: <ListChecks className="w-4 h-4" />, tone: 'amber', onClick: () => s.setTab('requests') }
+            ].map((a) => (
+              <button
+                key={a.label}
+                onClick={a.onClick}
+                className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-surface-2 text-left transition-colors group"
+              >
+                <span className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 ${
+                  a.tone === 'primary' ? 'bg-primary text-on-primary'
+                  : a.tone === 'green' ? 'bg-green-soft text-green'
+                  : a.tone === 'violet' ? 'bg-violet-soft text-violet'
+                  : 'bg-amber-soft text-amber'
+                }`}>
+                  {a.icon}
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-sm font-semibold text-ink leading-tight">{a.label}</span>
+                  <span className="block text-xs text-ink-3">{a.hint}</span>
+                </span>
+              </button>
+            ))}
+          </div>
         </Card>
       </div>
 
