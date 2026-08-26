@@ -4,13 +4,14 @@ import {
   Award, Search, HandHeart
 } from 'lucide-react';
 import { useStore } from '../lib/store';
-import { api, timeAgo } from '../lib/api';
+import { api, timeAgo, type ScoreResponse } from '../lib/api';
 import {
   Card, Chip, StatusBadge, UrgencyBadge, Button, SeatsIndicator, Avatar, Reveal
 } from '../components/ui';
 import { WorkFormModal } from './WorkExchange';
 import { ActivityTelemetry } from './ActivityTelemetry';
 import { MyExchangePanel } from './MyExchangePanel';
+import { ScoreCard } from '../components/ScoreCard';
 import { TiltCard } from '../components/TiltCard';
 import { MatchBadge } from '../components/Match';
 
@@ -25,9 +26,11 @@ export function HomeDashboard() {
   const [myRequests, setMyRequests] = useState<any[]>([]);
   const [newOpen, setNewOpen] = useState(false);
   const [recs, setRecs] = useState<{ items: any[]; configured: boolean }>({ items: [], configured: true });
+  const [score, setScore] = useState<ScoreResponse | null>(null);
 
   useEffect(() => {
     api.get('/requests/mine').then((d) => setMyRequests(d.applications || []));
+    api.get('/score').then(setScore).catch(() => { /* non-fatal */ });
   }, []);
 
   // Recommendations are ranked server-side against the user's specialisation
@@ -119,14 +122,15 @@ export function HomeDashboard() {
         ))}
       </Reveal>
 
-      {/* Post a requirement is the product's core action, so it gets a permanent
-          home on the dashboard rather than living only in the header. */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3.5">
-        {/* The tier card beside this one is naturally tall, and short tiles left
-            a dead band across the bottom of this card. The tiles stretch to the
-            shared row height instead — filling it with the action itself rather
-            than with decoration, since the accent in this row is already spent
-            on the tier solid next door. */}
+      {/* Score, actions and tier share one row. The score leads it: it is the
+          thing a returning user looks for first, and burying it in a sub-page
+          is what made it invisible. */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-3.5">
+        <ScoreCard data={score} onOpenDetail={() => s.setTab('achievements')} />
+
+        {/* Short tiles left a dead band across the bottom of this card, so they
+            stretch to the shared row height — filled with the action itself
+            rather than with decoration. */}
         <Card className="p-5 lg:col-span-2 flex flex-col">
           <h2 className="text-sm font-semibold text-ink mb-3.5">Quick actions</h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 flex-1">

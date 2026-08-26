@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Zap, KeyRound, Award, Cpu, Camera, Trash2 } from 'lucide-react';
+import { Zap, KeyRound, Award, Cpu, Camera, Trash2, Star } from 'lucide-react';
 import { useStore } from '../lib/store';
 import { api } from '../lib/api';
 import { processImageFile } from '../lib/imageCompressor';
@@ -144,7 +144,11 @@ export function ProfileDrawer() {
             <p className="text-xs text-ink-3 mt-0.5">{u.campus}</p>
             <div className="flex items-center gap-1.5 mt-1.5">
               <span className="flex items-center gap-1 text-xs font-semibold text-amber">
-                <Award className="w-3.5 h-3.5" /> {Number(u.contributionScore)} badge{Number(u.contributionScore) === 1 ? '' : 's'}
+                <Star className="w-3.5 h-3.5 fill-current" /> {Number(u.contributionScore).toFixed(2)}
+                <span className="text-ink-3 font-medium">/ 5</span>
+              </span>
+              <span className="text-xs font-medium text-ink-3">
+                {Number(u.badgesCount)} badge{Number(u.badgesCount) === 1 ? '' : 's'}
               </span>
               <Chip tone="primary">{u.systemRole.toUpperCase()}</Chip>
             </div>

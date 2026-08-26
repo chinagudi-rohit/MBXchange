@@ -10,7 +10,10 @@ import {
   computeMatch, remainingBandwidth, type MatchResult
 } from './rules.ts';
 import { SEED_USER_PASSWORD, SEED_ADMIN_PASSWORD } from './seed.ts';
-import { AWARD_BADGES, BADGE_DIMENSIONS, getBadge, isBadgeId, recomputeRecognition } from './badges.ts';
+import {
+  AWARD_BADGES, BADGE_DIMENSIONS, getBadge, isBadgeId, recomputeRecognition,
+  computeContributionScore
+} from './badges.ts';
 
 export const api = Router();
 
@@ -142,6 +145,9 @@ async function refreshTier(userId: string): Promise<void> {
     collaborationsCount: Number(u.collaborations_count || 0),
     departmentsSupported: Number(u.departments_supported || 0)
   });
+  // The score leans on the same totals the tier does, so it is refreshed
+  // here too rather than only when a badge is awarded.
+  await recomputeRecognition(userId);
   if (earned.name === u.tier) return;
   const climbed = TIERS.findIndex((t) => t.name === earned.name) > TIERS.findIndex((t) => t.name === u.tier);
   await q(`UPDATE users SET tier = $1 WHERE id = $2`, [earned.name, userId]);
@@ -1868,6 +1874,23 @@ api.get('/badges/catalogue', requireAuth(), async (_req, res) => {
   res.json({ badges: AWARD_BADGES, dimensions: BADGE_DIMENSIONS });
 });
 
+/** The signed-in user's 0-5 contribution score with its working shown. */
+api.get('/score', requireAuth(), async (req, res) => {
+  const { user } = req as AuthedRequest;
+  const target = (req.query.userId as string) || user.id;
+  const u = await one<any>(
+    `SELECT badges_count, hours_contributed, departments_supported, collaborations_count, tier
+       FROM users WHERE id = $1`, [target]);
+  if (!u) return res.status(404).json({ error: 'User not found' });
+  const { score, breakdown } = computeContributionScore({
+    badges: Number(u.badges_count || 0),
+    hoursContributed: Number(u.hours_contributed || 0),
+    departmentsSupported: Number(u.departments_supported || 0),
+    collaborationsCount: Number(u.collaborations_count || 0)
+  });
+  res.json({ score, outOf: 5, tier: u.tier, breakdown });
+});
+
 /** Recognition received by a person (defaults to the signed-in user). */
 api.get('/appreciations', requireAuth(), async (req, res) => {
   const { user } = req as AuthedRequest;
@@ -2057,15 +2080,16 @@ api.get('/insights', requireAuth(), async (_req, res) => {
 api.get('/leaderboard', requireAuth(), async (req, res) => {
   const { user } = req as AuthedRequest;
   const scope = String(req.query.scope || 'organisation');
-  const metric = String(req.query.metric || 'badges');
+  const metric = String(req.query.metric || 'score');
 
   const ORDER: Record<string, string> = {
-    badges: 'u.contribution_score',
+    score: 'u.contribution_score',
+    badges: 'u.badges_count',
     hours: 'u.hours_contributed',
     engagements: 'u.collaborations_count',
     departments: 'u.departments_supported'
   };
-  const orderBy = ORDER[metric] || ORDER.badges;
+  const orderBy = ORDER[metric] || ORDER.score;
 
   let where = `u.status = 'active'`;
   const params: any[] = [];
@@ -2083,7 +2107,7 @@ api.get('/leaderboard', requireAuth(), async (req, res) => {
 
   const { rows } = await q(
     `SELECT u.id, u.name, u.initials, u.role, u.department, u.avatar_url AS "avatarUrl",
-       u.contribution_score AS badges, u.hours_contributed AS hours,
+       u.contribution_score AS score, u.badges_count AS badges, u.hours_contributed AS hours,
        u.collaborations_count AS engagements, u.departments_supported AS departments,
        u.tier
      FROM users u
@@ -2141,7 +2165,7 @@ api.get('/reports', requireAuth(), requireRole('manager', 'admin'), async (req, 
        u.tier, u.available_hours_week AS "availableHoursWeek", u.hours_consumed AS "hoursConsumed",
        u.hours_contributed AS "hoursContributed", u.collaborations_count AS "engagements",
        u.departments_supported AS "departmentsSupported",
-       u.contribution_score AS "badges",
+       u.badges_count AS "badges", u.contribution_score AS "score",
        (SELECT COUNT(*)::int FROM applications a
          WHERE a.applicant_id = u.id AND a.status IN ('pending_author','pending_manager')) AS "openRequests",
        (SELECT COUNT(*)::int FROM applications a JOIN work_posts p ON p.id = a.post_id

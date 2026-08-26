@@ -155,7 +155,10 @@ export async function applyMigrations(): Promise<void> {
     // Recognition is a badge award now, not a free-text note plus a star
     // rating that everybody set to 5. The rating column is left in place but
     // is no longer written to.
-    `ALTER TABLE appreciations ADD COLUMN IF NOT EXISTS badge_id TEXT NOT NULL DEFAULT ''`
+    `ALTER TABLE appreciations ADD COLUMN IF NOT EXISTS badge_id TEXT NOT NULL DEFAULT ''`,
+    // contribution_score went back to being a 0-5 figure, so the raw badge
+    // tally needs a column of its own.
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS badges_count INTEGER NOT NULL DEFAULT 0`
   ];
   for (const sql of migrations) {
     await q(sql);

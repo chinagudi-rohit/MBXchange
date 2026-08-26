@@ -63,7 +63,10 @@ export interface User {
   availableFor: string[];
   typicalAvailability: string;
   availableHoursWeek: number;
+  /** 0-5, derived from badges plus contribution totals. */
   contributionScore: number;
+  /** Raw number of badges awarded to this person. */
+  badgesCount: number;
   ratingBreakdown: Record<string, number>;
   badges: Array<{ id: string; name: string; icon: string; description: string; dateEarned: string }>;
   collaborationsCount: number;
@@ -319,4 +322,23 @@ export function timeAgo(iso: string): string {
   const days = Math.floor(hours / 24);
   if (days < 7) return `${days}d ago`;
   return new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+}
+
+/** One row of the working behind a contribution score. */
+export interface ScoreRow {
+  key: 'recognition' | 'impact' | 'reach' | 'consistency';
+  label: string;
+  hint: string;
+  target: number;
+  weight: number;
+  value: number;
+  ratio: number;
+  points: number;
+}
+
+export interface ScoreResponse {
+  score: number;
+  outOf: number;
+  tier: string;
+  breakdown: ScoreRow[];
 }

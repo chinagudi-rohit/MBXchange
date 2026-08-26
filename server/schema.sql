@@ -22,7 +22,9 @@ CREATE TABLE IF NOT EXISTS users (
   avatar_url TEXT NOT NULL DEFAULT '',
   last_seen TIMESTAMPTZ,
   tier TEXT NOT NULL DEFAULT 'Contributor',
+  -- 0-5, derived from badges + contribution totals (see badges.ts)
   contribution_score NUMERIC NOT NULL DEFAULT 0,
+  badges_count INTEGER NOT NULL DEFAULT 0,
   rating_breakdown JSONB NOT NULL DEFAULT '{}',
   badges JSONB NOT NULL DEFAULT '[]',
   collaborations_count INTEGER NOT NULL DEFAULT 0,

@@ -5,7 +5,7 @@ import { api } from '../lib/api';
 import { Card, Avatar, Chip, Select, EmptyState, RowSkeleton } from '../components/ui';
 
 type Scope = 'organisation' | 'department' | 'team';
-type Metric = 'badges' | 'hours' | 'engagements' | 'departments';
+type Metric = 'score' | 'badges' | 'hours' | 'engagements' | 'departments';
 
 interface Row {
   id: string; name: string; initials: string; role: string; department: string;
@@ -13,6 +13,7 @@ interface Row {
 }
 
 const METRICS: Array<{ id: Metric; label: string; unit: (n: number) => string }> = [
+  { id: 'score', label: 'Contribution score', unit: (n) => `${Number(n).toFixed(2)} / 5` },
   { id: 'badges', label: 'Badges earned', unit: (n) => `${n} badge${n === 1 ? '' : 's'}` },
   { id: 'hours', label: 'Hours contributed', unit: (n) => `${n}h` },
   { id: 'engagements', label: 'Engagements', unit: (n) => `${n}` },
@@ -25,7 +26,7 @@ const MEDAL: Record<number, string> = { 1: '🥇', 2: '🥈', 3: '🥉' };
 export function Leaderboard() {
   const s = useStore();
   const [scope, setScope] = useState<Scope>('organisation');
-  const [metric, setMetric] = useState<Metric>('badges');
+  const [metric, setMetric] = useState<Metric>('score');
   const [data, setData] = useState<{ rows: Row[]; me: Row | null; total: number; unavailable?: string } | null>(null);
 
   useEffect(() => {

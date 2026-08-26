@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { MessageSquare, Handshake, Award, X } from 'lucide-react';
+import { MessageSquare, Handshake, Award, X, Star } from 'lucide-react';
 import { useStore } from '../lib/store';
 import { TiltCard } from '../components/TiltCard';
 import { api, type User } from '../lib/api';
@@ -112,7 +112,7 @@ export function PeopleView() {
                   <div className="flex items-center gap-1.5 mt-1">
                     <Chip>{u.department}</Chip>
                     <span className="flex items-center gap-0.5 text-xs font-semibold text-amber">
-                      <Award className="w-3 h-3" /> {Number(u.contributionScore)}
+                      <Star className="w-3 h-3 fill-current" /> {Number(u.contributionScore).toFixed(2)}
                     </span>
                   </div>
                 </div>
@@ -190,7 +190,8 @@ export function PeopleView() {
               <Avatar initials={profile.initials} size="xl" name={profile.name} src={profile.avatarUrl} showPresence online={profile.isOnline} />
               <div className="min-w-0">
                 <p className="flex items-center gap-1.5 text-sm font-semibold text-amber">
-                  <Award className="w-4 h-4" /> {Number(profile.contributionScore)} badge{Number(profile.contributionScore) === 1 ? '' : 's'}
+                  <Star className="w-4 h-4 fill-current" /> {Number(profile.contributionScore).toFixed(2)}
+                  <span className="text-ink-3 font-medium text-xs">/ 5 · {Number(profile.badgesCount)} badges</span>
                   <span className="text-xs font-medium text-ink-3">contribution score</span>
                 </p>
                 <p className="text-xs text-ink-2 mt-1">
