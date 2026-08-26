@@ -314,7 +314,7 @@ export function HomeDashboard() {
           </span>
           <div>
             <p className="text-sm font-normal text-ink">Beyond Work</p>
-            <p className="text-xs text-ink-2">Marketplace listings, carpool rides and communities — everything off-desk lives here.</p>
+            <p className="text-xs text-ink-2">Carpool rides and communities — everything off-desk lives here.</p>
           </div>
         </div>
         <Button variant="soft" onClick={() => s.setTab('beyond')}>Explore <ArrowRight className="w-3.5 h-3.5" /></Button>

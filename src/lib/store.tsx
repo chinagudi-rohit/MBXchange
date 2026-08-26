@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { api, setToken, getToken, ApiError, type User, type WorkPost, type Notification, type Message } from './api';
 
-export type MainTab = 'home' | 'work' | 'people' | 'requests' | 'achievements' | 'insights' | 'beyond' | 'manager' | 'admin';
+export type MainTab = 'home' | 'work' | 'people' | 'requests' | 'achievements' | 'insights' | 'learning' | 'beyond' | 'manager' | 'admin';
 
 export interface Toast {
   id: string;
@@ -27,8 +27,8 @@ interface Store {
   setTab: (t: MainTab) => void;
   openWorkId: string | null;
   setOpenWorkId: (id: string | null) => void;
-  beyondSection: 'market' | 'carpool' | 'community';
-  setBeyondSection: (s: 'market' | 'carpool' | 'community') => void;
+  beyondSection: 'carpool' | 'community';
+  setBeyondSection: (s: 'carpool' | 'community') => void;
 
   // global data
   users: User[];
@@ -79,7 +79,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const [tab, setTabState] = useState<MainTab>('home');
   const [openWorkId, setOpenWorkId] = useState<string | null>(null);
-  const [beyondSection, setBeyondSection] = useState<'market' | 'carpool' | 'community'>('market');
+  const [beyondSection, setBeyondSection] = useState<'carpool' | 'community'>('carpool');
 
   const [users, setUsers] = useState<User[]>([]);
   const [posts, setPosts] = useState<WorkPost[]>([]);

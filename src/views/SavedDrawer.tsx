@@ -1,27 +1,27 @@
 import React, { useEffect, useState } from 'react';
-import { Briefcase, ShoppingBag, Car, UsersRound } from 'lucide-react';
+import { Briefcase, GraduationCap, Car, UsersRound } from 'lucide-react';
 import { useStore } from '../lib/store';
 import { api } from '../lib/api';
 import { Drawer, EmptyState, SaveButton, StatusBadge } from '../components/ui';
 
 export function SavedDrawer() {
   const s = useStore();
-  const [listings, setListings] = useState<any[]>([]);
+  const [trainings, setTrainings] = useState<any[]>([]);
   const [trips, setTrips] = useState<any[]>([]);
   const [community, setCommunity] = useState<any[]>([]);
 
   useEffect(() => {
     if (!s.savedOpen) return;
-    api.get('/listings').then((d) => setListings(d.listings));
+    api.get('/trainings').then((d) => setTrainings(d.trainings));
     api.get('/carpool/trips').then((d) => setTrips(d.trips));
     api.get('/community').then((d) => setCommunity(d.posts));
   }, [s.savedOpen]);
 
   const savedWork = s.posts.filter((p) => s.isSaved('work', p.id));
-  const savedListings = listings.filter((l) => s.isSaved('listing', l.id));
+  const savedTrainings = trainings.filter((t) => s.isSaved('training', t.id));
   const savedTrips = trips.filter((t) => s.isSaved('carpool', t.id));
   const savedCommunity = community.filter((c) => s.isSaved('community', c.id));
-  const total = savedWork.length + savedListings.length + savedTrips.length + savedCommunity.length;
+  const total = savedWork.length + savedTrainings.length + savedTrips.length + savedCommunity.length;
 
   const Section = ({ icon, title, children, count }: any) => count === 0 ? null : (
     <div className="px-4 py-3">
@@ -39,7 +39,7 @@ export function SavedDrawer() {
       width="max-w-md"
     >
       {total === 0 ? (
-        <EmptyState title="Nothing saved yet" hint="Tap the bookmark on any opportunity, listing or ride to keep it here." />
+        <EmptyState title="Nothing saved yet" hint="Tap the bookmark on any opportunity, session or ride to keep it here." />
       ) : (
         <div className="divide-y divide-line/60">
           <Section icon={<Briefcase className="w-3.5 h-3.5" />} title="Work opportunities" count={savedWork.length}>
@@ -57,17 +57,17 @@ export function SavedDrawer() {
               </div>
             ))}
           </Section>
-          <Section icon={<ShoppingBag className="w-3.5 h-3.5" />} title="Marketplace" count={savedListings.length}>
-            {savedListings.map((l) => (
-              <div key={l.id} className="flex items-center gap-2 p-2.5 rounded-xl bg-surface-2">
+          <Section icon={<GraduationCap className="w-3.5 h-3.5" />} title="Learning sessions" count={savedTrainings.length}>
+            {savedTrainings.map((t) => (
+              <div key={t.id} className="flex items-center gap-2 p-2.5 rounded-xl bg-surface-2">
                 <button
                   className="flex-1 min-w-0 text-left"
-                  onClick={() => { s.setTab('beyond'); s.setBeyondSection('market'); s.setSavedOpen(false); }}
+                  onClick={() => { s.setTab('learning'); s.setSavedOpen(false); }}
                 >
-                  <p className="text-xs font-medium text-ink truncate">{l.title}</p>
-                  <p className="text-xs text-ink-3">{l.isFree || l.price === 0 ? 'Free' : `${l.currency}${l.price}`} · {l.sellerName}</p>
+                  <p className="text-xs font-medium text-ink truncate">{t.title}</p>
+                  <p className="text-xs text-ink-3">{t.level} · {t.hostName}</p>
                 </button>
-                <SaveButton saved onToggle={() => s.toggleSaved('listing', l.id)} />
+                <SaveButton saved onToggle={() => s.toggleSaved('training', t.id)} />
               </div>
             ))}
           </Section>

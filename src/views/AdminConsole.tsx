@@ -219,7 +219,7 @@ export function AdminConsole() {
                 ['Pending registrations', overview.stats.awaitingRegistration],
                 ['Approved engagements', overview.stats.approvedThisMonth],
                 ['Active carpool trips', overview.stats.activeTrips],
-                ['Marketplace listings', overview.stats.activeListings]
+                ['Upcoming trainings', overview.stats.upcomingTrainings]
               ].map(([label, value]) => (
                 <Card key={label as string} className="p-4">
                   <p className="text-2xl font-medium text-ink">{value as number}</p>

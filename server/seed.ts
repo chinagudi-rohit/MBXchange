@@ -12,7 +12,7 @@ import {
   INITIAL_BANDWIDTH_OFFERS,
   INITIAL_MANAGER_APPROVALS,
   INITIAL_CARPOOL_RIDES,
-  INITIAL_MARKETPLACE_LISTINGS,
+  INITIAL_TRAINING_SESSIONS,
   INITIAL_COMMUNITIES,
   INITIAL_KNOWLEDGE_QUESTIONS,
   INITIAL_NOTIFICATIONS,
@@ -364,21 +364,35 @@ export async function seedIfEmpty(): Promise<void> {
     );
   }
 
-  // ---- Marketplace listings
-  for (const l of INITIAL_MARKETPLACE_LISTINGS) {
+  // ---- Training sessions (knowledge sharing)
+  // Dates are relative to seed time so the demo always has upcoming sessions.
+  const dayFromNow = (n: number) => {
+    const d = new Date();
+    d.setDate(d.getDate() + n);
+    return d.toISOString().slice(0, 10);
+  };
+  for (const t of INITIAL_TRAINING_SESSIONS) {
+    const hostId = uid(t.host);
+    if (!hostId) continue;
     await q(
-      `INSERT INTO listings (id, listing_type, title, price, currency, is_free, category, condition,
-        location, seller_id, seller_name, seller_role, seller_initials, description, specs,
-        event_date, ticket_quantity, created_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)`,
+      `INSERT INTO training_sessions (id, host_id, title, description, skills, level, format,
+        location, session_date, start_time, duration_mins, seats_total, status)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
       [
-        String(l.id), l.listingType || 'Sell', l.title, l.price, l.currency || '€', l.isFree || false,
-        l.category, String(l.condition), l.location, uid(l.seller), l.seller,
-        denorm(l.seller, l.sellerRole, l.initials).role,
-        denorm(l.seller, l.sellerRole, l.initials).initials, l.description, JSON.stringify(l.specs || {}), l.eventDate || null,
-        l.ticketQuantity || null, new Date(l.timestamp).toISOString()
+        t.id, hostId, t.title, t.description, JSON.stringify(t.skills), t.level, t.format,
+        t.location, dayFromNow(t.inDays), t.startTime, t.durationMins, t.seatsTotal,
+        t.inDays < 0 ? 'completed' : 'scheduled'
       ]
     );
+    for (const name of t.attendees || []) {
+      const attendeeId = uid(name);
+      if (!attendeeId || attendeeId === hostId) continue;
+      await q(
+        `INSERT INTO training_registrations (id, session_id, attendee_id, status, attended)
+         VALUES ($1,$2,$3,'registered',$4) ON CONFLICT DO NOTHING`,
+        [newId('reg'), t.id, attendeeId, t.inDays < 0]
+      );
+    }
   }
 
   // ---- Communities
@@ -514,9 +528,6 @@ export async function seedIfEmpty(): Promise<void> {
   for (const [userId, saved] of Object.entries(INITIAL_USER_SAVED_MAP)) {
     for (const w of saved.workIds || []) {
       await q(`INSERT INTO saved_items (user_id, item_type, item_id) VALUES ($1,'work',$2) ON CONFLICT DO NOTHING`, [userId, String(w)]);
-    }
-    for (const l of saved.listingIds || []) {
-      await q(`INSERT INTO saved_items (user_id, item_type, item_id) VALUES ($1,'listing',$2) ON CONFLICT DO NOTHING`, [userId, String(l)]);
     }
     for (const c of saved.communityIds || []) {
       await q(`INSERT INTO saved_items (user_id, item_type, item_id) VALUES ($1,'community',$2) ON CONFLICT DO NOTHING`, [userId, String(c)]);

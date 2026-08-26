@@ -39,7 +39,7 @@ export function NotificationsPanel() {
     }
     if (n.targetTab) {
       const tab = (['home', 'work', 'people', 'requests', 'insights', 'beyond', 'manager', 'admin'].includes(n.targetTab)
-        ? n.targetTab : n.targetTab === 'myxchange' ? 'requests' : n.targetTab === 'community' || n.targetTab === 'marketplace' || n.targetTab === 'carpool' ? 'beyond' : 'home') as MainTab;
+        ? n.targetTab : n.targetTab === 'myxchange' ? 'requests' : n.targetTab === 'community' || n.targetTab === 'carpool' ? 'beyond' : 'home') as MainTab;
       s.setTab(tab);
       if (tab === 'work' && n.targetId) s.setOpenWorkId(n.targetId);
       s.setNotificationsOpen(false);

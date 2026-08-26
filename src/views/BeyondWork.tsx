@@ -1,241 +1,20 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import {
-  ShoppingBag, Car, UsersRound, Plus, MapPin, Sunrise, Sunset, MessageSquare,
-  Tag, ChevronRight, ThumbsUp, CheckCircle2, Leaf
+  Car, UsersRound, Plus, MapPin, Sunrise, Sunset, MessageSquare,
+  ChevronRight, ThumbsUp, CheckCircle2, Leaf
 } from 'lucide-react';
 import { useStore } from '../lib/store';
 import { TiltCard } from '../components/TiltCard';
 import { TagEditor } from '../components/TagEditor';
-import { api, timeAgo, type Listing, type CarpoolTrip } from '../lib/api';
+import { api, timeAgo, type CarpoolTrip } from '../lib/api';
 import {
   Button, Card, Chip, Avatar, Modal, Field, TextInput, TextArea, Select, SearchField, EmptyState, SaveButton, StatusBadge, SkeletonGrid, Reveal
 } from '../components/ui';
 
 
 
-const CATEGORIES = ['All', 'Vehicles', 'Electronics', 'Furniture & Home', 'Sports & Outdoors', 'Tickets & Events', 'Books & Tools', 'Services', 'Giveaways & Free', 'Other'];
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 const VEHICLE_TYPES = ['Electric (EV)', 'Hybrid (PHEV)', 'Diesel / Petrol'];
-
-/* ══════════════════ Marketplace ══════════════════ */
-
-function Marketplace() {
-  const s = useStore();
-  const [listings, setListings] = useState<Listing[] | null>(null);
-  const [category, setCategory] = useState('All');
-  const [query, setQuery] = useState('');
-  const [sort, setSort] = useState<'newest' | 'priceAsc' | 'priceDesc'>('newest');
-  const [hideSold, setHideSold] = useState(true);
-  const [detail, setDetail] = useState<Listing | null>(null);
-  const [newOpen, setNewOpen] = useState(false);
-  const [form, setForm] = useState({
-    listingType: 'Sell', title: '', price: '', currency: '€', category: 'Electronics',
-    condition: 'Used - Excellent', location: '', description: '', isFree: false
-  });
-
-  const load = () => api.get('/listings').then((d) => setListings(d.listings));
-  useEffect(() => { load(); }, []);
-
-  const filtered = useMemo(() => (listings || []).filter((l) => {
-    if (category !== 'All' && l.category !== category) return false;
-    if (hideSold && l.sold) return false;
-    if (query) {
-      const ql = query.toLowerCase();
-      if (!l.title.toLowerCase().includes(ql) &&
-          !(l.description || '').toLowerCase().includes(ql) &&
-          !(l.sellerName || '').toLowerCase().includes(ql)) return false;
-    }
-    return true;
-  }).sort((a, b) => {
-    const pa = a.isFree ? 0 : Number(a.price || 0);
-    const pb = b.isFree ? 0 : Number(b.price || 0);
-    if (sort === 'priceAsc') return pa - pb;
-    if (sort === 'priceDesc') return pb - pa;
-    return +new Date(b.createdAt) - +new Date(a.createdAt);
-  }), [listings, category, query, sort, hideSold]);
-
-  const submit = async () => {
-    if (!form.title.trim()) { s.toast('error', 'Title required'); return; }
-    await api.post('/listings', { ...form, price: form.isFree ? 0 : Number(form.price) || 0 });
-    s.toast('success', 'Listing published');
-    setNewOpen(false);
-    setForm({ ...form, title: '', price: '', description: '' });
-    load();
-  };
-
-  if (!listings) return <SkeletonGrid count={6} cols="sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4" />;
-
-  return (
-    <div>
-      <div className="flex flex-wrap gap-2.5 mb-4 items-center">
-        <SearchField placeholder="Search title, description, seller…" value={query} onChange={(e) => setQuery(e.target.value)} className="!w-72" />
-        <Select value={category} onChange={(e) => setCategory(e.target.value)} className="!w-48" aria-label="Filter by category">
-          <option value="All">All categories</option>
-          {CATEGORIES.filter((c) => c !== 'All').map((c) => <option key={c}>{c}</option>)}
-        </Select>
-        <Select value={sort} onChange={(e) => setSort(e.target.value as typeof sort)} className="!w-44" aria-label="Sort listings">
-          <option value="newest">Newest first</option>
-          <option value="priceAsc">Price: low to high</option>
-          <option value="priceDesc">Price: high to low</option>
-        </Select>
-        <label className="flex items-center gap-2 text-xs font-medium text-ink-2 cursor-pointer select-none">
-          <input
-            type="checkbox" checked={hideSold} onChange={(e) => setHideSold(e.target.checked)}
-            className="w-4 h-4 accent-(--primary)"
-          />
-          Hide sold
-        </label>
-        <span className="flex-1" />
-        <Button onClick={() => setNewOpen(true)}><Plus className="w-4 h-4" /> Post Listing</Button>
-      </div>
-
-      <p className="text-xs text-ink-3 mb-3">
-        Showing <b className="text-ink-2">{filtered.length}</b> of {(listings || []).length} listings
-      </p>
-
-      {filtered.length === 0 ? (
-        <EmptyState title="No listings" hint="Post the first item for your colleagues." />
-      ) : (
-        <Reveal stagger className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
-          {filtered.map((l) => (
-            <TiltCard key={l.id}>
-            <Card className={`p-5 h-full flex flex-col ${l.sold ? 'opacity-60' : ''}`} onClick={() => setDetail(l)}>
-              <div className="flex items-start justify-between gap-2 mb-2">
-                <Chip>{l.category}</Chip>
-                <SaveButton saved={s.isSaved('listing', l.id)} onToggle={async () => {
-                  const now = await s.toggleSaved('listing', l.id);
-                  s.toast('info', now ? 'Saved' : 'Removed from saved');
-                }} />
-              </div>
-              <h3 className="text-base font-semibold text-ink leading-snug flex-1">{l.title}</h3>
-              <p className="text-lg font-medium text-primary-text mt-2.5">
-                {l.isFree || l.price === 0 ? 'Free' : `${l.currency}${Number(l.price).toLocaleString()}`}
-                {l.sold && <span className="ml-2 text-xs font-semibold text-red">SOLD</span>}
-              </p>
-              <div className="flex items-center justify-between mt-auto pt-3.5 border-t border-line">
-                <span className="flex items-center gap-2 min-w-0">
-                  <Avatar initials={l.sellerInitials} size="sm" name={l.sellerName} />
-                  <span className="text-xs text-ink-2 truncate">{l.sellerName}</span>
-                </span>
-                <span className="text-xs text-ink-3 shrink-0">{timeAgo(l.createdAt)}</span>
-              </div>
-            </Card>
-            </TiltCard>
-          ))}
-        </Reveal>
-      )}
-
-      {/* Detail modal */}
-      <Modal
-        open={!!detail} onClose={() => setDetail(null)} wide
-        title={detail?.title || ''}
-        subtitle={detail ? `${detail.category} · ${detail.condition} · ${detail.location}` : ''}
-        footer={detail ? (
-          <>
-            {detail.sellerId === s.user?.id && !detail.sold && (
-              <Button variant="secondary" onClick={async () => {
-                await api.patch(`/listings/${detail.id}`, { sold: true });
-                s.toast('success', 'Marked as sold');
-                setDetail(null); load();
-              }}>Mark as Sold</Button>
-            )}
-            <Button variant="secondary" onClick={() => setDetail(null)}>Close</Button>
-            {detail.sellerId && detail.sellerId !== s.user?.id && (
-              <Button onClick={() => {
-                s.setMessagePartnerId(detail.sellerId);
-                s.setMessagesOpen(true);
-                setDetail(null);
-              }}>
-                <MessageSquare className="w-3.5 h-3.5" /> Contact Seller
-              </Button>
-            )}
-          </>
-        ) : undefined}
-      >
-        {detail && (
-          <div className="space-y-4">
-            <p className="text-2xl font-medium text-primary-text">
-              {detail.isFree || detail.price === 0 ? 'Free' : `${detail.currency}${Number(detail.price).toLocaleString()}`}
-            </p>
-            <p className="text-sm text-ink-2 leading-relaxed whitespace-pre-line">{detail.description}</p>
-            {Object.keys(detail.specs || {}).length > 0 && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {Object.entries(detail.specs).map(([k, v]) => (
-                  <div key={k} className="bg-surface-2 rounded-xl px-3.5 py-2.5">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-ink-3">{k}</p>
-                    <p className="text-xs font-medium text-ink mt-0.5">{v}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-            <div className="flex items-center gap-2.5 pt-2 border-t border-line">
-              <Avatar initials={detail.sellerInitials} name={detail.sellerName} />
-              <div>
-                <p className="text-xs font-medium text-ink">{detail.sellerName}</p>
-                <p className="text-xs text-ink-3">{detail.sellerRole} · {timeAgo(detail.createdAt)}</p>
-              </div>
-            </div>
-          </div>
-        )}
-      </Modal>
-
-      {/* New listing modal */}
-      <Modal
-        open={newOpen} onClose={() => setNewOpen(false)} wide
-        title="Post a Listing" subtitle="Visible to all colleagues on MBXchange"
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setNewOpen(false)}>Cancel</Button>
-            <Button onClick={submit}>Publish</Button>
-          </>
-        }
-      >
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="Type">
-            <Select value={form.listingType} onChange={(e) => setForm({ ...form, listingType: e.target.value, isFree: e.target.value === 'Give Away (Free)' })}>
-              {['Sell', 'Buy / Looking for', 'Give Away (Free)', 'Exchange', 'Ticket / Event', 'Service Offer'].map((t) => <option key={t}>{t}</option>)}
-            </Select>
-          </Field>
-          <Field label="Category">
-            <Select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
-              {CATEGORIES.filter((c) => c !== 'All').map((c) => <option key={c}>{c}</option>)}
-            </Select>
-          </Field>
-          <div className="sm:col-span-2">
-            <Field label="Title" required>
-              <TextInput value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-            </Field>
-          </div>
-          {!form.isFree && (
-            <Field label="Price">
-              <div className="flex gap-2">
-                <Select value={form.currency} onChange={(e) => setForm({ ...form, currency: e.target.value })} className="!w-18">
-                  <option>€</option><option>₹</option><option>$</option>
-                </Select>
-                <TextInput type="number" min={0} value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
-              </div>
-            </Field>
-          )}
-          <Field label="Condition">
-            <Select value={form.condition} onChange={(e) => setForm({ ...form, condition: e.target.value })}>
-              {['Brand New', 'Like New', 'Used - Excellent', 'Used', 'Fair', 'N/A'].map((c) => <option key={c}>{c}</option>)}
-            </Select>
-          </Field>
-          <div className="sm:col-span-2">
-            <Field label="Pickup / Location">
-              <TextInput value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder={s.user?.campus} />
-            </Field>
-          </div>
-          <div className="sm:col-span-2">
-            <Field label="Description">
-              <TextArea rows={4} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-            </Field>
-          </div>
-        </div>
-      </Modal>
-    </div>
-  );
-}
 
 /* ══════════════════ Carpool (one-way trips) ══════════════════ */
 
@@ -813,7 +592,6 @@ function Communities() {
 export function BeyondWork() {
   const s = useStore();
   const sections = [
-    { id: 'market' as const, label: 'Marketplace', icon: <ShoppingBag className="w-4 h-4" /> },
     { id: 'carpool' as const, label: 'Carpool', icon: <Car className="w-4 h-4" /> },
     { id: 'community' as const, label: 'Communities', icon: <UsersRound className="w-4 h-4" /> }
   ];
@@ -823,7 +601,7 @@ export function BeyondWork() {
       <div className="mb-5">
         <h1 className="text-2xl font-bold tracking-tight text-ink">Beyond Work</h1>
         <p className="text-xs text-ink-2 mt-0.5">
-          The colleague-to-colleague space — buy & sell, share rides, and join communities
+          The colleague-to-colleague space — share rides and join communities
         </p>
       </div>
 
@@ -841,7 +619,6 @@ export function BeyondWork() {
         ))}
       </div>
 
-      {s.beyondSection === 'market' && <Marketplace />}
       {s.beyondSection === 'carpool' && <Carpool />}
       {s.beyondSection === 'community' && <Communities />}
     </div>

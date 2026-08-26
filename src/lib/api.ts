@@ -213,26 +213,37 @@ export interface ApprovalItem {
   targetRole?: string;
 }
 
-export interface Listing {
+/** A colleague-hosted lecture or training session. */
+export interface Training {
   id: string;
-  listingType: string;
+  hostId: string;
   title: string;
-  price: number;
-  currency: string;
-  isFree: boolean;
-  category: string;
-  condition: string;
-  location: string;
-  sellerId: string | null;
-  sellerName: string;
-  sellerRole: string;
-  sellerInitials: string;
   description: string;
-  specs: Record<string, string>;
-  sold: boolean;
-  eventDate: string | null;
-  ticketQuantity: number | null;
+  skills: string[];
+  level: 'Beginner' | 'Intermediate' | 'Advanced' | 'All levels';
+  format: 'Virtual' | 'In-person' | 'Hybrid';
+  location: string;
+  /** ISO date (no time component) — the time lives in startTime. */
+  sessionDate: string;
+  startTime: string;
+  durationMins: number;
+  seatsTotal: number;
+  seatsFilled: number;
+  waitlistCount: number;
+  status: 'scheduled' | 'completed' | 'cancelled';
   createdAt: string;
+  hostName: string;
+  hostRole: string;
+  hostDepartment: string;
+  hostInitials: string;
+  hostAvatarUrl: string;
+  /** Where the viewer stands, if they signed up at all. */
+  myRegistration: 'registered' | 'waitlisted' | null;
+  /** Roster — populated only for the session's own host. */
+  attendees: Array<{
+    attendeeId: string; name: string; initials: string;
+    department: string; avatarUrl: string; status: 'registered' | 'waitlisted';
+  }>;
 }
 
 export interface CarpoolTrip {

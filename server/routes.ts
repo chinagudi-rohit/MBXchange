@@ -1071,49 +1071,157 @@ api.post('/bandwidth-offers', requireAuth(), async (req, res) => {
   res.status(201).json({ ok: true });
 });
 
-// ============================== MARKETPLACE ==============================
+// ============================== TRAINING ==============================
 
-api.get('/listings', requireAuth(), async (_req, res) => {
+/** Promote the longest-waiting waitlister once a seat frees up. */
+async function promoteFromWaitlist(sessionId: string): Promise<void> {
+  const sess = await one<{ seats_total: number; status: string }>(
+    `SELECT seats_total, status FROM training_sessions WHERE id = $1`, [sessionId]);
+  if (!sess || sess.status !== 'scheduled') return;
+  const taken = await one<{ n: string }>(
+    `SELECT COUNT(*)::text AS n FROM training_registrations
+      WHERE session_id = $1 AND status = 'registered'`, [sessionId]);
+  if (parseInt(taken?.n || '0', 10) >= sess.seats_total) return;
+  const next = await one<{ id: string; attendee_id: string }>(
+    `SELECT id, attendee_id FROM training_registrations
+      WHERE session_id = $1 AND status = 'waitlisted'
+      ORDER BY created_at LIMIT 1`, [sessionId]);
+  if (!next) return;
+  await q(`UPDATE training_registrations SET status = 'registered' WHERE id = $1`, [next.id]);
+  const t = await one<{ title: string }>(`SELECT title FROM training_sessions WHERE id = $1`, [sessionId]);
+  await notify(next.attendee_id, null, 'help_offer', 'A seat opened up ✓',
+    `You are off the waitlist for "${t?.title || 'the session'}".`, 'learning', sessionId);
+}
+
+api.get('/trainings', requireAuth(), async (req, res) => {
+  const { user } = req as AuthedRequest;
   const { rows } = await q(
-    `SELECT id, listing_type AS "listingType", title, price, currency, is_free AS "isFree", category,
-       condition, location, seller_id AS "sellerId", seller_name AS "sellerName", seller_role AS "sellerRole",
-       seller_initials AS "sellerInitials", description, specs, sold, event_date AS "eventDate",
-       ticket_quantity AS "ticketQuantity", created_at AS "createdAt"
-     FROM listings ORDER BY created_at DESC`
+    `SELECT t.id, t.host_id AS "hostId", t.title, t.description, t.skills, t.level, t.format,
+       t.location, t.session_date AS "sessionDate", t.start_time AS "startTime",
+       t.duration_mins AS "durationMins", t.seats_total AS "seatsTotal", t.status,
+       t.created_at AS "createdAt",
+       h.name AS "hostName", h.role AS "hostRole", h.department AS "hostDepartment",
+       h.initials AS "hostInitials", h.avatar_url AS "hostAvatarUrl",
+       (SELECT COUNT(*)::int FROM training_registrations r
+         WHERE r.session_id = t.id AND r.status = 'registered') AS "seatsFilled",
+       (SELECT COUNT(*)::int FROM training_registrations r
+         WHERE r.session_id = t.id AND r.status = 'waitlisted') AS "waitlistCount",
+       (SELECT r.status FROM training_registrations r
+         WHERE r.session_id = t.id AND r.attendee_id = $1) AS "myRegistration"
+     FROM training_sessions t JOIN users h ON h.id = t.host_id
+     ORDER BY t.session_date ASC, t.start_time ASC`,
+    [user.id]
   );
-  res.json({ listings: rows });
+  // Hosts get the roster for their own sessions; nobody else needs it.
+  const { rows: attendees } = await q(
+    `SELECT r.session_id AS "sessionId", r.status, u.id AS "attendeeId",
+       u.name, u.initials, u.department, u.avatar_url AS "avatarUrl"
+     FROM training_registrations r
+     JOIN users u ON u.id = r.attendee_id
+     JOIN training_sessions t ON t.id = r.session_id
+     WHERE t.host_id = $1 ORDER BY r.created_at`,
+    [user.id]
+  );
+  const bySession = new Map<string, any[]>();
+  for (const a of attendees) {
+    if (!bySession.has(a.sessionId)) bySession.set(a.sessionId, []);
+    bySession.get(a.sessionId)!.push(a);
+  }
+  res.json({ trainings: rows.map((t: any) => ({ ...t, attendees: bySession.get(t.id) || [] })) });
 });
 
-api.post('/listings', requireAuth(), async (req, res) => {
+api.post('/trainings', requireAuth(), async (req, res) => {
   const { user } = req as AuthedRequest;
   const b = req.body || {};
-  if (!b.title) return res.status(400).json({ error: 'Title is required' });
-  const id = newId('lst');
+  if (!b.title || !String(b.title).trim()) return res.status(400).json({ error: 'Title is required' });
+  if (!b.sessionDate) return res.status(400).json({ error: 'A session date is required' });
+  const id = newId('trn');
   await q(
-    `INSERT INTO listings (id, listing_type, title, price, currency, is_free, category, condition,
-      location, seller_id, seller_name, seller_role, seller_initials, description, specs, event_date, ticket_quantity)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`,
+    `INSERT INTO training_sessions (id, host_id, title, description, skills, level, format,
+      location, session_date, start_time, duration_mins, seats_total)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
     [
-      id, b.listingType || 'Sell', b.title, Number(b.price) || 0, b.currency || '₹', !!b.isFree,
-      b.category || 'Other', b.condition || 'Used', b.location || user.campus, user.id, user.name,
-      user.role, user.initials, b.description || '', JSON.stringify(b.specs || {}),
-      b.eventDate || null, b.ticketQuantity || null
+      id, user.id, String(b.title).trim(), b.description || '',
+      JSON.stringify(Array.isArray(b.skills) ? b.skills : []),
+      b.level || 'All levels', b.format || 'Virtual', b.location || '',
+      b.sessionDate, b.startTime || '', Math.max(15, Number(b.durationMins) || 60),
+      Math.max(1, Number(b.seatsTotal) || 25)
     ]
   );
+  await audit(user.id, 'training_created', id, { title: b.title });
   res.status(201).json({ ok: true, id });
 });
 
-api.patch('/listings/:id', requireAuth(), async (req, res) => {
+api.patch('/trainings/:id', requireAuth(), async (req, res) => {
   const { user } = req as AuthedRequest;
-  const l = await one(`SELECT * FROM listings WHERE id = $1`, [req.params.id]);
-  if (!l) return res.status(404).json({ error: 'Listing not found' });
-  if (l.seller_id !== user.id && user.systemRole !== 'admin') return res.status(403).json({ error: 'Not your listing' });
+  const t = await one<any>(`SELECT * FROM training_sessions WHERE id = $1`, [req.params.id]);
+  if (!t) return res.status(404).json({ error: 'Session not found' });
+  if (t.host_id !== user.id && user.systemRole !== 'admin') {
+    return res.status(403).json({ error: 'Only the host can change this session' });
+  }
   const b = req.body || {};
   await q(
-    `UPDATE listings SET title = COALESCE($1, title), price = COALESCE($2, price),
-      description = COALESCE($3, description), sold = COALESCE($4, sold) WHERE id = $5`,
-    [b.title ?? null, b.price != null ? Number(b.price) : null, b.description ?? null, b.sold ?? null, req.params.id]
+    `UPDATE training_sessions SET title = COALESCE($1, title), description = COALESCE($2, description),
+      session_date = COALESCE($3, session_date), start_time = COALESCE($4, start_time),
+      duration_mins = COALESCE($5, duration_mins), seats_total = COALESCE($6, seats_total),
+      location = COALESCE($7, location), status = COALESCE($8, status), skills = COALESCE($9, skills)
+     WHERE id = $10`,
+    [
+      b.title ?? null, b.description ?? null, b.sessionDate ?? null, b.startTime ?? null,
+      b.durationMins != null ? Number(b.durationMins) : null,
+      b.seatsTotal != null ? Number(b.seatsTotal) : null,
+      b.location ?? null, b.status ?? null,
+      Array.isArray(b.skills) ? JSON.stringify(b.skills) : null,
+      req.params.id
+    ]
   );
+  // Cancelling or rescheduling is worth telling the people who signed up.
+  if (b.status === 'cancelled' || b.sessionDate || b.startTime) {
+    const { rows: signedUp } = await q(
+      `SELECT attendee_id FROM training_registrations WHERE session_id = $1`, [req.params.id]);
+    for (const r of signedUp) {
+      await notify(r.attendee_id, null, 'system_alert',
+        b.status === 'cancelled' ? 'Session cancelled' : 'Session rescheduled',
+        `"${t.title}" — ${b.status === 'cancelled' ? 'the host cancelled this session.' : 'the host changed the schedule.'}`,
+        'learning', req.params.id);
+    }
+  }
+  // A larger room may mean the waitlist can move.
+  if (b.seatsTotal != null) await promoteFromWaitlist(req.params.id);
+  res.json({ ok: true });
+});
+
+api.post('/trainings/:id/register', requireAuth(), async (req, res) => {
+  const { user } = req as AuthedRequest;
+  const t = await one<any>(
+    `SELECT t.*, (SELECT COUNT(*)::int FROM training_registrations r
+                   WHERE r.session_id = t.id AND r.status = 'registered') AS filled
+     FROM training_sessions t WHERE t.id = $1`, [req.params.id]);
+  if (!t) return res.status(404).json({ error: 'Session not found' });
+  if (t.status !== 'scheduled') return res.status(400).json({ error: 'This session is no longer open' });
+  if (t.host_id === user.id) return res.status(400).json({ error: 'You are hosting this session' });
+  const dup = await one(
+    `SELECT id FROM training_registrations WHERE session_id = $1 AND attendee_id = $2`,
+    [req.params.id, user.id]);
+  if (dup) return res.status(400).json({ error: 'You are already signed up' });
+
+  // A full session waitlists rather than refusing, so interest is still visible
+  // to the host — who can then widen the room or repeat the session.
+  const status = t.filled >= t.seats_total ? 'waitlisted' : 'registered';
+  await q(
+    `INSERT INTO training_registrations (id, session_id, attendee_id, status) VALUES ($1,$2,$3,$4)`,
+    [newId('reg'), req.params.id, user.id, status]);
+  await notify(t.host_id, null, 'help_offer',
+    status === 'waitlisted' ? 'New waitlist signup' : 'New attendee',
+    `${user.name} signed up for "${t.title}".`, 'learning', req.params.id);
+  res.status(201).json({ ok: true, status });
+});
+
+api.post('/trainings/:id/cancel-registration', requireAuth(), async (req, res) => {
+  const { user } = req as AuthedRequest;
+  await q(`DELETE FROM training_registrations WHERE session_id = $1 AND attendee_id = $2`,
+    [req.params.id, user.id]);
+  await promoteFromWaitlist(req.params.id);
   res.json({ ok: true });
 });
 
@@ -1505,7 +1613,7 @@ api.get('/saved', requireAuth(), async (req, res) => {
 api.post('/saved/toggle', requireAuth(), async (req, res) => {
   const { user } = req as AuthedRequest;
   const { itemType, itemId } = req.body || {};
-  if (!['work', 'listing', 'community', 'carpool'].includes(itemType) || !itemId) {
+  if (!['work', 'training', 'community', 'carpool'].includes(itemType) || !itemId) {
     return res.status(400).json({ error: 'Invalid itemType or itemId' });
   }
   const existing = await one(
@@ -1955,7 +2063,7 @@ api.get('/admin/overview', requireAuth(), requireRole('manager', 'admin'), async
     awaitingRegistration: await counts(`SELECT COUNT(*)::text AS n FROM registration_requests WHERE status = 'pending'`),
     approvedThisMonth: await counts(`SELECT COUNT(*)::text AS n FROM applications WHERE status = 'approved'`),
     activeTrips: await counts(`SELECT COUNT(*)::text AS n FROM carpool_trips WHERE status = 'active'`),
-    activeListings: await counts(`SELECT COUNT(*)::text AS n FROM listings WHERE sold = FALSE`)
+    upcomingTrainings: await counts(`SELECT COUNT(*)::text AS n FROM training_sessions WHERE status = 'scheduled'`)
   };
   const { rows: departmentLoad } = await q(
     `SELECT department, COUNT(*)::int AS posts FROM work_posts GROUP BY department ORDER BY posts DESC`

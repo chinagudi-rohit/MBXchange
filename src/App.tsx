@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   Home, Briefcase, Users, ListChecks, Compass, ShieldCheck, Settings2, BarChart3,
   Bell, MessageSquare, Bookmark, Sun, Moon, LogOut, KeyRound, ChevronDown, Search,
-  UserRound, X, PanelLeftClose, PanelLeftOpen, Menu, Plus, Zap, Award
+  UserRound, X, PanelLeftClose, PanelLeftOpen, Menu, Plus, Zap, Award, GraduationCap
 } from 'lucide-react';
 import { StoreProvider, useStore, type MainTab } from './lib/store';
 import { Toasts, Avatar, MercedesStar } from './components/ui';
@@ -13,6 +13,7 @@ import { WorkExchange, WorkFormModal } from './views/WorkExchange';
 import { PeopleView } from './views/PeopleView';
 import { MyRequests } from './views/MyRequests';
 import { InsightsView } from './views/InsightsView';
+import { LearningView } from './views/LearningView';
 import { Achievements } from './views/Achievements';
 import { BeyondWork } from './views/BeyondWork';
 import { ManagerInbox } from './views/ManagerInbox';
@@ -122,6 +123,7 @@ function Shell() {
     { id: 'requests', label: 'My Requests', icon: <ListChecks className="w-4.5 h-4.5" />, show: true },
     { id: 'achievements', label: 'Achievements', icon: <Award className="w-4.5 h-4.5" />, show: true },
     { id: 'insights', label: 'Insights', icon: <BarChart3 className="w-4.5 h-4.5" />, show: true },
+    { id: 'learning', label: 'Learning', icon: <GraduationCap className="w-4.5 h-4.5" />, show: true },
     { id: 'beyond', label: 'Beyond Work', icon: <Compass className="w-4.5 h-4.5" />, show: true },
     {
       // Any employee can post a requirement and needs to see who applied to
@@ -188,7 +190,7 @@ function Shell() {
               {
                 label: 'Offer bandwidth', hint: 'List hours and skills you can lend',
                 icon: <Zap className="w-4 h-4" />, tone: 'bg-green-soft text-green',
-                run: () => { s.setTab('work'); s.setBeyondSection('market'); window.dispatchEvent(new CustomEvent('mbx:offer-bandwidth')); }
+                run: () => { s.setTab('work'); window.dispatchEvent(new CustomEvent('mbx:offer-bandwidth')); }
               },
               {
                 label: 'Offer a ride', hint: 'Share your commute',
@@ -198,7 +200,7 @@ function Shell() {
               {
                 label: 'List an item', hint: 'Sell or give away equipment',
                 icon: <Bookmark className="w-4 h-4" />, tone: 'bg-amber-soft text-amber',
-                run: () => { s.setTab('beyond'); s.setBeyondSection('market'); }
+                run: () => { s.setTab('beyond'); s.setBeyondSection('carpool'); }
               }
             ].map((a) => (
               <button
@@ -327,7 +329,7 @@ function Shell() {
                 glass shadow-card text-ink-3 text-sm hover:text-ink-2 transition-colors"
             >
               <Search className="w-4 h-4 shrink-0" />
-              <span className="flex-1 text-left truncate">Search opportunities, people, listings…</span>
+              <span className="flex-1 text-left truncate">Search opportunities, people, sessions…</span>
               <kbd className="text-xs font-semibold border border-line-strong rounded-md px-1.5 py-0.5 shrink-0">⌘K</kbd>
             </button>
           </div>
@@ -494,6 +496,7 @@ function Shell() {
           {s.tab === 'requests' && <MyRequests />}
           {s.tab === 'achievements' && <Achievements />}
           {s.tab === 'insights' && <InsightsView />}
+          {s.tab === 'learning' && <LearningView />}
           {s.tab === 'beyond' && <BeyondWork />}
           {s.tab === 'manager' && <ManagerInbox />}
           {s.tab === 'admin' && <AdminConsole />}

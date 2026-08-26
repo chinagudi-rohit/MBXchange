@@ -1903,129 +1903,122 @@ export const INITIAL_CARPOOL_RIDES: CarpoolRide[] = [
   }
 ];
 
-export const INITIAL_MARKETPLACE_LISTINGS: MarketListing[] = [
+export interface TrainingSeed {
+  id: string;
+  host: string;
+  title: string;
+  description: string;
+  skills: string[];
+  level: 'Beginner' | 'Intermediate' | 'Advanced' | 'All levels';
+  format: 'Virtual' | 'In-person' | 'Hybrid';
+  location: string;
+  /** Offset from seed time, so the demo always has upcoming sessions. */
+  inDays: number;
+  startTime: string;
+  durationMins: number;
+  seatsTotal: number;
+  attendees: string[];
+}
+
+export const INITIAL_TRAINING_SESSIONS: TrainingSeed[] = [
   {
-    id: 201,
-    listingType: 'Sell',
-    title: '2022 MacBook Pro 14" (M1 Pro, 32GB RAM, 1TB SSD) — Space Gray',
-    price: 1350,
-    currency: '€',
-    category: 'Electronics',
-    condition: 'Used - Excellent',
-    location: 'Sindelfingen campus Bldg 30 / Reception',
-    time: '3 hours ago',
-    timestamp: Date.now() - 10800000,
-    seller: 'Felix Weber',
-    sellerRole: 'Security Engineer',
-    initials: 'FW',
-    description: `Selling my personal developer laptop due to home office upgrade. Pristine condition, 94% battery health, zero dead pixels or scratches. Includes original 96W MagSafe charger and leather sleeve. Available for immediate handover at campus reception.`,
-    specs: {
-      'Chipset': 'Apple M1 Pro 10-core CPU',
-      'Memory': '32 GB Unified RAM',
-      'Storage': '1 TB NVMe SSD',
-      'Battery Health': '94% (148 cycles)'
-    },
-    contacted: false,
-    bookmarked: false
+    id: 'trn_terraform',
+    host: 'Rohit Chinagudi',
+    title: 'Terraform Modules That Survive a Second Team',
+    description:
+      'A hands-on walkthrough of how we structure reusable Terraform modules across MBRDI: versioning, remote state layout, and the review checklist we use before a module is shared org-wide. Bring a laptop — we refactor a real module together in the last 20 minutes.',
+    skills: ['Terraform', 'AWS', 'Infrastructure as Code', 'CI/CD'],
+    level: 'Intermediate',
+    format: 'Hybrid',
+    location: 'MBRDI Whitefield · Room 4.12 + Teams',
+    inDays: 4,
+    startTime: '02:00 PM',
+    durationMins: 90,
+    seatsTotal: 24,
+    attendees: ['Rakesh Kumar', 'Ishana Kumar', 'Upasana Ghosh', 'Pawan Hegde']
   },
   {
-    id: 202,
-    listingType: 'Sell',
-    title: 'Herman Miller Aeron Chair (Size B, Fully Loaded, PostureFit SL)',
-    price: 680,
-    currency: '€',
-    category: 'Furniture & Home',
-    condition: 'Used - Excellent',
-    location: 'Stuttgart Möhringen Hub',
-    time: '5 hours ago',
-    timestamp: Date.now() - 18000000,
-    seller: 'Swati Bansal',
-    sellerRole: 'UX / UI Designer',
-    initials: 'CW',
-    description: `Selling my ergonomic Herman Miller Aeron Remastered chair in Mineral/Satin colorway. Forward tilt, tilt limiter, fully adjustable 3D armrests. Kept in a smoke-free, pet-free home office. Can bring to campus trunk handover.`,
-    specs: {
-      'Size': 'Size B (Medium)',
-      'Lumbar Support': 'PostureFit SL',
-      'Armrests': '3D Multi-adjustable',
-      'Wheels': 'Hard floor quiet casters'
-    },
-    contacted: false,
-    bookmarked: true
+    id: 'trn_kafka',
+    host: 'Sangeeta Bhaskaran',
+    title: 'Tuning Kafka for Connected-Vehicle Telemetry',
+    description:
+      'Why our broker latency spikes at fleet scale and what actually fixes it. Covers partition sizing, consumer-group rebalancing, heap configuration and the three dashboards worth alerting on.',
+    skills: ['Kafka', 'Distributed Systems', 'Performance Tuning'],
+    level: 'Advanced',
+    format: 'Virtual',
+    location: 'Microsoft Teams',
+    inDays: 7,
+    startTime: '11:00 AM',
+    durationMins: 60,
+    seatsTotal: 40,
+    attendees: ['Rohit Chinagudi', 'Amith Kashyap', 'Sunil Naik']
   },
   {
-    id: 203,
-    listingType: 'Ticket / Event',
-    title: '2x VIP Pass — Stuttgart Jazz Open Festival (Friday Headliner Night)',
-    price: 140,
-    currency: '€',
-    category: 'Tickets & Events',
-    condition: 'N/A',
-    location: 'Schlossplatz Stuttgart / Digital Transfer',
-    time: '1 day ago',
-    timestamp: Date.now() - 86400000,
-    seller: 'Markus Vogel',
-    sellerRole: 'Lead Perception Engineer',
-    initials: 'MV',
-    description: `I have two official VIP terrace tickets for the Jazz Open festival in Schlossplatz this coming Friday evening. Face value is €110 each, offering at €70 each to colleagues because of an overlapping business trip. Instant digital transfer via internal corporate email.`,
-    specs: {
-      'Event Date': 'Friday, 19:30 CET',
-      'Seat Tier': 'Grandstand A - Row 4',
-      'Ticket Count': '2 Digital E-Tickets'
-    },
-    eventDate: 'This Friday, 19:30',
-    ticketQuantity: 2,
-    contacted: false,
-    bookmarked: false
+    id: 'trn_hil',
+    host: 'Sunil Naik',
+    title: 'HiL Bench Basics for Software Engineers',
+    description:
+      'A gentle introduction to hardware-in-the-loop testing for people who have only ever run things in CI. What the rig does, how to read a failing trace, and how to book bench time without blocking the validation team.',
+    skills: ['HiL Testing', 'dSPACE', 'Validation', 'AUTOSAR'],
+    level: 'Beginner',
+    format: 'In-person',
+    location: 'MBRDI Whitefield · Validation Lab',
+    inDays: 11,
+    startTime: '10:00 AM',
+    durationMins: 120,
+    seatsTotal: 12,
+    attendees: ['Raghav Singh', 'Soumya Mehta']
   },
   {
-    id: 204,
-    listingType: 'Give Away (Free)',
-    title: 'Heavy Duty Standing Desk Converter + Dual Monitor Arm (FREE giveaway)',
-    price: 0,
-    currency: '€',
-    isFree: true,
-    category: 'Giveaways & Free',
-    condition: 'Used',
-    location: 'Untertürkheim R&D / Tech Wing Parking',
-    time: '1 day ago',
-    timestamp: Date.now() - 95000000,
-    seller: 'Sven Becker',
-    sellerRole: 'Systems Engineer',
-    initials: 'SB',
-    description: `Moving apartments and giving away a sturdy pneumatic standing desk converter that sits on top of any standard office table. Accommodates dual 27" screens. Free to any colleague who can pick it up this week!`,
-    specs: {
-      'Price': 'Free Giveaway (€0)',
-      'Weight Capacity': '18 kg',
-      'Pickup': 'Untertürkheim R&D Bldg 12'
-    },
-    contacted: false,
-    bookmarked: false
+    id: 'trn_llm',
+    host: 'Upasana Ghosh',
+    title: 'Practical Retrieval-Augmented Generation on Internal Docs',
+    description:
+      'Building a RAG pipeline against Mercedes-internal documentation: chunking strategies that respect engineering docs, embedding choices, evaluation without a labelled set, and the failure modes we hit in the first pilot.',
+    skills: ['Python', 'Machine Learning', 'LLM', 'Data Engineering'],
+    level: 'Intermediate',
+    format: 'Virtual',
+    location: 'Microsoft Teams',
+    inDays: 14,
+    startTime: '04:00 PM',
+    durationMins: 75,
+    seatsTotal: 50,
+    attendees: ['Rohit Chinagudi', 'Ishana Kumar', 'Rashmi Puttaswamachary', 'Aman Yadav', 'Shital Honde']
   },
   {
-    id: 205,
-    listingType: 'Sell',
-    title: '2023 Canyon Commuter 7 E-Bike — Gates Carbon Belt, Size L',
-    price: 1650,
-    currency: '€',
-    category: 'Vehicles',
-    condition: 'Like New',
-    location: 'Böblingen Hub / Campus Bike Station',
-    time: '2 days ago',
-    timestamp: Date.now() - 172800000,
-    seller: 'Dr. Sarah Lin',
-    sellerRole: 'AI Research Lead',
-    initials: 'SL',
-    description: `Pristine condition urban commuter with silent Gates Carbon belt drive, Shimano internal hub, integrated Supernova LED lighting, and Fazua motor. Only 850 km logged. Test rides welcome at the Böblingen campus test track.`,
-    specs: {
-      'Motor': 'Fazua Ride 50 StreetDrive (55 Nm)',
-      'Battery': '252 Wh integrated removable',
-      'Drivetrain': 'Gates CDX Belt + Shimano Alfine 11',
-      'Weight': '16.2 kg'
-    },
-    contacted: false,
-    bookmarked: false
+    id: 'trn_k8s',
+    host: 'Amith Kashyap',
+    title: 'Kubernetes Debugging: From CrashLoopBackOff to Root Cause',
+    description:
+      'A live-debugging session. We break a cluster on purpose four times and work through each failure with nothing but kubectl and logs — no dashboards allowed.',
+    skills: ['Kubernetes', 'Docker', 'Observability', 'Linux'],
+    level: 'Intermediate',
+    format: 'Hybrid',
+    location: 'MBRDI Bangalore · Auditorium B + Teams',
+    inDays: 18,
+    startTime: '03:30 PM',
+    durationMins: 90,
+    seatsTotal: 60,
+    attendees: ['Pawan Hegde', 'Avinash Koppal']
+  },
+  {
+    id: 'trn_functional_safety',
+    host: 'Ishana Kumar',
+    title: 'ISO 26262 for the Impatient: ASIL Decomposition in Practice',
+    description:
+      'What ASIL decomposition actually means when you are the one writing the safety case, using a real fuel-cell HARA as the running example.',
+    skills: ['ISO 26262', 'Functional Safety', 'HARA', 'Systems Engineering'],
+    level: 'Advanced',
+    format: 'In-person',
+    location: 'MBRDI Whitefield · Room 2.03',
+    inDays: -9,
+    startTime: '02:00 PM',
+    durationMins: 120,
+    seatsTotal: 20,
+    attendees: ['Sunil Naik', 'Sangeeta Bhaskaran', 'Rakesh Kumar']
   }
 ];
+
 
 export const INITIAL_COMMUNITIES: CommunityGroup[] = [
   {
@@ -2405,5 +2398,4 @@ export const INITIAL_COMMUNITY_POSTS: CommunityPost[] = [
 ];
 
 export const INITIAL_COMMUNITY_GROUPS = INITIAL_COMMUNITIES;
-export const INITIAL_LISTINGS = INITIAL_MARKETPLACE_LISTINGS;
 

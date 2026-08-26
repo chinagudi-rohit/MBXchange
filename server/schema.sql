@@ -143,26 +143,37 @@ CREATE TABLE IF NOT EXISTS bandwidth_offers (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE TABLE IF NOT EXISTS listings (
+-- Knowledge sharing: a colleague offers a lecture / training at a set time,
+-- and others register to attend it.
+CREATE TABLE IF NOT EXISTS training_sessions (
   id TEXT PRIMARY KEY,
-  listing_type TEXT NOT NULL DEFAULT 'Sell',
+  host_id TEXT NOT NULL REFERENCES users(id),
   title TEXT NOT NULL,
-  price NUMERIC NOT NULL DEFAULT 0,
-  currency TEXT NOT NULL DEFAULT '₹',
-  is_free BOOLEAN NOT NULL DEFAULT FALSE,
-  category TEXT NOT NULL DEFAULT 'Other',
-  condition TEXT NOT NULL DEFAULT '',
-  location TEXT NOT NULL DEFAULT '',
-  seller_id TEXT REFERENCES users(id),
-  seller_name TEXT NOT NULL DEFAULT '',
-  seller_role TEXT NOT NULL DEFAULT '',
-  seller_initials TEXT NOT NULL DEFAULT '',
   description TEXT NOT NULL DEFAULT '',
-  specs JSONB NOT NULL DEFAULT '{}',
-  sold BOOLEAN NOT NULL DEFAULT FALSE,
-  event_date TEXT,
-  ticket_quantity INTEGER,
+  -- What the session teaches, matched against the same skill catalogue the
+  -- rest of the app uses so it can answer a capability gap.
+  skills JSONB NOT NULL DEFAULT '[]',
+  level TEXT NOT NULL DEFAULT 'All levels' CHECK (level IN ('Beginner','Intermediate','Advanced','All levels')),
+  format TEXT NOT NULL DEFAULT 'Virtual' CHECK (format IN ('Virtual','In-person','Hybrid')),
+  location TEXT NOT NULL DEFAULT '',
+  session_date DATE NOT NULL,
+  start_time TEXT NOT NULL DEFAULT '',
+  duration_mins INTEGER NOT NULL DEFAULT 60,
+  seats_total INTEGER NOT NULL DEFAULT 25,
+  status TEXT NOT NULL DEFAULT 'scheduled' CHECK (status IN ('scheduled','completed','cancelled')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS training_registrations (
+  id TEXT PRIMARY KEY,
+  session_id TEXT NOT NULL REFERENCES training_sessions(id) ON DELETE CASCADE,
+  attendee_id TEXT NOT NULL REFERENCES users(id),
+  -- Registration is open (no host gate); a full session waitlists instead of
+  -- refusing, and cancellations promote the next person in line.
+  status TEXT NOT NULL DEFAULT 'registered' CHECK (status IN ('registered','waitlisted')),
+  attended BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (session_id, attendee_id)
 );
 
 CREATE TABLE IF NOT EXISTS community_groups (
@@ -296,7 +307,7 @@ CREATE TABLE IF NOT EXISTS notification_clears (
 
 CREATE TABLE IF NOT EXISTS saved_items (
   user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  item_type TEXT NOT NULL CHECK (item_type IN ('work','listing','community','carpool')),
+  item_type TEXT NOT NULL CHECK (item_type IN ('work','training','community','carpool')),
   item_id TEXT NOT NULL,
   PRIMARY KEY (user_id, item_type, item_id)
 );

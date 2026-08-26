@@ -143,7 +143,14 @@ export async function applyMigrations(): Promise<void> {
     `ALTER TABLE carpool_bookings ADD CONSTRAINT carpool_bookings_status_check CHECK (status IN ('pending','approved','rejected'))`,
     // Lets a message point at the record it concerns, so a booking request
     // can carry inline approve/reject actions in the thread itself.
-    `ALTER TABLE messages ADD COLUMN IF NOT EXISTS context_id TEXT`
+    `ALTER TABLE messages ADD COLUMN IF NOT EXISTS context_id TEXT`,
+    // The marketplace is gone; knowledge-sharing sessions replace it. Saved
+    // items must accept 'training' and stop accepting 'listing', and any
+    // saved listings are dropped along with the table they pointed at.
+    `DELETE FROM saved_items WHERE item_type = 'listing'`,
+    `ALTER TABLE saved_items DROP CONSTRAINT IF EXISTS saved_items_item_type_check`,
+    `ALTER TABLE saved_items ADD CONSTRAINT saved_items_item_type_check CHECK (item_type IN ('work','training','community','carpool'))`,
+    `DROP TABLE IF EXISTS listings`
   ];
   for (const sql of migrations) {
     await q(sql);
