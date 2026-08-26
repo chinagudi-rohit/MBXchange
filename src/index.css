@@ -19,7 +19,7 @@
   /* Overlay surfaces (modals, drawers) — opaque: nothing behind them may
      compete with the text they carry. */
   --surface-overlay: #ffffff;
-  --surface-2: rgba(21, 101, 192, 0.06);
+  --surface-2: rgba(23, 109, 208, 0.06);
   /* Borders must clear 3:1 against the card they sit on */
   /* Decorative hairline. Anything that carries meaning uses line-strong. */
   --line: #cbd2dc;
@@ -27,30 +27,30 @@
   --line-strong: #929dac;
   --ink: #1b2736;
   --ink-2: #4d5a66;
-  --ink-3: #626d7a;   /* 5.1:1 on the page ground; 4.23 before */
+  --ink-3: #626d7a;   /* 4.96:1 on the page ground */
 
   /* --primary is the brand fill (buttons, active nav). --primary-text is the
      darkened variant for primary-coloured TEXT, which needs more contrast
      than a fill does to carry 12–14px copy. */
-  --primary: #176dd0;      /* white text: 5.75:1 */
+  --primary: #176dd0;      /* white text: 5.08:1 */
   --primary-strong: #1157ae;
-  --primary-text: #135caa; /* on page: 7.0:1 */
-  --primary-soft: rgba(21, 101, 192, 0.12);
+  --primary-text: #135caa; /* on page: 6.3:1 */
+  --primary-soft: rgba(23, 109, 208, 0.12);
   --on-primary: #ffffff;
 
   --accent-green: #128166;
-  --accent-green-soft: rgba(16, 113, 90, 0.12);
+  --accent-green-soft: rgba(18, 129, 102, 0.12);
   --accent-amber: #9a650d;
-  --accent-amber-soft: rgba(160, 106, 18, 0.14);
+  --accent-amber-soft: rgba(154, 101, 13, 0.14);
   --accent-red: #c22921;
   --on-red: #ffffff;
-  --accent-red-soft: rgba(179, 38, 30, 0.10);
+  --accent-red-soft: rgba(194, 41, 33, 0.10);
   /* Info sits in teal rather than blue so it stays legible as a *status*
      next to a blue primary. */
   --accent-blue: #107a9c;
-  --accent-blue-soft: rgba(14, 109, 140, 0.12);
+  --accent-blue-soft: rgba(16, 122, 156, 0.12);
   --accent-violet: #6758c8;
-  --accent-violet-soft: rgba(91, 75, 196, 0.12);
+  --accent-violet-soft: rgba(103, 88, 200, 0.12);
 
   --glass-border: rgba(255, 255, 255, 0.70);
   --shadow-card: 0 2px 16px -4px rgba(18, 32, 51, 0.10), 0 0 0 1px var(--glass-border), inset 0 1px 0 rgba(255,255,255,0.8);
