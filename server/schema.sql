@@ -80,11 +80,16 @@ CREATE TABLE IF NOT EXISTS applications (
   manager_id TEXT REFERENCES users(id),
   note TEXT NOT NULL DEFAULT '',
   commitment TEXT NOT NULL DEFAULT '',
-  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('awaiting_registration','pending','approved','rejected','withdrawn')),
+  -- Two decisions in sequence: the post's own author first (pending_author),
+  -- then the applicant's manager (pending_manager). awaiting_registration is
+  -- reached only from pending_manager, when the author has already said yes
+  -- but the applicant has no registered manager to hand off to yet.
+  status TEXT NOT NULL DEFAULT 'pending_author' CHECK (status IN ('pending_author','pending_manager','awaiting_registration','approved','rejected','withdrawn')),
   ai_recommendation TEXT NOT NULL DEFAULT '',
   ai_reason TEXT NOT NULL DEFAULT '',
   manager_notes TEXT NOT NULL DEFAULT '',
   edited_at TIMESTAMPTZ,
+  author_decided_at TIMESTAMPTZ,
   decided_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   UNIQUE (post_id, applicant_id)
@@ -112,12 +117,20 @@ CREATE TABLE IF NOT EXISTS collab_requests (
   id TEXT PRIMARY KEY,
   requester_id TEXT NOT NULL REFERENCES users(id),
   target_id TEXT NOT NULL REFERENCES users(id),
+  -- Set once the target accepts, to whichever manager owns the second
+  -- decision (the target's manager). NULL until then, and stays NULL
+  -- forever for a target with no manager — accepting skips straight to
+  -- accepted in that case, there is nobody to hand off to.
+  manager_id TEXT REFERENCES users(id),
   task_title TEXT NOT NULL,
   estimated_hours TEXT NOT NULL DEFAULT '',
   dates TEXT NOT NULL DEFAULT '',
   notes TEXT NOT NULL DEFAULT '',
-  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','accepted','declined','completed','withdrawn')),
+  -- pending: waiting on the target. pending_manager: target said yes,
+  -- waiting on the target's manager. accepted/declined are final either way.
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','pending_manager','accepted','declined','completed','withdrawn')),
   edited_at TIMESTAMPTZ,
+  target_decided_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

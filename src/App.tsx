@@ -124,8 +124,12 @@ function Shell() {
     { id: 'insights', label: 'Insights', icon: <BarChart3 className="w-4.5 h-4.5" />, show: true },
     { id: 'beyond', label: 'Beyond Work', icon: <Compass className="w-4.5 h-4.5" />, show: true },
     {
+      // Any employee can post a requirement and needs to see who applied to
+      // it, so this is no longer manager/admin-only — the server scopes what
+      // actually shows up (your own posts, and your reports' if you manage
+      // any) rather than the nav gating it.
       id: 'manager', label: 'Approvals', icon: <ShieldCheck className="w-4.5 h-4.5" />,
-      badge: s.counts.pendingApprovals, show: s.user.systemRole === 'manager' || s.user.systemRole === 'admin'
+      badge: s.counts.pendingApprovals, show: true
     },
     { id: 'admin', label: 'Admin Console', icon: <Settings2 className="w-4.5 h-4.5" />, show: s.user.systemRole === 'admin' }
   ];

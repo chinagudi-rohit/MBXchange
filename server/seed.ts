@@ -236,17 +236,23 @@ export async function seedIfEmpty(): Promise<void> {
       applicantSkills: applicant.primary_skills || [],
       postTags: post ? (post.tags || []) : []
     });
+    // The fixture demonstrates the manager-decision stage specifically (that
+    // is what the tuned CAPACITY_OVERRIDES are for), so these start as if
+    // the post's author had already said yes — pending_manager, not
+    // pending_author — with manager_id already resolved to the applicant's
+    // real manager.
     const status = a.status === 'Approved' || a.status === 'Approved with Conditions' ? 'approved'
-      : a.status === 'Rejected' ? 'rejected' : 'pending';
+      : a.status === 'Rejected' ? 'rejected' : 'pending_manager';
     await q(
       `INSERT INTO applications (id, post_id, group_id, applicant_id, submitted_by, manager_id, note,
-        commitment, status, ai_recommendation, ai_reason, manager_notes, decided_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
+        commitment, status, ai_recommendation, ai_reason, manager_notes, author_decided_at, decided_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
       [
         a.id, post ? String(a.opportunityId) : '101', a.id, a.employeeId, a.employeeId, a.managerId,
         `Current project: ${a.currentProject}. Period: ${a.period}.`,
         a.requestedCommitment, status, rec.verdict, rec.reason, a.managerNotes || '',
-        status === 'pending' ? null : decidedAt(i)
+        decidedAt(i),
+        status === 'pending_manager' ? null : decidedAt(i)
       ]
     );
   }

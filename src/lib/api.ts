@@ -125,7 +125,10 @@ export interface Application {
   managerId: string | null;
   note: string;
   commitment: string;
-  status: 'awaiting_registration' | 'pending' | 'approved' | 'rejected' | 'withdrawn';
+  status: 'pending_author' | 'pending_manager' | 'awaiting_registration' | 'approved' | 'rejected' | 'withdrawn';
+  /** Only present on rows returned by GET /approvals. */
+  kind?: 'application';
+  stage?: 'author' | 'manager';
   aiRecommendation: string;
   aiReason: string;
   managerNotes: string;
@@ -151,12 +154,14 @@ export interface CollabRequest {
   id: string;
   requester_id: string;
   target_id: string;
+  manager_id: string | null;
   task_title: string;
   estimated_hours: string;
   dates: string;
   notes: string;
-  status: string;
+  status: 'pending' | 'pending_manager' | 'accepted' | 'declined' | 'completed' | 'withdrawn';
   edited_at: string | null;
+  target_decided_at: string | null;
   created_at: string;
   targetName: string;
   targetInitials: string;
@@ -164,6 +169,48 @@ export interface CollabRequest {
   requesterName: string;
   requesterInitials: string;
   requesterDepartment: string;
+  managerName?: string | null;
+}
+
+/** One row from GET /approvals: an application at either stage, or a
+ *  collaboration request awaiting its target's manager. */
+export interface ApprovalItem {
+  id: string;
+  kind: 'application' | 'collab';
+  stage: 'author' | 'manager';
+  status: string;
+  createdAt: string;
+  // application fields (kind === 'application')
+  applicantId?: string;
+  applicantName?: string;
+  applicantInitials?: string;
+  applicantDepartment?: string;
+  applicantRole?: string;
+  applicantAvailableHours?: number;
+  postTitle?: string;
+  postDepartment?: string;
+  postEffort?: string;
+  commitment?: string;
+  note?: string;
+  editedAt?: string | null;
+  aiRecommendation?: string;
+  aiReason?: string;
+  managerName?: string | null;
+  // collab fields (kind === 'collab')
+  taskTitle?: string;
+  estimatedHours?: string;
+  dates?: string;
+  notes?: string;
+  requesterId?: string;
+  requesterName?: string;
+  requesterInitials?: string;
+  requesterDepartment?: string;
+  requesterRole?: string;
+  targetId?: string;
+  targetName?: string;
+  targetInitials?: string;
+  targetDepartment?: string;
+  targetRole?: string;
 }
 
 export interface Listing {

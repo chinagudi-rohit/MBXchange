@@ -39,7 +39,7 @@ export function HomeDashboard() {
 
   const recommended = recs.items.slice(0, 6);
 
-  const pendingMine = myRequests.filter((r) => ['pending', 'awaiting_registration'].includes(r.status));
+  const pendingMine = myRequests.filter((r) => ['pending_author', 'pending_manager', 'awaiting_registration'].includes(r.status));
   const activeMine = myRequests.filter((r) => r.status === 'approved' && r.postStatus !== 'Completed' && r.postStatus !== 'Cancelled');
   const openCount = s.posts.filter((p) => p.status === 'Open').length;
   const firstName = (s.user?.name || '').replace(/^(Dr\.|Mr\.|Ms\.)\s*/, '').split(' ')[0];

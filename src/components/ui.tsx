@@ -340,6 +340,8 @@ const STATUS_STYLES: Record<string, string> = {
   'Completed': 'bg-green-soft text-green',
   'Cancelled': 'bg-surface-2 text-ink-3',
   'pending': 'bg-amber-soft text-amber',
+  'pending_author': 'bg-amber-soft text-amber',
+  'pending_manager': 'bg-blue-soft text-blue',
   'awaiting_registration': 'bg-violet-soft text-violet',
   'approved': 'bg-green-soft text-green',
   'rejected': 'bg-red-soft text-red',
@@ -352,6 +354,8 @@ const STATUS_STYLES: Record<string, string> = {
 const STATUS_LABELS: Record<string, string> = {
   awaiting_registration: 'Awaiting Registration',
   pending: 'Pending Approval',
+  pending_author: 'Pending Author Approval',
+  pending_manager: 'Pending Manager Approval',
   approved: 'Approved',
   rejected: 'Declined',
   withdrawn: 'Withdrawn',

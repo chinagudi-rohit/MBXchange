@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { q, one, newId } from './db.ts';
 import {
@@ -42,7 +42,7 @@ async function committedHours(applicantId: string, excludeAppId?: string): Promi
        FROM applications a
        JOIN work_posts p ON p.id = a.post_id
       WHERE a.applicant_id = $1
-        AND a.status IN ('pending','approved')
+        AND a.status IN ('pending_author','pending_manager','awaiting_registration','approved')
         AND p.status NOT IN ('Completed','Cancelled')
         AND ($2::text IS NULL OR a.id <> $2)`,
     [applicantId, excludeAppId || null]
@@ -205,6 +205,26 @@ async function recommendFor(applicant: any, post: any, excludeAppId?: string) {
     applicantSkills: applicant.primary_skills ?? applicant.primarySkills ?? [],
     postTags: post.tags || []
   });
+}
+
+/**
+ * Fills in behind every path that can approve an application: once every
+ * seat on an Open post is taken, the post itself moves to In Progress
+ * automatically rather than sitting Open with no room left to apply.
+ * A no-op for posts an admin already moved on manually (In Progress,
+ * Completed, Cancelled) or that still have room.
+ */
+async function advancePostIfFull(postId: string): Promise<void> {
+  const post = await one<{ id: string; status: string; seats: number }>(
+    `SELECT id, status, seats FROM work_posts WHERE id = $1`, [postId]
+  );
+  if (!post || post.status !== 'Open') return;
+  const filled = await one<{ n: string }>(
+    `SELECT COUNT(*)::text AS n FROM applications WHERE post_id = $1 AND status = 'approved'`, [postId]
+  );
+  if (parseInt(filled?.n || '0', 10) >= post.seats) {
+    await q(`UPDATE work_posts SET status = 'In Progress' WHERE id = $1`, [postId]);
+  }
 }
 
 // ============================== AUTH ==============================
@@ -604,7 +624,6 @@ api.post('/work-posts/:id/apply', requireAuth(), async (req, res) => {
 
     const appId = newId('app');
     const needsApproval = post.approval_required;
-    const managerRegistered = !!member.manager_id;
 
     if (!needsApproval) {
       const rec = await recommendFor(member, post);
@@ -616,41 +635,26 @@ api.post('/work-posts/:id/apply', requireAuth(), async (req, res) => {
       if (post.author_id && post.author_id !== memberId) {
         await notify(post.author_id, null, 'help_offer', 'Support Offer Received', `${member.name} offered to support "${post.title.slice(0, 50)}".`, 'work', post.id);
       }
+      await advancePostIfFull(post.id);
       results.push({ userId: memberId, applicationId: appId, status: 'approved' });
       continue;
     }
 
-    if (managerRegistered) {
-      const rec = await recommendFor(member, post);
-      await q(
-        `INSERT INTO applications (id, post_id, group_id, applicant_id, submitted_by, manager_id, note, commitment, status, ai_recommendation, ai_reason)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'pending',$9,$10)`,
-        [appId, post.id, groupId, memberId, user.id, member.manager_id, note, post.effort_hours, rec.verdict, rec.reason]
-      );
-      await notify(member.manager_id, null, 'manager_approval', `Approval Needed: ${member.name}`,
-        `${member.name} requested approval to support "${post.title.slice(0, 60)}" (${post.effort_hours || post.duration}).`, 'manager', appId);
-      results.push({ userId: memberId, applicationId: appId, status: 'pending' });
-    } else {
-      // Manager not registered → application waits; admin gets a registration request
-      await q(
-        `INSERT INTO applications (id, post_id, group_id, applicant_id, submitted_by, manager_id, note, commitment, status)
-         VALUES ($1,$2,$3,$4,$5,NULL,$6,$7,'awaiting_registration')`,
-        [appId, post.id, groupId, memberId, user.id, note, post.effort_hours]
-      );
-      const regId = newId('reg');
-      await q(
-        `INSERT INTO registration_requests (id, requested_by, subject_name, subject_email, subject_kind,
-          subject_role, subject_department, for_user_id, related_application_id, related_post_id, note, status)
-         VALUES ($1,$2,$3,$4,'manager','','',$5,$6,$7,$8,'pending')`,
-        [
-          regId, user.id, `Manager of ${member.name}`, '', memberId, appId, post.id,
-          `${member.name} (${member.department}) applied to "${post.title.slice(0, 60)}" but has no registered manager. Register their manager to route the approval.`
-        ]
-      );
-      await notify(null, 'admin', 'registration_request', `Registration Needed: manager of ${member.name}`,
-        `An application to "${post.title.slice(0, 50)}" is waiting until ${member.name}'s manager is registered.`, 'admin', regId);
-      results.push({ userId: memberId, applicationId: appId, status: 'awaiting_registration' });
+    // First decision always goes to the post's own author — anyone who has
+    // posted a requirement can have applicants, not only managers. The
+    // applicant's manager only enters once the author has said yes (see
+    // POST /approvals/:id/decision), so there is nothing to check about
+    // manager registration here.
+    await q(
+      `INSERT INTO applications (id, post_id, group_id, applicant_id, submitted_by, manager_id, note, commitment, status)
+       VALUES ($1,$2,$3,$4,$5,NULL,$6,$7,'pending_author')`,
+      [appId, post.id, groupId, memberId, user.id, note, post.effort_hours]
+    );
+    if (post.author_id) {
+      await notify(post.author_id, null, 'help_offer', `Application Received: ${member.name}`,
+        `${member.name} applied to support "${post.title.slice(0, 60)}" (${post.effort_hours || post.duration}).`, 'work', appId);
     }
+    results.push({ userId: memberId, applicationId: appId, status: 'pending_author' });
   }
 
   res.status(201).json({ groupId, results });
@@ -686,7 +690,7 @@ api.patch('/applications/:id', requireAuth(), async (req, res) => {
   if (app.applicant_id !== user.id && app.submitted_by !== user.id) {
     return res.status(403).json({ error: 'Not your application' });
   }
-  if (!['pending', 'awaiting_registration'].includes(app.status)) {
+  if (!['pending_author', 'pending_manager', 'awaiting_registration'].includes(app.status)) {
     return res.status(400).json({ error: 'Only pending applications can be edited' });
   }
   const { note, commitment } = req.body || {};
@@ -694,10 +698,17 @@ api.patch('/applications/:id', requireAuth(), async (req, res) => {
     `UPDATE applications SET note = COALESCE($1, note), commitment = COALESCE($2, commitment), edited_at = now() WHERE id = $3`,
     [note ?? null, commitment ?? null, req.params.id]
   );
-  if (app.manager_id) {
+  {
     const applicant = await one(`SELECT name FROM users WHERE id = $1`, [app.applicant_id]);
-    await notify(app.manager_id, null, 'manager_approval', `Request Edited: ${applicant?.name}`,
-      `A pending approval request was edited by the applicant. Review the updated details.`, 'manager', app.id);
+    // Whoever holds the decision right now gets told it changed — the post's
+    // author at the first stage, the applicant's manager at the second.
+    const reviewer = app.status === 'pending_manager' ? app.manager_id
+      : app.status === 'pending_author' ? (await one(`SELECT author_id FROM work_posts WHERE id = $1`, [app.post_id]))?.author_id
+      : null;
+    if (reviewer) {
+      await notify(reviewer, null, 'manager_approval', `Request Edited: ${applicant?.name}`,
+        `A pending approval request was edited by the applicant. Review the updated details.`, 'manager', app.id);
+    }
   }
   const updated = await one(`SELECT ${APP_SELECT} ${APP_JOINS} WHERE a.id = $1`, [req.params.id]);
   res.json({ application: updated });
@@ -710,13 +721,16 @@ api.post('/applications/:id/withdraw', requireAuth(), async (req, res) => {
   if (app.applicant_id !== user.id && app.submitted_by !== user.id) {
     return res.status(403).json({ error: 'Not your application' });
   }
-  if (!['pending', 'awaiting_registration'].includes(app.status)) {
+  if (!['pending_author', 'pending_manager', 'awaiting_registration'].includes(app.status)) {
     return res.status(400).json({ error: 'Only pending applications can be withdrawn' });
   }
   await q(`UPDATE applications SET status = 'withdrawn', decided_at = now() WHERE id = $1`, [req.params.id]);
   await q(`UPDATE registration_requests SET status = 'dismissed' WHERE related_application_id = $1 AND status = 'pending'`, [req.params.id]);
-  if (app.manager_id) {
-    await notify(app.manager_id, null, 'manager_approval', 'Request Withdrawn',
+  const reviewer = app.status === 'pending_manager' ? app.manager_id
+    : app.status === 'pending_author' ? (await one(`SELECT author_id FROM work_posts WHERE id = $1`, [app.post_id]))?.author_id
+    : null;
+  if (reviewer) {
+    await notify(reviewer, null, 'manager_approval', 'Request Withdrawn',
       `${user.name} withdrew a pending approval request.`, 'manager');
   }
   res.json({ ok: true });
@@ -724,15 +738,54 @@ api.post('/applications/:id/withdraw', requireAuth(), async (req, res) => {
 
 // ============================== APPROVALS (manager inbox) ==============================
 
-api.get('/approvals', requireAuth(), requireRole('manager', 'admin'), async (req, res) => {
+/**
+ * Every application in `pending_author` where the caller posted the
+ * requirement, every application in `pending_manager` where the caller is
+ * the applicant's manager, and every collaboration request in
+ * `pending_manager` where the caller is the target's manager — one inbox,
+ * three sources, tagged so the client can render and act on each correctly.
+ * Open to any authenticated user rather than gated to manager/admin: the
+ * first decision on an application belongs to whoever posted it, and that
+ * can be any employee.
+ */
+api.get('/approvals', requireAuth(), async (req, res) => {
   const { user } = req as AuthedRequest;
-  const where = user.systemRole === 'admin' ? '' : `WHERE a.manager_id = $1`;
-  const params = user.systemRole === 'admin' ? [] : [user.id];
-  const { rows } = await q(`SELECT ${APP_SELECT} ${APP_JOINS} ${where} ORDER BY (a.status = 'pending') DESC, a.created_at DESC`, params);
-  res.json({ approvals: rows });
+  const isAdmin = user.systemRole === 'admin';
+
+  const authorWhere = isAdmin ? `WHERE a.status = 'pending_author'` : `WHERE a.status = 'pending_author' AND p.author_id = $1`;
+  const { rows: authorStage } = await q(
+    `SELECT ${APP_SELECT}, 'application' AS kind, 'author' AS stage ${APP_JOINS} ${authorWhere}`,
+    isAdmin ? [] : [user.id]
+  );
+
+  const managerWhere = isAdmin ? `WHERE a.status = 'pending_manager'` : `WHERE a.status = 'pending_manager' AND a.manager_id = $1`;
+  const { rows: managerStage } = await q(
+    `SELECT ${APP_SELECT}, 'application' AS kind, 'manager' AS stage ${APP_JOINS} ${managerWhere}`,
+    isAdmin ? [] : [user.id]
+  );
+
+  const collabWhere = isAdmin ? `WHERE c.status = 'pending_manager'` : `WHERE c.status = 'pending_manager' AND c.manager_id = $1`;
+  const { rows: collabStage } = await q(
+    `SELECT c.id, c.task_title AS "taskTitle", c.estimated_hours AS "estimatedHours", c.dates, c.notes,
+       c.status, c.created_at AS "createdAt",
+       'collab' AS kind, 'manager' AS stage,
+       r.id AS "requesterId", r.name AS "requesterName", r.initials AS "requesterInitials",
+       r.department AS "requesterDepartment", r.role AS "requesterRole",
+       t.id AS "targetId", t.name AS "targetName", t.initials AS "targetInitials",
+       t.department AS "targetDepartment", t.role AS "targetRole"
+     FROM collab_requests c
+     JOIN users r ON r.id = c.requester_id
+     JOIN users t ON t.id = c.target_id
+     ${collabWhere}`,
+    isAdmin ? [] : [user.id]
+  );
+
+  const approvals = [...authorStage, ...managerStage, ...collabStage]
+    .sort((a: any, b: any) => +new Date(b.createdAt) - +new Date(a.createdAt));
+  res.json({ approvals });
 });
 
-api.post('/approvals/:id/decision', requireAuth(), requireRole('manager', 'admin'), async (req, res) => {
+api.post('/approvals/:id/decision', requireAuth(), async (req, res) => {
   const { user } = req as AuthedRequest;
   const { decision, notes = '' } = req.body || {};
   if (!['approved', 'rejected'].includes(decision)) {
@@ -741,34 +794,126 @@ api.post('/approvals/:id/decision', requireAuth(), requireRole('manager', 'admin
   if (decision === 'rejected' && !String(notes).trim()) {
     return res.status(400).json({ error: 'A reason is required to decline a request' });
   }
+
   const app = await one(`SELECT * FROM applications WHERE id = $1`, [req.params.id]);
-  if (!app) return res.status(404).json({ error: 'Approval not found' });
-  if (user.systemRole !== 'admin' && app.manager_id !== user.id) {
-    return res.status(403).json({ error: 'This request is routed to a different manager' });
+  if (app) return decideApplication(app, user, decision, notes, res);
+
+  const cr = await one(`SELECT * FROM collab_requests WHERE id = $1`, [req.params.id]);
+  if (cr) return decideCollabAsManager(cr, user, decision, notes, res);
+
+  return res.status(404).json({ error: 'Approval not found' });
+});
+
+async function decideApplication(app: any, user: AuthedRequest['user'], decision: 'approved' | 'rejected', notes: string, res: Response) {
+  const stage = app.status === 'pending_author' ? 'author' : app.status === 'pending_manager' ? 'manager' : null;
+  if (!stage) return res.status(400).json({ error: 'This request has already been decided' });
+
+  const post = await one(`SELECT id, title, author_id, seats, effort_hours, department, tags, effort_min, effort_max FROM work_posts WHERE id = $1`, [app.post_id]);
+  const isAdmin = user.systemRole === 'admin';
+  const isReviewer = stage === 'author' ? post?.author_id === user.id : app.manager_id === user.id;
+  if (!isAdmin && !isReviewer) {
+    return res.status(403).json({
+      error: stage === 'author' ? 'Only the requirement\'s author can decide this' : 'This request is routed to a different manager'
+    });
   }
-  // Admins can decide any request, which would otherwise include their own.
-  // Platform administration is held by engineers who also apply for work here,
-  // so nobody approves their own capacity regardless of system role.
+  // Admins can decide any request, which would otherwise include their own —
+  // platform administration is held by engineers who also apply for work
+  // here, so nobody approves their own capacity regardless of system role.
   if (app.applicant_id === user.id) {
     return res.status(403).json({ error: 'You cannot decide your own request' });
   }
-  if (app.status !== 'pending') return res.status(400).json({ error: 'This request has already been decided' });
 
-  await q(`UPDATE applications SET status = $1, manager_notes = $2, decided_at = now() WHERE id = $3`, [decision, notes, req.params.id]);
-  const post = await one(`SELECT id, title, author_id, seats FROM work_posts WHERE id = $1`, [app.post_id]);
-  const applicant = await one(`SELECT id, name FROM users WHERE id = $1`, [app.applicant_id]);
-  await audit(user.id, `application_${decision}`, `${applicant?.name} → ${post?.title}`, { applicationId: app.id, notes });
-  await notify(app.applicant_id, null, 'manager_approval',
-    decision === 'approved' ? 'Request Approved ✓' : 'Request Declined',
-    `${user.name} ${decision} your request for "${post?.title?.slice(0, 60)}"${notes ? ` — ${String(notes).slice(0, 80)}` : ''}.`,
+  const applicant = await one(`SELECT * FROM users WHERE id = $1`, [app.applicant_id]);
+
+  if (decision === 'rejected') {
+    await q(`UPDATE applications SET status = 'rejected', manager_notes = $1, decided_at = now() WHERE id = $2`, [notes, app.id]);
+    await audit(user.id, 'application_rejected', `${applicant?.name} → ${post?.title}`, { applicationId: app.id, stage, notes });
+    await notify(app.applicant_id, null, 'manager_approval', 'Request Declined',
+      `${user.name} declined your request for "${post?.title?.slice(0, 60)}"${notes ? ` — ${String(notes).slice(0, 80)}` : ''}.`,
+      'requests', app.id);
+    const updated = await one(`SELECT ${APP_SELECT} ${APP_JOINS} WHERE a.id = $1`, [app.id]);
+    return res.json({ application: updated });
+  }
+
+  if (stage === 'author') {
+    await audit(user.id, 'application_author_approved', `${applicant?.name} → ${post?.title}`, { applicationId: app.id });
+    if (applicant?.manager_id) {
+      const rec = await recommendFor(applicant, post, app.id);
+      await q(
+        `UPDATE applications SET status = 'pending_manager', manager_id = $1, ai_recommendation = $2, ai_reason = $3, author_decided_at = now() WHERE id = $4`,
+        [applicant.manager_id, rec.verdict, rec.reason, app.id]
+      );
+      await notify(applicant.manager_id, null, 'manager_approval', `Approval Needed: ${applicant.name}`,
+        `${applicant.name} requested approval to support "${post.title.slice(0, 60)}" (${post.effort_hours}). The requirement's author has already approved.`,
+        'manager', app.id);
+      await notify(app.applicant_id, null, 'manager_approval', 'Approved by the author — now with your manager',
+        `${user.name} approved your request for "${post.title.slice(0, 60)}". It now needs your manager's sign-off.`, 'requests', app.id);
+    } else {
+      await q(`UPDATE applications SET status = 'awaiting_registration', author_decided_at = now() WHERE id = $1`, [app.id]);
+      const regId = newId('reg');
+      await q(
+        `INSERT INTO registration_requests (id, requested_by, subject_name, subject_email, subject_kind,
+          subject_role, subject_department, for_user_id, related_application_id, related_post_id, note, status)
+         VALUES ($1,$2,$3,$4,'manager','','',$5,$6,$7,$8,'pending')`,
+        [
+          regId, user.id, `Manager of ${applicant.name}`, '', applicant.id, app.id, post.id,
+          `${applicant.name} (${applicant.department}) was approved by the requirement's author but has no registered manager. Register their manager to route the final approval.`
+        ]
+      );
+      await notify(null, 'admin', 'registration_request', `Registration Needed: manager of ${applicant.name}`,
+        `An approved application for "${post.title.slice(0, 50)}" is waiting until ${applicant.name}'s manager is registered.`, 'admin', regId);
+      await notify(app.applicant_id, null, 'manager_approval', 'Approved by the author — waiting on manager registration',
+        `${user.name} approved your request for "${post.title.slice(0, 60)}", but you have no manager registered yet. The admin has been notified.`,
+        'requests', app.id);
+    }
+    const updated = await one(`SELECT ${APP_SELECT} ${APP_JOINS} WHERE a.id = $1`, [app.id]);
+    return res.json({ application: updated });
+  }
+
+  // stage === 'manager' — the final decision.
+  await q(`UPDATE applications SET status = 'approved', manager_notes = $1, decided_at = now() WHERE id = $2`, [notes, app.id]);
+  await audit(user.id, 'application_approved', `${applicant?.name} → ${post?.title}`, { applicationId: app.id, notes });
+  await notify(app.applicant_id, null, 'manager_approval', 'Request Approved ✓',
+    `${user.name} approved your request for "${post?.title?.slice(0, 60)}"${notes ? ` — ${String(notes).slice(0, 80)}` : ''}.`,
     'requests', app.id);
-  if (decision === 'approved' && post?.author_id) {
+  if (post?.author_id) {
     await notify(post.author_id, null, 'help_offer', 'Seat Confirmed',
       `${applicant?.name} was approved to support "${post.title.slice(0, 60)}".`, 'work', post.id);
   }
-  const updated = await one(`SELECT ${APP_SELECT} ${APP_JOINS} WHERE a.id = $1`, [req.params.id]);
-  res.json({ application: updated });
-});
+  await advancePostIfFull(app.post_id);
+  const updated = await one(`SELECT ${APP_SELECT} ${APP_JOINS} WHERE a.id = $1`, [app.id]);
+  return res.json({ application: updated });
+}
+
+async function decideCollabAsManager(cr: any, user: AuthedRequest['user'], decision: 'approved' | 'rejected', notes: string, res: Response) {
+  if (cr.status !== 'pending_manager') return res.status(400).json({ error: 'This request has already been decided' });
+  const isAdmin = user.systemRole === 'admin';
+  if (!isAdmin && cr.manager_id !== user.id) {
+    return res.status(403).json({ error: 'This request is routed to a different manager' });
+  }
+  if (!isAdmin && (cr.requester_id === user.id || cr.target_id === user.id)) {
+    return res.status(403).json({ error: 'You cannot decide your own request' });
+  }
+
+  const [requester, target] = await Promise.all([
+    one(`SELECT name FROM users WHERE id = $1`, [cr.requester_id]),
+    one(`SELECT name FROM users WHERE id = $1`, [cr.target_id])
+  ]);
+  const finalStatus = decision === 'approved' ? 'accepted' : 'declined';
+  await q(`UPDATE collab_requests SET status = $1 WHERE id = $2`, [finalStatus, cr.id]);
+  await audit(user.id, `collab_manager_${decision}`, `${target?.name} → ${requester?.name}: ${cr.task_title}`, { collabRequestId: cr.id, notes });
+
+  const summary = `"${String(cr.task_title).slice(0, 60)}" between ${requester?.name} and ${target?.name}`;
+  const title = decision === 'approved' ? 'Collaboration Approved ✓' : 'Collaboration Declined by Manager';
+  const body = decision === 'approved'
+    ? `${user.name} approved the collaboration ${summary}.`
+    : `${user.name} declined the collaboration ${summary}${notes ? ` — ${String(notes).slice(0, 80)}` : ''}.`;
+  await notify(cr.requester_id, null, 'collab_request', title, body, 'requests', cr.id);
+  await notify(cr.target_id, null, 'collab_request', title, body, 'requests', cr.id);
+
+  const updated = await one(`SELECT * FROM collab_requests WHERE id = $1`, [cr.id]);
+  return res.json({ collabRequest: updated });
+}
 
 // ============================== MY REQUESTS (centralized hub) ==============================
 
@@ -780,15 +925,19 @@ api.get('/requests/mine', requireAuth(), async (req, res) => {
   );
   const { rows: collabSent } = await q(
     `SELECT c.*, t.name AS "targetName", t.initials AS "targetInitials", t.department AS "targetDepartment",
-       r.name AS "requesterName", r.initials AS "requesterInitials", r.department AS "requesterDepartment"
+       r.name AS "requesterName", r.initials AS "requesterInitials", r.department AS "requesterDepartment",
+       m.name AS "managerName"
      FROM collab_requests c JOIN users t ON t.id = c.target_id JOIN users r ON r.id = c.requester_id
+       LEFT JOIN users m ON m.id = c.manager_id
      WHERE c.requester_id = $1 ORDER BY c.created_at DESC`,
     [user.id]
   );
   const { rows: collabReceived } = await q(
     `SELECT c.*, t.name AS "targetName", t.initials AS "targetInitials", t.department AS "targetDepartment",
-       r.name AS "requesterName", r.initials AS "requesterInitials", r.department AS "requesterDepartment"
+       r.name AS "requesterName", r.initials AS "requesterInitials", r.department AS "requesterDepartment",
+       m.name AS "managerName"
      FROM collab_requests c JOIN users t ON t.id = c.target_id JOIN users r ON r.id = c.requester_id
+       LEFT JOIN users m ON m.id = c.manager_id
      WHERE c.target_id = $1 ORDER BY c.created_at DESC`,
     [user.id]
   );
@@ -850,16 +999,41 @@ api.post('/collab-requests/:id/respond', requireAuth(), async (req, res) => {
   const { action } = req.body || {};
   const cr = await one(`SELECT * FROM collab_requests WHERE id = $1`, [req.params.id]);
   if (!cr) return res.status(404).json({ error: 'Request not found' });
+  const isTarget = cr.target_id === user.id;
+  const isRequester = cr.requester_id === user.id;
+
+  // Accepting is the one action with a real branch: it either hands off to
+  // the target's manager for a second decision, or — for a target with no
+  // registered manager — there is nobody to hand off to, so it finalises
+  // immediately, same as it always did.
+  if (action === 'accepted') {
+    if (!isTarget) return res.status(403).json({ error: 'Only the recipient can do this' });
+    if (cr.status !== 'pending') return res.status(400).json({ error: `Cannot accept a ${cr.status} request` });
+    const target = await one(`SELECT name, manager_id FROM users WHERE id = $1`, [cr.target_id]);
+    if (target?.manager_id) {
+      await q(`UPDATE collab_requests SET status = 'pending_manager', manager_id = $1, target_decided_at = now() WHERE id = $2`,
+        [target.manager_id, cr.id]);
+      await notify(target.manager_id, null, 'collab_request', `Approval Needed: ${target.name}`,
+        `${target.name} agreed to help with "${cr.task_title.slice(0, 60)}" — needs your sign-off.`,
+        'manager', cr.id);
+      await notify(cr.requester_id, null, 'collab_request', 'Accepted — pending manager sign-off',
+        `${target.name} agreed to help with "${cr.task_title.slice(0, 60)}". Their manager needs to sign off before it is final.`,
+        'requests', cr.id);
+    } else {
+      await q(`UPDATE collab_requests SET status = 'accepted', target_decided_at = now() WHERE id = $1`, [cr.id]);
+      await notify(cr.requester_id, null, 'collab_request', 'Collaboration accepted',
+        `${target?.name} accepted "${cr.task_title.slice(0, 60)}".`, 'requests', cr.id);
+    }
+    return res.json({ ok: true });
+  }
+
   const allowed: Record<string, { who: string; from: string[] }> = {
-    accepted: { who: 'target', from: ['pending'] },
     declined: { who: 'target', from: ['pending'] },
     completed: { who: 'either', from: ['accepted'] },
-    withdrawn: { who: 'requester', from: ['pending'] }
+    withdrawn: { who: 'requester', from: ['pending', 'pending_manager'] }
   };
   const rule = allowed[action];
   if (!rule) return res.status(400).json({ error: 'Invalid action' });
-  const isTarget = cr.target_id === user.id;
-  const isRequester = cr.requester_id === user.id;
   if (rule.who === 'target' && !isTarget) return res.status(403).json({ error: 'Only the recipient can do this' });
   if (rule.who === 'requester' && !isRequester) return res.status(403).json({ error: 'Only the requester can do this' });
   if (rule.who === 'either' && !isTarget && !isRequester) return res.status(403).json({ error: 'Not your request' });
@@ -868,6 +1042,10 @@ api.post('/collab-requests/:id/respond', requireAuth(), async (req, res) => {
   const other = isTarget ? cr.requester_id : cr.target_id;
   await notify(other, null, 'collab_request', `Collaboration ${action}`,
     `${user.name} marked "${cr.task_title.slice(0, 60)}" as ${action}.`, 'requests', cr.id);
+  if (action === 'withdrawn' && cr.manager_id) {
+    await notify(cr.manager_id, null, 'collab_request', 'Request Withdrawn',
+      `${user.name} withdrew a collaboration request awaiting your sign-off.`, 'manager');
+  }
   res.json({ ok: true });
 });
 
@@ -1310,7 +1488,7 @@ api.post('/admin/registration-requests/:id/complete', requireAuth(), requireReal
         effort_min: app.effort_min, effort_max: app.effort_max, effort_hours: app.effort_hours
       }, app.id);
       await q(
-        `UPDATE applications SET manager_id = $1, status = 'pending', ai_recommendation = $2, ai_reason = $3 WHERE id = $4`,
+        `UPDATE applications SET manager_id = $1, status = 'pending_manager', ai_recommendation = $2, ai_reason = $3 WHERE id = $4`,
         [newUserId, rec.verdict, rec.reason, app.id]
       );
       await notify(newUserId, null, 'manager_approval', `Approval Needed: ${applicant.name}`,
@@ -1329,8 +1507,8 @@ api.post('/admin/registration-requests/:id/complete', requireAuth(), requireReal
       if (managerId) {
         const rec = await recommendFor(applicant, post);
         await q(
-          `INSERT INTO applications (id, post_id, group_id, applicant_id, submitted_by, manager_id, note, commitment, status, ai_recommendation, ai_reason)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'pending',$9,$10)`,
+          `INSERT INTO applications (id, post_id, group_id, applicant_id, submitted_by, manager_id, note, commitment, status, ai_recommendation, ai_reason, author_decided_at)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'pending_manager',$9,$10, now())`,
           [appId, post.id, newId('grp'), newUserId, reg.requested_by, managerId, `Included via nomination by request ${reg.id}`, post.effort_hours, rec.verdict, rec.reason]
         );
         await notify(managerId, null, 'manager_approval', `Approval Needed: ${name}`,
@@ -1683,7 +1861,7 @@ api.get('/admin/overview', requireAuth(), requireRole('manager', 'admin'), async
   const stats = {
     users: await counts(`SELECT COUNT(*)::text AS n FROM users WHERE status = 'active'`),
     openPosts: await counts(`SELECT COUNT(*)::text AS n FROM work_posts WHERE status = 'Open'`),
-    pendingApprovals: await counts(`SELECT COUNT(*)::text AS n FROM applications WHERE status = 'pending'`),
+    pendingApprovals: await counts(`SELECT COUNT(*)::text AS n FROM applications WHERE status IN ('pending_author','pending_manager')`),
     awaitingRegistration: await counts(`SELECT COUNT(*)::text AS n FROM registration_requests WHERE status = 'pending'`),
     approvedThisMonth: await counts(`SELECT COUNT(*)::text AS n FROM applications WHERE status = 'approved'`),
     activeTrips: await counts(`SELECT COUNT(*)::text AS n FROM carpool_trips WHERE status = 'active'`),
@@ -1715,11 +1893,25 @@ api.get('/sync', requireAuth(), async (req, res) => {
   );
   const unreadMessages = await one<{ n: string }>(
     `SELECT COUNT(*)::text AS n FROM messages WHERE recipient_id = $1 AND read = FALSE`, [user.id]);
-  const pendingApprovals = user.systemRole === 'employee'
-    ? { n: '0' }
-    : user.systemRole === 'admin'
-      ? await one<{ n: string }>(`SELECT COUNT(*)::text AS n FROM applications WHERE status = 'pending'`)
-      : await one<{ n: string }>(`SELECT COUNT(*)::text AS n FROM applications WHERE status = 'pending' AND manager_id = $1`, [user.id]);
+  // Any employee can have this badge now — the first decision on an
+  // application belongs to whoever posted the requirement, not only to
+  // managers. Admins see every open approval org-wide; everyone else sees
+  // what is actually routed to them: their own posts awaiting a first
+  // decision, applications where they are the applicant's manager, and
+  // collaboration requests awaiting their sign-off as the target's manager.
+  const pendingApprovals = user.systemRole === 'admin'
+    ? await one<{ n: string }>(
+        `SELECT (
+           (SELECT COUNT(*) FROM applications WHERE status IN ('pending_author','pending_manager')) +
+           (SELECT COUNT(*) FROM collab_requests WHERE status = 'pending_manager')
+         )::text AS n`)
+    : await one<{ n: string }>(
+        `SELECT (
+           (SELECT COUNT(*) FROM applications a JOIN work_posts p ON p.id = a.post_id
+             WHERE a.status = 'pending_author' AND p.author_id = $1) +
+           (SELECT COUNT(*) FROM applications WHERE status = 'pending_manager' AND manager_id = $1) +
+           (SELECT COUNT(*) FROM collab_requests WHERE status = 'pending_manager' AND manager_id = $1)
+         )::text AS n`, [user.id]);
   res.json({
     unreadNotifications: parseInt(unreadNotifications?.n || '0', 10),
     unreadMessages: parseInt(unreadMessages?.n || '0', 10),

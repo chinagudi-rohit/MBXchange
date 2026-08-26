@@ -120,7 +120,7 @@ export function MyRequests() {
             ) : (
               <Reveal stagger className="space-y-2.5">
                 {applications.map((a) => {
-                  const canEdit = ['pending', 'awaiting_registration'].includes(a.status);
+                  const canEdit = ['pending_author', 'pending_manager', 'awaiting_registration'].includes(a.status);
                   const forSomeoneElse = a.applicantId !== s.user?.id;
                   return (
                     <Card key={a.id} className="p-4">
@@ -308,12 +308,16 @@ export function MyRequests() {
               ))}
             </Reveal>
           )}
-          {(s.user?.systemRole === 'manager' || s.user?.systemRole === 'admin') && (
-            <Card className="p-4 mt-4 flex items-center justify-between gap-3">
-              <p className="text-xs text-ink-2">Approval requests from your team live in the <b>Approvals</b> inbox.</p>
-              <Button size="sm" variant="soft" onClick={() => s.setTab('manager')}>Open Approvals</Button>
-            </Card>
-          )}
+          {/* Applicants to anything you've posted, requests where you're the
+              applicant's manager, and collaboration requests routed to you as
+              a manager all live in one inbox — not just for managers, since
+              posting a requirement makes anyone the first approver on it. */}
+          <Card className="p-4 mt-4 flex items-center justify-between gap-3">
+            <p className="text-xs text-ink-2">
+              Applications to things you've posted, and anything routed to you as a manager, live in the <b>Approvals</b> inbox.
+            </p>
+            <Button size="sm" variant="soft" onClick={() => s.setTab('manager')}>Open Approvals</Button>
+          </Card>
         </section>
       )}
 

@@ -117,7 +117,20 @@ export async function applyMigrations(): Promise<void> {
     )`,
     `CREATE INDEX IF NOT EXISTS idx_appreciation_to ON appreciations(to_user_id)`,
     `CREATE UNIQUE INDEX IF NOT EXISTS idx_appreciation_unique ON appreciations(application_id, from_user_id)`,
-    `CREATE UNIQUE INDEX IF NOT EXISTS idx_ledger_app_kind ON bandwidth_ledger(application_id, kind)`
+    `CREATE UNIQUE INDEX IF NOT EXISTS idx_ledger_app_kind ON bandwidth_ledger(application_id, kind)`,
+    // Two-stage approval: the post's author decides first, then the
+    // applicant's manager. Widens the status set (drop+recreate the
+    // constraint, since ALTER COLUMN can't add CHECK values in place) and
+    // adds the author's own decision timestamp alongside the existing one.
+    `ALTER TABLE applications DROP CONSTRAINT IF EXISTS applications_status_check`,
+    `ALTER TABLE applications ADD CONSTRAINT applications_status_check CHECK (status IN ('pending_author','pending_manager','awaiting_registration','approved','rejected','withdrawn'))`,
+    `ALTER TABLE applications ADD COLUMN IF NOT EXISTS author_decided_at TIMESTAMPTZ`,
+    // Same shape for collaboration requests: the target decides first, then
+    // the target's manager.
+    `ALTER TABLE collab_requests DROP CONSTRAINT IF EXISTS collab_requests_status_check`,
+    `ALTER TABLE collab_requests ADD CONSTRAINT collab_requests_status_check CHECK (status IN ('pending','pending_manager','accepted','declined','completed','withdrawn'))`,
+    `ALTER TABLE collab_requests ADD COLUMN IF NOT EXISTS manager_id TEXT REFERENCES users(id)`,
+    `ALTER TABLE collab_requests ADD COLUMN IF NOT EXISTS target_decided_at TIMESTAMPTZ`
   ];
   for (const sql of migrations) {
     await q(sql);
