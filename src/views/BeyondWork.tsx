@@ -10,10 +10,6 @@ import {
   Button, Card, Chip, Avatar, Modal, Field, TextInput, TextArea, Select, EmptyState, SaveButton, StatusBadge, SkeletonGrid, Reveal
 } from '../components/ui';
 
-// Decorative header accent; three.js stays lazy so it never blocks first paint.
-const PageArtifact3D = React.lazy(() =>
-  import('../components/PageArtifact3D').then((m) => ({ default: m.PageArtifact3D }))
-);
 
 
 const CATEGORIES = ['All', 'Vehicles', 'Electronics', 'Furniture & Home', 'Sports & Outdoors', 'Tickets & Events', 'Books & Tools', 'Services', 'Giveaways & Free', 'Other'];
@@ -782,10 +778,7 @@ export function BeyondWork() {
 
   return (
     <div className="anim-fade-up">
-      <div className="relative mb-5">
-        <React.Suspense fallback={null}>
-          <PageArtifact3D variant="scatter" className="hidden lg:block absolute -top-12 right-0 w-56 h-40 opacity-50 -z-10" />
-        </React.Suspense>
+      <div className="mb-5">
         <h1 className="text-2xl font-bold tracking-tight text-ink">Beyond Work</h1>
         <p className="text-xs text-ink-2 mt-0.5">
           The colleague-to-colleague space — buy & sell, share rides, and join communities

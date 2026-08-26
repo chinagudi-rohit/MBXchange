@@ -8,10 +8,6 @@ import {
   Button, Card, Chip, Avatar, Modal, Field, TextInput, Select, StatusBadge, EmptyState, RowSkeleton
 } from '../components/ui';
 
-// Decorative header accent; three.js stays lazy so it never blocks first paint.
-const PageArtifact3D = React.lazy(() =>
-  import('../components/PageArtifact3D').then((m) => ({ default: m.PageArtifact3D }))
-);
 
 
 const DEPARTMENTS = ['PT-THIA', 'PT-THIS', 'PT-THIT', 'PT-THID', 'PT-THIE', 'PT-THIM', 'PT-THIP', 'PT-THIG', 'PT-THIC', 'PT-THIF'];
@@ -190,10 +186,7 @@ export function AdminConsole() {
 
   return (
     <div className="anim-fade-up">
-      <div className="relative flex flex-wrap items-end justify-between gap-3 mb-5">
-        <React.Suspense fallback={null}>
-          <PageArtifact3D variant="grid" className="hidden lg:block absolute -top-12 right-0 w-56 h-40 opacity-50 -z-10" />
-        </React.Suspense>
+      <div className="flex flex-wrap items-end justify-between gap-3 mb-5">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-ink">Admin Console</h1>
           <p className="text-xs text-ink-2 mt-0.5">Accounts, registrations, governance and platform insight</p>

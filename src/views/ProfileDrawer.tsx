@@ -4,7 +4,7 @@ import { useStore } from '../lib/store';
 import { api } from '../lib/api';
 import { processImageFile } from '../lib/imageCompressor';
 import { searchSkills, ALL_SKILLS } from '../data/skills';
-import { Drawer, Button, Field, TextInput, Chip, Avatar, Select } from '../components/ui';
+import { Drawer, Button, Field, TextInput, Chip, Avatar } from '../components/ui';
 
 /**
  * Chip-based tag editor with a typeahead over the skill catalogue.
@@ -138,11 +138,7 @@ function TagEditor({ tags, onChange, placeholder, useCatalogue = false, suggesti
 export function ProfileDrawer() {
   const s = useStore();
   const u = s.user;
-  const [availability, setAvailability] = useState({
-    hours: u?.availableHoursWeek || 0,
-    text: u?.typicalAvailability || '',
-    period: (u?.bandwidthPeriod || 'week') as 'week' | 'month'
-  });
+  const [availability, setAvailability] = useState({ hours: u?.availableHoursWeek || 0 });
   const [editingBandwidth, setEditingBandwidth] = useState(false);
   const [photoBusy, setPhotoBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -175,19 +171,14 @@ export function ProfileDrawer() {
 
   if (!u) return null;
 
-  const periodWord = u.bandwidthPeriod === 'month' ? 'month' : 'week';
   const consumed = Number(u.hoursConsumed || 0);
   const remaining = Math.max(0, (u.availableHoursWeek || 0) - consumed);
 
   const saveBandwidth = async () => {
-    await api.patch('/me', {
-      availableHoursWeek: Number(availability.hours),
-      typicalAvailability: availability.text,
-      bandwidthPeriod: availability.period
-    });
+    await api.patch('/me', { availableHoursWeek: Number(availability.hours) });
     await s.refreshMe();
     setEditingBandwidth(false);
-    s.toast('success', 'Bandwidth updated', `Declared availability: ${availability.hours}h per ${availability.period}.`);
+    s.toast('success', 'Bandwidth updated', `Declared availability: ${availability.hours}h per week.`);
   };
 
   const onPickPhoto = async (file?: File) => {
@@ -335,24 +326,9 @@ export function ProfileDrawer() {
           </p>
           {editingBandwidth ? (
             <div className="space-y-3">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Field label="Hours available">
-                  <TextInput type="number" min={0} max={200} value={availability.hours}
-                    onChange={(e) => setAvailability({ ...availability, hours: parseInt(e.target.value) || 0 })} />
-                </Field>
-                <Field label="Per" hint="Pick the period these hours cover">
-                  <Select
-                    value={availability.period}
-                    onChange={(e) => setAvailability({ ...availability, period: e.target.value as 'week' | 'month' })}
-                  >
-                    <option value="week">Week</option>
-                    <option value="month">Month</option>
-                  </Select>
-                </Field>
-              </div>
-              <Field label="Label" hint='Free text shown on your profile, e.g. "Tue–Thu afternoons"'>
-                <TextInput value={availability.text}
-                  onChange={(e) => setAvailability({ ...availability, text: e.target.value })} />
+              <Field label="Hours available per week">
+                <TextInput type="number" min={0} max={168} value={availability.hours}
+                  onChange={(e) => setAvailability({ ...availability, hours: parseInt(e.target.value) || 0 })} />
               </Field>
               <div className="flex gap-2 justify-end">
                 <Button size="sm" variant="secondary" onClick={() => setEditingBandwidth(false)}>Cancel</Button>
@@ -364,8 +340,7 @@ export function ProfileDrawer() {
               <p className="text-xl font-medium text-primary-text">
                 {remaining}h
                 <span className="text-xs font-semibold text-ink-3">
-                  {' '}left of {u.availableHoursWeek}h this {periodWord}
-                  {u.typicalAvailability ? ` · ${u.typicalAvailability}` : ''}
+                  {' '}left of {u.availableHoursWeek}h this week
                 </span>
               </p>
               {consumed > 0 && (
@@ -377,7 +352,7 @@ export function ProfileDrawer() {
                     />
                   </div>
                   <p className="text-xs text-ink-3 mt-1.5">
-                    {consumed}h used by completed engagements this {periodWord}.
+                    {consumed}h used by completed engagements this week.
                   </p>
                 </div>
               )}

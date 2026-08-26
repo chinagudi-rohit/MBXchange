@@ -6,10 +6,6 @@ import {
   Button, Card, StatusBadge, Chip, Avatar, Modal, Field, TextInput, TextArea, EmptyState, RowSkeleton, Reveal
 } from '../components/ui';
 
-// Decorative header accent; three.js stays lazy so it never blocks first paint.
-const PageArtifact3D = React.lazy(() =>
-  import('../components/PageArtifact3D').then((m) => ({ default: m.PageArtifact3D }))
-);
 
 
 export function MyRequests() {
@@ -88,10 +84,7 @@ export function MyRequests() {
 
   return (
     <div className="anim-fade-up">
-      <div className="relative flex flex-wrap items-end justify-between gap-3 mb-5">
-        <React.Suspense fallback={null}>
-          <PageArtifact3D variant="flow" className="hidden lg:block absolute -top-12 right-0 w-56 h-40 opacity-50 -z-10" />
-        </React.Suspense>
+      <div className="flex flex-wrap items-end justify-between gap-3 mb-5">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-ink">My Requests</h1>
           <p className="text-xs text-ink-2 mt-0.5">Everything you've submitted and everything waiting on you — in one place</p>

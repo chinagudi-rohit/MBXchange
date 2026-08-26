@@ -5,10 +5,6 @@ import { TiltCard } from '../components/TiltCard';
 import { api, type User } from '../lib/api';
 import { Button, Card, Chip, Avatar, Modal, Field, TextInput, TextArea, EmptyState, Reveal } from '../components/ui';
 
-// Decorative header accent; three.js stays lazy so it never blocks first paint.
-const PageArtifact3D = React.lazy(() =>
-  import('../components/PageArtifact3D').then((m) => ({ default: m.PageArtifact3D }))
-);
 
 
 const DEPARTMENTS = ['All', 'PT-THIA', 'PT-THIS', 'PT-THIT', 'PT-THID', 'PT-THIE', 'PT-THIM', 'PT-THIP', 'PT-THIG', 'PT-THIC', 'PT-THIF'];
@@ -73,10 +69,7 @@ export function PeopleView() {
 
   return (
     <div className="anim-fade-up">
-      <div className="relative mb-5">
-        <React.Suspense fallback={null}>
-          <PageArtifact3D variant="network" className="hidden lg:block absolute -top-12 right-0 w-56 h-40 opacity-50 -z-10" />
-        </React.Suspense>
+      <div className="mb-5">
         <h1 className="text-2xl font-bold tracking-tight text-ink">People & Skills</h1>
         <p className="text-xs text-ink-2 mt-0.5">Verified colleagues across every department, with the bandwidth they have declared</p>
       </div>
@@ -163,7 +156,7 @@ export function PeopleView() {
               )}
 
               <p className="text-xs text-ink-3 mt-3">
-                Bandwidth: <b className="text-ink-2">{u.availableHoursWeek}h/{u.bandwidthPeriod === 'month' ? 'month' : 'week'}</b>
+                Bandwidth: <b className="text-ink-2">{u.availableHoursWeek}h/week</b>
                 {u.hoursConsumed > 0 && <span className="text-ink-3"> ({Math.max(0, u.availableHoursWeek - u.hoursConsumed)}h free)</span>}
                 {' '}· {u.collaborationsCount} gigs · {u.hoursContributed}h contributed
               </p>

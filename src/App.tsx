@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Home, Briefcase, Users, ListChecks, Compass, ShieldCheck, Settings2, BarChart3,
   Bell, MessageSquare, Bookmark, Sun, Moon, LogOut, KeyRound, ChevronDown, Search,
@@ -51,10 +51,37 @@ function WordMark() {
 
 const TAGLINE = 'Connect · Collaborate · Contribute';
 
+/**
+ * Closes an open dropdown on any click outside it.
+ *
+ * The obvious alternative — a `fixed inset-0` backdrop behind the panel — is
+ * broken here: the header (and most cards) use `backdrop-filter` for the
+ * frosted-glass look, and per the CSS Filter Effects spec `backdrop-filter`
+ * makes an element the containing block for its `position: fixed`
+ * descendants. A backdrop nested inside one only ever covers that ancestor's
+ * own box — for the header that's its 64px strip, not the viewport — so
+ * clicking anywhere in the actual page silently did nothing. A document-level
+ * listener has no such dependency on which ancestor happens to blur its
+ * background.
+ */
+function useOutsideClick(open: boolean, onClose: () => void) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open, onClose]);
+  return ref;
+}
+
 function Shell() {
   const s = useStore();
   const [searchOpen, setSearchOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useOutsideClick(userMenuOpen, () => setUserMenuOpen(false));
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [createMenuOpen, setCreateMenuOpen] = useState(false);
 
@@ -88,19 +115,19 @@ function Shell() {
   // Impersonating admins are exempt — they are not the account's owner.
   if (s.user.mustChangePassword && !s.impersonating) return <ForcePasswordChange />;
 
-  const navItems: Array<{ id: MainTab; label: string; hint: string; icon: React.ReactNode; badge?: number; show: boolean }> = [
-    { id: 'home', label: 'Home', hint: 'Matches, activity & quick actions', icon: <Home className="w-4.5 h-4.5" />, show: true },
-    { id: 'work', label: 'Opportunities', hint: 'Projects & PoCs beyond your day job', icon: <Briefcase className="w-4.5 h-4.5" />, show: true },
-    { id: 'people', label: 'People & Skills', hint: 'Skill directory & collaboration', icon: <Users className="w-4.5 h-4.5" />, show: true },
-    { id: 'requests', label: 'My Requests', hint: 'Everything you sent and received', icon: <ListChecks className="w-4.5 h-4.5" />, show: true },
-    { id: 'achievements', label: 'Achievements', hint: 'Tier, milestones & recognition', icon: <Award className="w-4.5 h-4.5" />, show: true },
-    { id: 'insights', label: 'Insights', hint: 'Skill heatmap & org analytics', icon: <BarChart3 className="w-4.5 h-4.5" />, show: true },
-    { id: 'beyond', label: 'Beyond Work', hint: 'Marketplace, carpool & communities', icon: <Compass className="w-4.5 h-4.5" />, show: true },
+  const navItems: Array<{ id: MainTab; label: string; icon: React.ReactNode; badge?: number; show: boolean }> = [
+    { id: 'home', label: 'Home', icon: <Home className="w-4.5 h-4.5" />, show: true },
+    { id: 'work', label: 'Opportunities', icon: <Briefcase className="w-4.5 h-4.5" />, show: true },
+    { id: 'people', label: 'People & Skills', icon: <Users className="w-4.5 h-4.5" />, show: true },
+    { id: 'requests', label: 'My Requests', icon: <ListChecks className="w-4.5 h-4.5" />, show: true },
+    { id: 'achievements', label: 'Achievements', icon: <Award className="w-4.5 h-4.5" />, show: true },
+    { id: 'insights', label: 'Insights', icon: <BarChart3 className="w-4.5 h-4.5" />, show: true },
+    { id: 'beyond', label: 'Beyond Work', icon: <Compass className="w-4.5 h-4.5" />, show: true },
     {
-      id: 'manager', label: 'Approvals', hint: 'Capacity-checked team requests', icon: <ShieldCheck className="w-4.5 h-4.5" />,
+      id: 'manager', label: 'Approvals', icon: <ShieldCheck className="w-4.5 h-4.5" />,
       badge: s.counts.pendingApprovals, show: s.user.systemRole === 'manager' || s.user.systemRole === 'admin'
     },
-    { id: 'admin', label: 'Admin Console', hint: 'Accounts, registrations & audit', icon: <Settings2 className="w-4.5 h-4.5" />, show: s.user.systemRole === 'admin' }
+    { id: 'admin', label: 'Admin Console', icon: <Settings2 className="w-4.5 h-4.5" />, show: s.user.systemRole === 'admin' }
   ];
 
   // Five slots is the most that stays tappable on a 375px screen, so the tab bar
@@ -121,8 +148,10 @@ function Shell() {
    * Post / Request — the platform's primary action, so it sits at the top of
    * the navigation on every surface rather than only on the home page.
    */
-  const CreateMenu = ({ onNavigate, mini = false }: { onNavigate?: () => void; mini?: boolean }) => (
-    <div className="relative">
+  const CreateMenu = ({ onNavigate, mini = false }: { onNavigate?: () => void; mini?: boolean }) => {
+    const menuRef = useOutsideClick(createMenuOpen, () => setCreateMenuOpen(false));
+    return (
+    <div className="relative" ref={menuRef}>
       <button
         onClick={() => setCreateMenuOpen((v) => !v)}
         aria-expanded={createMenuOpen}
@@ -139,8 +168,6 @@ function Shell() {
       </button>
 
       {createMenuOpen && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={() => setCreateMenuOpen(false)} />
           <div
             role="menu"
             className={`absolute z-50 mt-2 w-64 panel-overlay rounded-2xl shadow-pop p-1.5 anim-pop-in ${
@@ -184,10 +211,10 @@ function Shell() {
               </button>
             ))}
           </div>
-        </>
       )}
     </div>
-  );
+    );
+  };
 
   const NavLinks = ({ onNavigate, mini = false }: { onNavigate?: () => void; mini?: boolean }) => (
     <nav className="flex flex-col gap-1" aria-label="Primary">
@@ -216,14 +243,7 @@ function Shell() {
               <span className="absolute left-1 top-2.5 bottom-2.5 w-1 rounded-full bg-primary" />
             )}
             <span className="shrink-0">{n.icon}</span>
-            {!mini && (
-              <span className="flex-1 min-w-0 text-left">
-                <span className="block truncate">{n.label}</span>
-                <span className={`block text-xs font-medium truncate mt-0.5 ${active ? 'text-primary-text/70' : 'text-ink-3'}`}>
-                  {n.hint}
-                </span>
-              </span>
-            )}
+            {!mini && <span className="flex-1 min-w-0 text-left truncate">{n.label}</span>}
             {!!n.badge && (
               mini ? (
                 <span className="absolute -top-0.5 -right-0.5 min-w-4.5 h-4.5 px-1 rounded-full bg-red text-on-red text-xs font-semibold flex items-center justify-center ring-2 ring-(--surface-solid)">
@@ -362,7 +382,7 @@ function Shell() {
               )}
             </button>
 
-            <div className="relative ml-1">
+            <div className="relative ml-1" ref={userMenuRef}>
               <button
                 onClick={() => setUserMenuOpen((v) => !v)}
                 className="flex items-center gap-1.5 p-1 pr-2 rounded-2xl hover:bg-surface-2 transition-colors"
@@ -372,9 +392,7 @@ function Shell() {
                 <ChevronDown className="w-3.5 h-3.5 text-ink-3" />
               </button>
               {userMenuOpen && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} />
-                  <div className="absolute right-0 top-full mt-2 z-50 w-60 panel-overlay rounded-2xl shadow-pop p-2 anim-pop-in">
+                <div className="absolute right-0 top-full mt-2 z-50 w-60 panel-overlay rounded-2xl shadow-pop p-2 anim-pop-in">
                     <div className="px-3 py-2.5 border-b border-line mb-1">
                       <p className="text-sm font-normal text-ink truncate">{s.user.name}</p>
                       <p className="text-xs text-ink-2 truncate">{s.user.role} · {s.user.department}</p>
@@ -398,8 +416,7 @@ function Shell() {
                     >
                       <LogOut className="w-4 h-4" /> Sign Out
                     </button>
-                  </div>
-                </>
+                </div>
               )}
             </div>
           </div>
@@ -431,8 +448,7 @@ function Shell() {
           ) : (
             <div className="mt-5 mx-1 p-3.5 rounded-2xl bg-surface-2">
               <p className="text-xs font-medium text-ink-2 mb-1">Weekly bandwidth</p>
-              <p className="text-xl font-semibold text-ink">{s.user.availableHoursWeek}h</p>
-              <p className="text-xs text-ink-3">{s.user.typicalAvailability || 'declared availability'}</p>
+              <p className="text-xl font-semibold text-ink">{s.user.availableHoursWeek}h<span className="text-xs font-medium text-ink-3">/week</span></p>
               <button
                 onClick={() => s.setProfileOpen(true)}
                 className="mt-2 text-xs font-medium text-ink-2 hover:text-ink hover:underline underline-offset-2"

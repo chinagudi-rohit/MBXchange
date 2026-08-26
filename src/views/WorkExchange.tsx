@@ -11,10 +11,6 @@ import {
   Button, Modal, Field, TextInput, TextArea, Select, StatusBadge, UrgencyBadge, Chip, Avatar, SaveButton, EmptyState, Card, SeatsIndicator, Reveal, SkeletonGrid
 } from '../components/ui';
 
-// Decorative header accent; three.js stays lazy so it never blocks first paint.
-const PageArtifact3D = React.lazy(() =>
-  import('../components/PageArtifact3D').then((m) => ({ default: m.PageArtifact3D }))
-);
 
 
 const DEPARTMENTS = ['PT-THIA', 'PT-THIS', 'PT-THIT', 'PT-THID', 'PT-THIE', 'PT-THIM', 'PT-THIP', 'PT-THIG', 'PT-THIC', 'PT-THIF'];
@@ -187,7 +183,7 @@ function ApplyModal({ open, onClose, post }: { open: boolean; onClose: () => voi
   return (
     <Modal
       open={open} onClose={onClose}
-      title="Apply to help"
+      title="Collaborate"
       subtitle={`${post.title.slice(0, 70)} · ${openSeats} of ${post.seats} seats open`}
       footer={
         <>
@@ -217,7 +213,7 @@ function ApplyModal({ open, onClose, post }: { open: boolean; onClose: () => voi
         <div className="flex items-center justify-between gap-3 p-3.5 rounded-xl bg-surface-2 text-xs">
           <span className="text-ink-2">Your remaining capacity</span>
           <span className="font-semibold text-ink">
-            {s.user?.availableHoursWeek ?? 0}h / {s.user?.bandwidthPeriod === 'month' ? 'month' : 'week'}
+            {s.user?.availableHoursWeek ?? 0}h / week
             <span className="text-ink-3 font-medium"> · this asks for {post.effortHours || post.duration || '—'}</span>
           </span>
         </div>
@@ -321,7 +317,7 @@ function WorkDetail({ postId, onBack }: { postId: string; onBack: () => void }) 
             <StatusBadge status={myApp.status} />
           ) : post.status === 'Open' && openSeats > 0 ? (
             <Button onClick={() => setApplyOpen(true)}>
-              <Send className="w-3.5 h-3.5" /> Apply to help
+              <Send className="w-3.5 h-3.5" /> Collaborate
             </Button>
           ) : (
             <span className="text-xs font-semibold text-ink-3">
@@ -492,10 +488,7 @@ export function WorkExchange() {
 
   return (
     <div className="anim-fade-up">
-      <div className="relative flex flex-wrap items-end justify-between gap-3 mb-5">
-        <React.Suspense fallback={null}>
-          <PageArtifact3D variant="orbit" className="hidden lg:block absolute -top-12 right-0 w-56 h-40 opacity-50 -z-10" />
-        </React.Suspense>
+      <div className="flex flex-wrap items-end justify-between gap-3 mb-5">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-ink">Opportunities</h1>
           <p className="text-xs text-ink-2 mt-0.5">Projects and proofs of concept you can take on alongside your day-to-day work</p>
