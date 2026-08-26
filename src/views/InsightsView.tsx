@@ -2,6 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { TrendingUp, TrendingDown, Minus, Lightbulb, Building2, Flame } from 'lucide-react';
 import { useStore } from '../lib/store';
 import { api } from '../lib/api';
+
+// three.js is ~150KB gzipped and only two views ever draw with it, so it is
+// split out of the initial bundle rather than paid for on first page load.
+const SkillGlobe3D = React.lazy(() =>
+  import('../components/SkillGlobe3D').then((m) => ({ default: m.SkillGlobe3D }))
+);
 import {
   Card, Chip, Button, EmptyState, RowSkeleton, Reveal
 } from '../components/ui';
@@ -114,6 +120,12 @@ export function InsightsView() {
           </div>
         </Card>
       )}
+
+      {/* The same heatmap the table below breaks down, read at a glance:
+          one node per capability, sized by demand and lit when experts are short. */}
+      <React.Suspense fallback={<div className="panel rounded-2xl shadow-card h-96 mb-6" />}>
+        <SkillGlobe3D skills={heatmap} className="mb-6" onSelectSkill={() => setFilter('gaps')} />
+      </React.Suspense>
 
       {/* Heatmap */}
       <section>

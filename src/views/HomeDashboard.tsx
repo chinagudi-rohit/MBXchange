@@ -13,6 +13,12 @@ import { ActivityTelemetry } from './ActivityTelemetry';
 import { TiltCard } from '../components/TiltCard';
 import { MatchBadge } from '../components/Match';
 
+// Decorative only, and three.js is heavy — loaded after the dashboard paints
+// rather than blocking it.
+const Hero3DCanvas = React.lazy(() =>
+  import('../components/Hero3DCanvas').then((m) => ({ default: m.Hero3DCanvas }))
+);
+
 export function HomeDashboard() {
   const s = useStore();
   const [myRequests, setMyRequests] = useState<any[]>([]);
@@ -76,7 +82,12 @@ export function HomeDashboard() {
 
   return (
     <div className="anim-fade-up space-y-14">
-      <div className="flex flex-wrap items-end justify-between gap-3">
+      <div className="relative flex flex-wrap items-end justify-between gap-3">
+        {/* Decorative only — sits behind the greeting, hidden on small screens
+            where it would crowd the text rather than frame it. */}
+        <React.Suspense fallback={null}>
+          <Hero3DCanvas className="hidden lg:block absolute -top-16 right-0 w-72 h-52 opacity-60 -z-10" />
+        </React.Suspense>
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-ink">Welcome back, {firstName}</h1>
           <p className="text-sm text-ink-2 mt-1">
