@@ -7,7 +7,7 @@ import { TagEditor } from '../components/TagEditor';
 import { api, type Training } from '../lib/api';
 import {
   Button, Card, Chip, Avatar, Modal, Field, TextInput, TextArea, Select,
-  SearchField, EmptyState, SaveButton, SkeletonGrid, Reveal
+  SearchField, FilterBar, FilterSelect, EmptyState, SaveButton, SkeletonGrid, Reveal
 } from '../components/ui';
 
 const LEVELS = ['All levels', 'Beginner', 'Intermediate', 'Advanced'] as const;
@@ -161,22 +161,24 @@ export function LearningView() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 mb-4">
-        <div className="sm:col-span-2">
+      <FilterBar
+        search={
           <SearchField
             value={query} onChange={(e) => setQuery(e.target.value)}
             placeholder="Search sessions, topics or hosts…"
           />
-        </div>
-        <Select value={level} onChange={(e) => setLevel(e.target.value)} aria-label="Filter by level">
+        }
+        sticky={false}
+      >
+        <FilterSelect value={level} onChange={(e) => setLevel(e.target.value)} aria-label="Filter by level">
           <option value="All">Any level</option>
           {LEVELS.map((l) => <option key={l}>{l}</option>)}
-        </Select>
-        <Select value={format} onChange={(e) => setFormat(e.target.value)} aria-label="Filter by format">
+        </FilterSelect>
+        <FilterSelect value={format} onChange={(e) => setFormat(e.target.value)} aria-label="Filter by format">
           <option value="All">Any format</option>
           {FORMATS.map((f) => <option key={f}>{f}</option>)}
-        </Select>
-      </div>
+        </FilterSelect>
+      </FilterBar>
 
       {filtered.length === 0 ? (
         <EmptyState

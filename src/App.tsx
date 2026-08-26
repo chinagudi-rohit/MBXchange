@@ -489,7 +489,11 @@ function Shell() {
 
         {/* Main content — fluid: fills the viewport at any width, no side gutters.
             Extra bottom padding below lg clears the fixed mobile tab bar. */}
-        <main className="flex-1 min-w-0 w-full px-4 sm:px-6 lg:px-10 2xl:px-12 py-8 sm:py-10 pb-28 lg:pb-10">
+        {/* The content column is capped and centred. Unbounded, the grid
+            stretched to whatever monitor it landed on — 100+ character line
+            lengths and four-column rows so far apart the cards stopped
+            reading as a set. */}
+        <main className="flex-1 min-w-0 w-full max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-10 2xl:px-12 py-8 sm:py-10 pb-28 lg:pb-10">
           {s.tab === 'home' && <HomeDashboard />}
           {s.tab === 'work' && <WorkExchange />}
           {s.tab === 'people' && <PeopleView />}

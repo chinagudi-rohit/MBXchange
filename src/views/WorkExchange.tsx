@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import {
   Plus, ArrowLeft, MapPin, Clock, Send, UserPlus, Trash2, Pencil, Zap, MessageSquare,
-  AlertCircle, CalendarDays, ShieldCheck
+  AlertCircle, ShieldCheck
 } from 'lucide-react';
 import { useStore } from '../lib/store';
 import { TiltCard } from '../components/TiltCard';
@@ -9,7 +9,7 @@ import { TagEditor } from '../components/TagEditor';
 import { MatchBadge, MatchBreakdown } from '../components/Match';
 import { api, timeAgo, type WorkPost, type User } from '../lib/api';
 import {
-  Button, Modal, Field, TextInput, TextArea, Select, SearchField, StatusBadge, UrgencyBadge, Chip, Avatar, SaveButton, EmptyState, Card, SeatsIndicator, Reveal, SkeletonGrid
+  Button, Modal, Field, TextInput, TextArea, Select, SearchField, FilterBar, FilterSelect, StatusBadge, UrgencyBadge, Chip, Avatar, SaveButton, EmptyState, Card, SeatsIndicator, Reveal, SkeletonGrid
 } from '../components/ui';
 
 
@@ -97,10 +97,10 @@ export function WorkFormModal({ open, onClose, existing }: {
             {URGENCIES.map((u) => <option key={u}>{u}</option>)}
           </Select>
         </Field>
-        <Field label="Duration" hint="e.g. 2 days">
-          <TextInput value={form.duration} onChange={(e) => setForm({ ...form, duration: e.target.value })} placeholder="2 days" />
-        </Field>
-        <Field label="Total Effort to Complete" hint="Total hours for the whole engagement, not a weekly rate — e.g. 8–12 hours total. Checked against the applicant's declared weekly bandwidth.">
+        <Field
+          label="Total effort to complete"
+          hint="Hours for the whole piece of work, start to finish — not a weekly rate."
+        >
           <TextInput value={form.effortHours} onChange={(e) => setForm({ ...form, effortHours: e.target.value })} placeholder="8–12 hours total" />
         </Field>
         <Field label="Location">
@@ -211,7 +211,7 @@ function ApplyModal({ open, onClose, post }: { open: boolean; onClose: () => voi
           <span className="text-ink-2">Your remaining capacity</span>
           <span className="font-semibold text-ink">
             {s.user?.availableHoursWeek ?? 0}h / week
-            <span className="text-ink-3 font-medium"> · this asks for {post.effortHours || post.duration || '—'}</span>
+            <span className="text-ink-3 font-medium"> · this asks for {post.effortHours || '—'} in total</span>
           </span>
         </div>
 
@@ -280,7 +280,7 @@ function WorkDetail({ postId, onBack }: { postId: string; onBack: () => void }) 
             </div>
             <h1 className="text-xl font-semibold text-ink leading-snug">{post.title}</h1>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-xs text-ink-2">
-              <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {post.duration || '—'} · {post.effortHours || 'effort TBD'}</span>
+              <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {post.effortHours || 'effort TBD'} total</span>
               <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {post.location}</span>
             </div>
           </div>
@@ -516,41 +516,43 @@ export function WorkExchange() {
 
       {section === 'requirements' ? (
         <>
-          <div className="sticky-bar -mx-1 px-3 py-3 mb-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-2.5">
+          <FilterBar
+            search={
               <SearchField
                 placeholder="Search title, tag, author…"
                 value={query} onChange={(e) => setQuery(e.target.value)}
-                className="xl:col-span-2"
               />
-              <Select value={dept} onChange={(e) => setDept(e.target.value)} aria-label="Filter by department">
-                <option value="All">All departments</option>
-                {DEPARTMENTS.map((d) => <option key={d}>{d}</option>)}
-              </Select>
-              <Select value={status} onChange={(e) => setStatus(e.target.value)} aria-label="Filter by status">
-                <option value="All">Any status</option>
-                {STATUSES.map((st) => <option key={st}>{st}</option>)}
-              </Select>
-              <Select value={urgency} onChange={(e) => setUrgency(e.target.value)} aria-label="Filter by urgency">
-                <option value="All">Any urgency</option>
-                {URGENCIES.map((u) => <option key={u}>{u}</option>)}
-              </Select>
-              <Select value={skill} onChange={(e) => setSkill(e.target.value)} aria-label="Filter by skill">
-                <option value="All">Any skill</option>
-                {skillOptions.map((t) => <option key={t}>{t}</option>)}
-              </Select>
-              <Select value={sort} onChange={(e) => setSort(e.target.value as typeof sort)} aria-label="Sort results">
-                <option value="match">Best match first</option>
-                <option value="newest">Newest first</option>
-                <option value="urgency">Most urgent first</option>
-                <option value="seats">Most seats open</option>
-              </Select>
-            </div>
-            <p className="text-xs text-ink-3 mt-2.5">
-              Showing <b className="text-ink-2">{filtered.length}</b> of {s.posts.length}
-              {sort === 'match' && ' · ranked against your declared skills and remaining bandwidth'}
-            </p>
-          </div>
+            }
+            footer={
+              <>
+                Showing <b className="text-ink-2">{filtered.length}</b> of {s.posts.length}
+                {sort === 'match' && ' · ranked against your declared skills and the bandwidth you have offered'}
+              </>
+            }
+          >
+            <FilterSelect value={dept} onChange={(e) => setDept(e.target.value)} aria-label="Filter by department">
+              <option value="All">All departments</option>
+              {DEPARTMENTS.map((d) => <option key={d}>{d}</option>)}
+            </FilterSelect>
+            <FilterSelect value={status} onChange={(e) => setStatus(e.target.value)} aria-label="Filter by status">
+              <option value="All">Any status</option>
+              {STATUSES.map((st) => <option key={st}>{st}</option>)}
+            </FilterSelect>
+            <FilterSelect value={urgency} onChange={(e) => setUrgency(e.target.value)} aria-label="Filter by urgency">
+              <option value="All">Any urgency</option>
+              {URGENCIES.map((u) => <option key={u}>{u}</option>)}
+            </FilterSelect>
+            <FilterSelect value={skill} onChange={(e) => setSkill(e.target.value)} aria-label="Filter by skill">
+              <option value="All">Any skill</option>
+              {skillOptions.map((t) => <option key={t}>{t}</option>)}
+            </FilterSelect>
+            <FilterSelect value={sort} onChange={(e) => setSort(e.target.value as typeof sort)} aria-label="Sort results">
+              <option value="match">Best match first</option>
+              <option value="newest">Newest first</option>
+              <option value="urgency">Most urgent first</option>
+              <option value="seats">Most seats open</option>
+            </FilterSelect>
+          </FilterBar>
 
           {filtered.length === 0 ? (
             <EmptyState
@@ -588,10 +590,9 @@ export function WorkExchange() {
                       <p className="text-xs text-ink-2 mt-2 line-clamp-3 leading-relaxed">{p.description}</p>
 
                       {/* Key facts, always in the same place so rows scan vertically */}
-                      <dl className="grid grid-cols-2 sm:grid-cols-4 gap-x-3 gap-y-2.5 mt-4">
+                      <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-3 gap-y-2.5 mt-4">
                         {[
-                          { icon: <Clock className="w-3 h-3" />, label: 'Effort', value: p.effortHours || '—' },
-                          { icon: <CalendarDays className="w-3 h-3" />, label: 'Duration', value: p.duration || '—' },
+                          { icon: <Clock className="w-3 h-3" />, label: 'Total effort', value: p.effortHours || '—' },
                           { icon: <MapPin className="w-3 h-3" />, label: 'Location', value: p.location || '—' },
                           {
                             icon: <ShieldCheck className="w-3 h-3" />, label: 'Approval',

@@ -3,7 +3,7 @@ import { MessageSquare, Handshake, Award, X, Star } from 'lucide-react';
 import { useStore } from '../lib/store';
 import { TiltCard } from '../components/TiltCard';
 import { api, type User } from '../lib/api';
-import { Button, Card, Chip, Avatar, Modal, Field, TextInput, TextArea, Select, SearchField, EmptyState, Reveal } from '../components/ui';
+import { Button, Card, Chip, Avatar, Modal, Field, TextInput, TextArea, Select, SearchField, FilterBar, FilterSelect, EmptyState, Reveal } from '../components/ui';
 
 
 
@@ -74,27 +74,24 @@ export function PeopleView() {
         <p className="text-xs text-ink-2 mt-0.5">Verified colleagues across every department, with the bandwidth they have declared</p>
       </div>
 
-      <div className="sticky-bar -mx-1 px-1 py-2.5 mb-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2.5 max-w-4xl">
-          <SearchField placeholder="Search by name, skill, or role…" value={query} onChange={(e) => setQuery(e.target.value)} />
-          <Select value={dept} onChange={(e) => setDept(e.target.value)} aria-label="Filter by department">
-            <option value="All">All departments</option>
-            {DEPARTMENTS.filter((d) => d !== 'All').map((d) => <option key={d}>{d}</option>)}
-          </Select>
-          <Select value={skill} onChange={(e) => setSkill(e.target.value)} aria-label="Filter by skill">
-            <option value="All">Any skill</option>
-            {skillOptions.map((sk) => <option key={sk}>{sk}</option>)}
-          </Select>
-          <Select value={sort} onChange={(e) => setSort(e.target.value as typeof sort)} aria-label="Sort colleagues">
-            <option value="contribution">Highest rated</option>
-            <option value="availability">Most bandwidth free</option>
-            <option value="name">Name A–Z</option>
-          </Select>
-        </div>
-        <p className="text-xs text-ink-3 mt-2 px-1">
-          Showing <b className="text-ink-2">{people.length}</b> of {s.users.length - 1} colleagues
-        </p>
-      </div>
+      <FilterBar
+        search={<SearchField placeholder="Search by name, skill, or role…" value={query} onChange={(e) => setQuery(e.target.value)} />}
+        footer={<>Showing <b className="text-ink-2">{people.length}</b> of {s.users.length - 1} colleagues</>}
+      >
+        <FilterSelect value={dept} onChange={(e) => setDept(e.target.value)} aria-label="Filter by department">
+          <option value="All">All departments</option>
+          {DEPARTMENTS.filter((d) => d !== 'All').map((d) => <option key={d}>{d}</option>)}
+        </FilterSelect>
+        <FilterSelect value={skill} onChange={(e) => setSkill(e.target.value)} aria-label="Filter by skill">
+          <option value="All">Any skill</option>
+          {skillOptions.map((sk) => <option key={sk}>{sk}</option>)}
+        </FilterSelect>
+        <FilterSelect value={sort} onChange={(e) => setSort(e.target.value as typeof sort)} aria-label="Sort colleagues">
+          <option value="contribution">Most recognised</option>
+          <option value="availability">Most bandwidth offered</option>
+          <option value="name">Name A–Z</option>
+        </FilterSelect>
+      </FilterBar>
 
       {people.length === 0 ? (
         <EmptyState title="No matching colleagues" hint="Try a different search term or department." />

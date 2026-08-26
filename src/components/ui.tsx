@@ -297,6 +297,8 @@ export function Field({ label, required, hint, children }: {
 }
 
 const inputCls = 'w-full px-3.5 py-2.5 rounded-xl panel border border-line-strong text-sm text-ink placeholder:text-ink-3 focus:border-primary focus:outline-none transition-colors';
+/** Filter-row controls are a fixed 44px so search and dropdowns line up. */
+const filterCls = 'w-full h-11 px-3.5 rounded-xl panel border border-line-strong text-sm text-ink focus:border-primary focus:outline-none transition-colors';
 
 export function TextInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
   return <input {...props} className={`${inputCls} ${props.className || ''}`} />;
@@ -308,6 +310,11 @@ export function TextArea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement
 
 export function Select(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
   return <select {...props} className={`${inputCls} ${props.className || ''}`} />;
+}
+
+/** A Select sized for a FilterBar row. */
+export function FilterSelect(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
+  return <select {...props} className={`${filterCls} ${props.className || ''}`} />;
 }
 
 /**
@@ -326,8 +333,42 @@ export function SearchField({ className = '', ...props }: React.InputHTMLAttribu
       <Search className="w-4 h-4 text-primary-text absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
       <input
         {...props}
-        className="w-full pl-10 pr-3.5 py-3 rounded-xl bg-primary-soft/70 border border-primary/20 text-sm text-ink placeholder:text-ink-3 focus:border-primary focus:outline-none focus:bg-surface-solid transition-colors"
+        className="w-full h-11 pl-10 pr-3.5 rounded-xl bg-primary-soft/70 border border-primary/20 text-sm text-ink placeholder:text-ink-3 focus:border-primary focus:outline-none focus:bg-surface-solid transition-colors"
       />
+    </div>
+  );
+}
+
+/**
+ * The filter row every list page shares.
+ *
+ * Each page used to lay its own out — a 6-column grid here, a 4-column one
+ * with `max-w-4xl` there — so the search box was a different width on every
+ * tab. Here the search has one fixed basis everywhere and the dropdowns
+ * split whatever is left evenly, which keeps the row symmetric whether a
+ * page has two filters or four.
+ */
+export function FilterBar({
+  search, children, footer, sticky = true, className = ''
+}: {
+  search?: React.ReactNode;
+  children?: React.ReactNode;
+  /** Result count / context line under the controls. */
+  footer?: React.ReactNode;
+  sticky?: boolean;
+  className?: string;
+}) {
+  return (
+    <div className={`${sticky ? 'sticky-bar -mx-1 px-3 py-3' : ''} mb-5 ${className}`}>
+      <div className="flex flex-wrap items-center gap-2.5">
+        {search && <div className="w-full sm:w-[19.5rem] shrink-0">{search}</div>}
+        {children && (
+          <div className="flex-1 min-w-0 flex flex-wrap gap-2.5 [&>*]:flex-1 [&>*]:min-w-[9.5rem]">
+            {children}
+          </div>
+        )}
+      </div>
+      {footer && <p className="text-xs text-ink-3 mt-2.5">{footer}</p>}
     </div>
   );
 }

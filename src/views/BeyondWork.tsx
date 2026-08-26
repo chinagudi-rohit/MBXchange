@@ -8,7 +8,7 @@ import { TiltCard } from '../components/TiltCard';
 import { TagEditor } from '../components/TagEditor';
 import { api, timeAgo, type CarpoolTrip } from '../lib/api';
 import {
-  Button, Card, Chip, Avatar, Modal, Field, TextInput, TextArea, Select, SearchField, EmptyState, SaveButton, StatusBadge, SkeletonGrid, Reveal
+  Button, Card, Chip, Avatar, Modal, Field, TextInput, TextArea, Select, SearchField, FilterBar, FilterSelect, EmptyState, SaveButton, StatusBadge, SkeletonGrid, Reveal
 } from '../components/ui';
 
 
@@ -145,16 +145,16 @@ function Carpool() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 mb-3">
-        <Select value={campus} onChange={(e) => setCampus(e.target.value)} aria-label="Filter by campus">
+      <FilterBar sticky={false}>
+        <FilterSelect value={campus} onChange={(e) => setCampus(e.target.value)} aria-label="Filter by campus">
           <option value="All">All campuses</option>
           {campuses.map((c) => <option key={c}>{c}</option>)}
-        </Select>
-        <Select value={vehicle} onChange={(e) => setVehicle(e.target.value)} aria-label="Filter by vehicle type">
+        </FilterSelect>
+        <FilterSelect value={vehicle} onChange={(e) => setVehicle(e.target.value)} aria-label="Filter by vehicle type">
           <option value="All">Any vehicle</option>
           {VEHICLE_TYPES.map((v) => <option key={v}>{v}</option>)}
-        </Select>
-      </div>
+        </FilterSelect>
+      </FilterBar>
 
       <p className="text-xs text-ink-3 mb-4">
         Showing <b className="text-ink-2">{filtered.length}</b> of {stats.total} one-way trips
