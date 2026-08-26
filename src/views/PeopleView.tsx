@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Star, MessageSquare, Handshake, Award, X } from 'lucide-react';
+import { MessageSquare, Handshake, Award, X } from 'lucide-react';
 import { useStore } from '../lib/store';
 import { TiltCard } from '../components/TiltCard';
 import { api, type User } from '../lib/api';
@@ -112,7 +112,7 @@ export function PeopleView() {
                   <div className="flex items-center gap-1.5 mt-1">
                     <Chip>{u.department}</Chip>
                     <span className="flex items-center gap-0.5 text-xs font-semibold text-amber">
-                      <Star className="w-3 h-3 fill-current" /> {Number(u.contributionScore).toFixed(2)}
+                      <Award className="w-3 h-3" /> {Number(u.contributionScore)}
                     </span>
                   </div>
                 </div>
@@ -190,7 +190,7 @@ export function PeopleView() {
               <Avatar initials={profile.initials} size="xl" name={profile.name} src={profile.avatarUrl} showPresence online={profile.isOnline} />
               <div className="min-w-0">
                 <p className="flex items-center gap-1.5 text-sm font-semibold text-amber">
-                  <Star className="w-4 h-4 fill-current" /> {Number(profile.contributionScore).toFixed(2)}
+                  <Award className="w-4 h-4" /> {Number(profile.contributionScore)} badge{Number(profile.contributionScore) === 1 ? '' : 's'}
                   <span className="text-xs font-medium text-ink-3">contribution score</span>
                 </p>
                 <p className="text-xs text-ink-2 mt-1">
@@ -222,28 +222,34 @@ export function PeopleView() {
 
             {profile.ratingBreakdown && Object.keys(profile.ratingBreakdown).length > 0 && (
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-ink-3 mb-2.5">Peer ratings</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-ink-3 mb-2.5">Recognition by kind</p>
                 <div className="space-y-2.5">
-                  {[
-                    ['helping', 'Helpfulness'],
-                    ['technicalExpertise', 'Technical expertise'],
-                    ['collaboration', 'Collaboration'],
-                    ['reliability', 'Reliability']
-                  ].map(([key, label]) => {
-                    const v = Number(profile.ratingBreakdown[key] ?? 0);
-                    if (!v) return null;
-                    return (
-                      <div key={key}>
-                        <div className="flex items-center justify-between text-xs mb-1">
-                          <span className="font-medium text-ink-2">{label}</span>
-                          <span className="font-semibold text-ink tabular-nums">{v.toFixed(1)} / 5</span>
+                  {(() => {
+                    const dims = [
+                      ['helping', 'Helping & mentorship'],
+                      ['technicalExpertise', 'Technical expertise'],
+                      ['collaboration', 'Cross-team collaboration'],
+                      ['reliability', 'Reliability & follow-through']
+                    ] as const;
+                    // Bars are scaled to this person's own strongest dimension,
+                    // so the shape shows where they are recognised most.
+                    const peak = Math.max(1, ...dims.map(([k]) => Number(profile.ratingBreakdown[k] ?? 0)));
+                    return dims.map(([key, label]) => {
+                      const v = Number(profile.ratingBreakdown[key] ?? 0);
+                      if (!v) return null;
+                      return (
+                        <div key={key}>
+                          <div className="flex items-center justify-between text-xs mb-1">
+                            <span className="font-medium text-ink-2">{label}</span>
+                            <span className="font-semibold text-ink tabular-nums">{v}</span>
+                          </div>
+                          <div className="h-1.5 rounded-full bg-surface-2 overflow-hidden">
+                            <div className="h-full rounded-full bg-primary transition-all duration-500" style={{ width: `${(v / peak) * 100}%` }} />
+                          </div>
                         </div>
-                        <div className="h-1.5 rounded-full bg-surface-2 overflow-hidden">
-                          <div className="h-full rounded-full bg-primary transition-all duration-500" style={{ width: `${(v / 5) * 100}%` }} />
-                        </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    });
+                  })()}
                 </div>
               </div>
             )}

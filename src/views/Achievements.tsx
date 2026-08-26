@@ -1,10 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { Award, Heart, Sparkles, Send, Trophy } from 'lucide-react';
+import { Award, Heart, Sparkles, Send, Trophy, Check } from 'lucide-react';
 import { useStore } from '../lib/store';
 import { api, timeAgo } from '../lib/api';
 import {
-  Card, Button, Avatar, Modal, Field, TextArea, Select, EmptyState, RowSkeleton, Reveal, Chip
+  Card, Button, Avatar, Modal, Field, TextArea, EmptyState, RowSkeleton, Reveal, Chip
 } from '../components/ui';
+
+interface AwardBadge {
+  id: string; name: string; icon: string; description: string;
+  dimension: 'helping' | 'technicalExpertise' | 'collaboration' | 'reliability';
+}
 
 // The tier solid is the page's single accent — lazy so three.js stays off
 // the critical path.
@@ -19,7 +24,7 @@ interface Milestone {
 }
 
 interface Appreciation {
-  id: string; message: string; rating: number | null; createdAt: string;
+  id: string; message: string; badgeId: string; badge: AwardBadge | null; createdAt: string;
   fromName: string; fromInitials: string; fromRole: string; fromAvatarUrl: string;
   postTitle: string | null; postDepartment?: string | null;
 }
@@ -28,7 +33,7 @@ interface PendingEngagement {
   applicationId: string; applicantId: string; applicantName: string;
   applicantInitials: string; applicantRole: string; applicantDepartment: string;
   applicantAvatarUrl: string; postId: string; postTitle: string;
-  commitment: string; alreadyRecognised: boolean;
+  commitment: string; alreadyRecognised: boolean; awardedBadgeId: string | null;
 }
 
 /**
@@ -42,44 +47,58 @@ export function Achievements() {
   const [received, setReceived] = useState<Appreciation[] | null>(null);
   const [pending, setPending] = useState<PendingEngagement[]>([]);
   const [target, setTarget] = useState<PendingEngagement | null>(null);
-  const [form, setForm] = useState({ message: '', rating: '5' });
+  const [catalogue, setCatalogue] = useState<AwardBadge[]>([]);
+  const [dimensions, setDimensions] = useState<Record<string, string>>({});
+  const [form, setForm] = useState({ message: '', badgeId: '' });
   const [busy, setBusy] = useState(false);
 
   const load = async () => {
-    const [ms, ap, pe] = await Promise.all([
+    const [ms, ap, pe, bc] = await Promise.all([
       api.get('/milestones'),
       api.get('/appreciations'),
-      api.get('/appreciations/pending')
+      api.get('/appreciations/pending'),
+      api.get('/badges/catalogue')
     ]);
     setMilestones(ms);
     setReceived(ap.appreciations);
     setPending(pe.engagements);
+    setCatalogue(bc.badges);
+    setDimensions(bc.dimensions);
   };
   useEffect(() => { load(); }, []);
 
   const submit = async () => {
     if (!target) return;
-    if (!form.message.trim()) {
-      s.toast('error', 'Say something specific', 'A blank note does not land as recognition.');
+    if (!form.badgeId) {
+      s.toast('error', 'Pick a badge', 'The badge is the recognition — choose the one that fits.');
       return;
     }
     setBusy(true);
     try {
       await api.post('/appreciations', {
         applicationId: target.applicationId,
-        message: form.message,
-        rating: Number(form.rating)
+        badgeId: form.badgeId,
+        message: form.message
       });
-      s.toast('success', 'Recognition sent', `${target.applicantName} has been notified.`);
+      s.toast('success', 'Badge awarded', `${target.applicantName} has been notified.`);
       setTarget(null);
-      setForm({ message: '', rating: '5' });
+      setForm({ message: '', badgeId: '' });
       await Promise.all([load(), s.loadUsers()]);
     } catch (e: any) {
-      s.toast('error', 'Could not send', e.message);
+      s.toast('error', 'Could not award', e.message);
     } finally {
       setBusy(false);
     }
   };
+
+  /** Badges the signed-in user has been awarded, grouped so repeats stack. */
+  const earnedBadges = (received || []).reduce((acc, a) => {
+    if (!a.badge) return acc;
+    const hit = acc.find((x) => x.badge.id === a.badge!.id);
+    if (hit) hit.count += 1;
+    else acc.push({ badge: a.badge, count: 1 });
+    return acc;
+  }, [] as Array<{ badge: AwardBadge; count: number }>).sort((a, b) => b.count - a.count);
 
   if (!milestones || received === null) return <RowSkeleton count={6} />;
 
@@ -109,7 +128,7 @@ export function Achievements() {
                 {toRecognise.length} {toRecognise.length === 1 ? 'person is' : 'people are'} waiting to be recognised
               </p>
               <p className="text-xs text-ink-2 mt-0.5 leading-relaxed">
-                Their work is finished. A specific sentence about what they did is worth more than a rating on its own.
+                Their work is finished. Award a badge that names what they actually did well.
               </p>
               <div className="space-y-2 mt-3.5">
                 {toRecognise.slice(0, 5).map((p) => (
@@ -122,7 +141,7 @@ export function Achievements() {
                       </div>
                     </div>
                     <Button size="sm" className="shrink-0" onClick={() => setTarget(p)}>
-                      <Sparkles className="w-3.5 h-3.5" /> Recognise
+                      <Sparkles className="w-3.5 h-3.5" /> Award badge
                     </Button>
                   </div>
                 ))}
@@ -155,7 +174,7 @@ export function Achievements() {
           { label: 'Hours given', value: `${milestones.totals.hours}h` },
           { label: 'Engagements', value: milestones.totals.gigs },
           { label: 'Departments reached', value: milestones.totals.departments },
-          { label: 'Recognitions', value: milestones.totals.recognitions }
+          { label: 'Badges earned', value: milestones.totals.recognitions }
         ].map((k) => (
           <Card key={k.label} className="p-5">
             <p className="text-xs font-semibold uppercase tracking-wide text-ink-3">{k.label}</p>
@@ -198,13 +217,40 @@ export function Achievements() {
         </Reveal>
       </section>
 
-      {/* Recognition received */}
+      {/* Badge collection — repeats stack, so three "Unblocker" awards read as
+          a strength rather than as three separate rows. */}
+      {earnedBadges.length > 0 && (
+        <section>
+          <h2 className="text-sm font-semibold text-ink mb-3 flex items-center gap-1.5">
+            <Award className="w-4 h-4 text-amber" /> Badges earned ({received.length})
+          </h2>
+          <Reveal stagger className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+            {earnedBadges.map(({ badge, count }) => (
+              <Card key={badge.id} className="p-4 h-full flex items-start gap-3">
+                <span className="w-10 h-10 rounded-2xl bg-amber-soft flex items-center justify-center text-lg shrink-0" aria-hidden="true">
+                  {badge.icon}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-semibold text-ink flex items-center gap-1.5">
+                    {badge.name}
+                    {count > 1 && <Chip tone="primary">×{count}</Chip>}
+                  </p>
+                  <p className="text-xs text-ink-3 mt-0.5 leading-relaxed">{badge.description}</p>
+                  <p className="text-xs text-ink-3 mt-1">{dimensions[badge.dimension]}</p>
+                </div>
+              </Card>
+            ))}
+          </Reveal>
+        </section>
+      )}
+
+      {/* Who awarded what, most recent first */}
       <section>
         <h2 className="text-sm font-semibold text-ink mb-3">Recognition received ({received.length})</h2>
         {received.length === 0 ? (
           <EmptyState
             title="No recognition yet"
-            hint="Complete an engagement and the person you helped can recognise the work."
+            hint="Complete an engagement and the person you helped can award you a badge for it."
           />
         ) : (
           <Reveal stagger className="space-y-2.5">
@@ -213,15 +259,17 @@ export function Achievements() {
                 <div className="flex items-start gap-3">
                   <Avatar initials={a.fromInitials} size="md" name={a.fromName} src={a.fromAvatarUrl} />
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm text-ink leading-relaxed">“{a.message}”</p>
+                    {a.badge && (
+                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-amber-soft text-amber text-xs font-bold mb-1.5">
+                        <span aria-hidden="true">{a.badge.icon}</span> {a.badge.name}
+                      </span>
+                    )}
+                    {a.message && <p className="text-sm text-ink leading-relaxed">“{a.message}”</p>}
                     <p className="text-xs text-ink-3 mt-1.5">
                       <b className="text-ink-2">{a.fromName}</b> · {a.fromRole}
                       {a.postTitle && <> · on {a.postTitle}</>} · {timeAgo(a.createdAt)}
                     </p>
                   </div>
-                  {a.rating != null && (
-                    <span className="text-xs font-semibold text-amber shrink-0 tabular-nums">{a.rating}/5</span>
-                  )}
                 </div>
               </Card>
             ))}
@@ -229,58 +277,70 @@ export function Achievements() {
         )}
       </section>
 
-      {/* Badges */}
-      {(s.user?.badges?.length || 0) > 0 && (
-        <section>
-          <h2 className="text-sm font-semibold text-ink mb-3 flex items-center gap-1.5">
-            <Award className="w-4 h-4 text-amber" /> Badges
-          </h2>
-          <Reveal stagger className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-            {s.user!.badges.map((b) => (
-              <Card key={b.id} className="p-4 h-full flex items-start gap-3">
-                <span className="w-10 h-10 rounded-2xl bg-amber-soft flex items-center justify-center text-lg shrink-0" aria-hidden="true">
-                  {b.icon}
-                </span>
-                <div className="min-w-0">
-                  <p className="text-xs font-semibold text-ink">{b.name}</p>
-                  <p className="text-xs text-ink-3 mt-0.5 leading-relaxed">{b.description}</p>
-                  <p className="text-xs text-ink-3 mt-1">{b.dateEarned}</p>
-                </div>
-              </Card>
-            ))}
-          </Reveal>
-        </section>
-      )}
-
       <Modal
         open={!!target} onClose={() => setTarget(null)}
-        title="Recognise this work"
+        title="Award a badge"
         subtitle={target ? `${target.applicantName} · ${target.postTitle}` : ''}
         footer={
           <>
             <Button variant="secondary" onClick={() => setTarget(null)}>Cancel</Button>
-            <Button onClick={submit} disabled={busy}>
-              <Send className="w-3.5 h-3.5" /> {busy ? 'Sending…' : 'Send recognition'}
+            <Button onClick={submit} disabled={busy || !form.badgeId}>
+              <Send className="w-3.5 h-3.5" /> {busy ? 'Awarding…' : 'Award badge'}
             </Button>
           </>
         }
       >
         <div className="space-y-4">
-          <Field label="What did they do well?" required hint="Specific beats generous — name the thing that made a difference.">
+          <Field label="Which badge fits?" required>
+            {/* Grouped by dimension so the choice is "what kind of good was
+                this?" first, and only then which specific badge. */}
+            <div className="space-y-3.5">
+              {Object.entries(dimensions).map(([dim, label]) => (
+                <div key={dim}>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-ink-3 mb-1.5">{label}</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    {catalogue.filter((b) => b.dimension === dim).map((b) => {
+                      const picked = form.badgeId === b.id;
+                      return (
+                        <button
+                          key={b.id}
+                          type="button"
+                          onClick={() => setForm({ ...form, badgeId: b.id })}
+                          title={b.description}
+                          className={`p-2.5 rounded-xl text-left border transition-all ${
+                            picked
+                              ? 'border-primary bg-primary-soft'
+                              : 'border-line bg-surface-2 hover:border-line-strong'
+                          }`}
+                        >
+                          <span className="flex items-center gap-1.5">
+                            <span className="text-base leading-none" aria-hidden="true">{b.icon}</span>
+                            {picked && <Check className="w-3 h-3 text-primary-text ml-auto" />}
+                          </span>
+                          <span className={`block text-xs font-semibold mt-1.5 ${picked ? 'text-primary-text' : 'text-ink'}`}>
+                            {b.name}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Field>
+
+          {form.badgeId && (
+            <p className="text-xs text-ink-2 bg-surface-2 rounded-xl px-3 py-2.5">
+              {catalogue.find((b) => b.id === form.badgeId)?.description}
+            </p>
+          )}
+
+          <Field label="Add a note (optional)" hint="A specific sentence makes the badge land harder.">
             <TextArea
               value={form.message}
               onChange={(e) => setForm({ ...form, message: e.target.value })}
               placeholder="e.g. Rewrote the Terraform modules in two days and unblocked the whole squad before the sprint review."
             />
-          </Field>
-          <Field label="Rating" hint="Feeds their contribution score in the directory">
-            <Select value={form.rating} onChange={(e) => setForm({ ...form, rating: e.target.value })}>
-              <option value="5">5 — Exceptional</option>
-              <option value="4">4 — Above expectations</option>
-              <option value="3">3 — Solid contribution</option>
-              <option value="2">2 — Some gaps</option>
-              <option value="1">1 — Did not work out</option>
-            </Select>
           </Field>
           <p className="text-xs text-ink-3">
             {target?.applicantName.split(' ')[0]} sees this on their profile and gets a notification. It cannot be edited afterwards.

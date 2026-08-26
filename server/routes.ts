@@ -10,6 +10,7 @@ import {
   computeMatch, remainingBandwidth, type MatchResult
 } from './rules.ts';
 import { SEED_USER_PASSWORD, SEED_ADMIN_PASSWORD } from './seed.ts';
+import { AWARD_BADGES, BADGE_DIMENSIONS, getBadge, isBadgeId, recomputeRecognition } from './badges.ts';
 
 export const api = Router();
 
@@ -1811,12 +1812,9 @@ api.get('/recommendations', requireAuth(), async (req, res) => {
  */
 api.post('/appreciations', requireAuth(), async (req, res) => {
   const { user } = req as AuthedRequest;
-  const { applicationId, message = '', rating } = req.body || {};
+  const { applicationId, badgeId, message = '' } = req.body || {};
   if (!applicationId) return res.status(400).json({ error: 'applicationId is required' });
-  if (!String(message).trim()) return res.status(400).json({ error: 'Write a short note — a blank thank-you says nothing' });
-  if (rating != null && (Number(rating) < 1 || Number(rating) > 5)) {
-    return res.status(400).json({ error: 'Rating must be between 1 and 5' });
-  }
+  if (!isBadgeId(badgeId)) return res.status(400).json({ error: 'Pick a badge to award' });
 
   const app = await one(
     `SELECT a.id, a.applicant_id, a.manager_id, a.status,
@@ -1827,42 +1825,33 @@ api.post('/appreciations', requireAuth(), async (req, res) => {
   );
   if (!app) return res.status(404).json({ error: 'Engagement not found' });
   if (app.status !== 'approved') return res.status(400).json({ error: 'Only approved engagements can be recognised' });
-  if (app.post_status !== 'Completed') return res.status(400).json({ error: 'Recognise the work once the requirement is completed' });
-  if (app.applicant_id === user.id) return res.status(400).json({ error: 'You cannot recognise your own work' });
+  if (app.post_status !== 'Completed') return res.status(400).json({ error: 'Award the badge once the requirement is completed' });
+  if (app.applicant_id === user.id) return res.status(400).json({ error: 'You cannot award yourself a badge' });
 
   const isAuthor = app.author_id === user.id;
   const isTheirManager = app.manager_id === user.id;
   if (!isAuthor && !isTheirManager && user.systemRole !== 'admin') {
-    return res.status(403).json({ error: 'Only the requirement author or the helper\'s manager can recognise this work' });
+    return res.status(403).json({ error: 'Only the requirement author or the helper\'s manager can award a badge here' });
   }
 
   const dup = await one(`SELECT id FROM appreciations WHERE application_id = $1 AND from_user_id = $2`, [applicationId, user.id]);
-  if (dup) return res.status(409).json({ error: 'You have already recognised this engagement' });
+  if (dup) return res.status(409).json({ error: 'You have already awarded a badge for this engagement' });
 
+  const badge = getBadge(badgeId)!;
   const id = newId('apr');
   await q(
-    `INSERT INTO appreciations (id, to_user_id, from_user_id, post_id, application_id, message, rating)
+    `INSERT INTO appreciations (id, to_user_id, from_user_id, post_id, application_id, badge_id, message)
      VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-    [id, app.applicant_id, user.id, app.post_id, applicationId, String(message).trim(), rating != null ? Number(rating) : null]
+    [id, app.applicant_id, user.id, app.post_id, applicationId, badgeId, String(message).trim()]
   );
+  await recomputeRecognition(app.applicant_id);
 
-  // Recognition counts toward the peer score the directory sorts on.
-  if (rating != null) {
-    await q(
-      `UPDATE users SET contribution_score = ROUND((
-         SELECT AVG(r)::numeric FROM (
-           SELECT rating AS r FROM appreciations WHERE to_user_id = $1 AND rating IS NOT NULL
-         ) x
-       ), 2) WHERE id = $1`,
-      [app.applicant_id]
-    );
-  }
-
-  await notify(app.applicant_id, null, 'feedback_received', `${user.name} recognised your work`,
-    `On "${app.title.slice(0, 50)}": “${String(message).trim().slice(0, 90)}”`, 'requests', app.post_id);
+  await notify(app.applicant_id, null, 'feedback_received', `${user.name} awarded you "${badge.name}"`,
+    `${badge.icon} On "${app.title.slice(0, 46)}"${String(message).trim() ? ` — “${String(message).trim().slice(0, 70)}”` : ''}`,
+    'achievements', app.post_id);
 
   const row = await one(
-    `SELECT ap.id, ap.message, ap.rating, ap.created_at AS "createdAt",
+    `SELECT ap.id, ap.message, ap.badge_id AS "badgeId", ap.created_at AS "createdAt",
             u.name AS "fromName", u.initials AS "fromInitials", u.role AS "fromRole", u.avatar_url AS "fromAvatarUrl",
             p.title AS "postTitle"
        FROM appreciations ap
@@ -1871,7 +1860,12 @@ api.post('/appreciations', requireAuth(), async (req, res) => {
       WHERE ap.id = $1`,
     [id]
   );
-  res.status(201).json({ appreciation: row });
+  res.status(201).json({ appreciation: { ...row, badge } });
+});
+
+/** The badge vocabulary the award picker offers. */
+api.get('/badges/catalogue', requireAuth(), async (_req, res) => {
+  res.json({ badges: AWARD_BADGES, dimensions: BADGE_DIMENSIONS });
 });
 
 /** Recognition received by a person (defaults to the signed-in user). */
@@ -1879,7 +1873,7 @@ api.get('/appreciations', requireAuth(), async (req, res) => {
   const { user } = req as AuthedRequest;
   const target = (req.query.userId as string) || user.id;
   const { rows } = await q(
-    `SELECT ap.id, ap.message, ap.rating, ap.created_at AS "createdAt",
+    `SELECT ap.id, ap.message, ap.badge_id AS "badgeId", ap.created_at AS "createdAt",
             u.name AS "fromName", u.initials AS "fromInitials", u.role AS "fromRole", u.avatar_url AS "fromAvatarUrl",
             p.title AS "postTitle", p.department AS "postDepartment"
        FROM appreciations ap
@@ -1889,7 +1883,8 @@ api.get('/appreciations', requireAuth(), async (req, res) => {
       ORDER BY ap.created_at DESC`,
     [target]
   );
-  res.json({ appreciations: rows });
+  // Resolve each award against the catalogue so the client never has to.
+  res.json({ appreciations: rows.map((r: any) => ({ ...r, badge: getBadge(r.badgeId) || null })) });
 });
 
 /**
@@ -1904,7 +1899,7 @@ api.get('/appreciations/pending', requireAuth(), async (req, res) => {
             u.role AS "applicantRole", u.department AS "applicantDepartment",
             u.avatar_url AS "applicantAvatarUrl",
             p.id AS "postId", p.title AS "postTitle",
-            (ap.id IS NOT NULL) AS "alreadyRecognised"
+            (ap.id IS NOT NULL) AS "alreadyRecognised", ap.badge_id AS "awardedBadgeId"
        FROM applications a
        JOIN work_posts p ON p.id = a.post_id
        JOIN users u ON u.id = a.applicant_id

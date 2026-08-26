@@ -6,6 +6,23 @@
 import bcrypt from 'bcryptjs';
 import { q, one, newId } from './db.ts';
 import { computeRecommendation, parseHoursRange, computeTier } from './rules.ts';
+import { AWARD_BADGES, recomputeRecognition } from './badges.ts';
+
+/** Short notes attached to the seeded badge awards, so the feed reads real. */
+const HISTORY_BADGE_NOTES = [
+  'Turned a two-week blocker into a two-day fix.',
+  'Explained the whole approach while doing it — the team can repeat this now.',
+  'Picked it up the same afternoon we asked.',
+  'Went past the symptom and found what was actually wrong.',
+  'Nobody else had thought of doing it this way.',
+  'Left the code better than the brief asked for.',
+  'Put our two teams in the same room and it saved weeks.',
+  'Made everyone around them more effective.',
+  'Never lost sight of who this was actually for.',
+  'Committed to a date and hit it exactly.',
+  'Completely unflappable when the deadline moved up.',
+  'Delivered well beyond what we scoped.'
+];
 import {
   INITIAL_USER_ACCOUNTS,
   INITIAL_WORK_POSTS,
@@ -317,6 +334,19 @@ export async function seedIfEmpty(): Promise<void> {
        VALUES ($1,$2,$3,$4,$5,'consumed',$6,$7)`,
       [`bl_hist_${i}`, helperId, appId, postId, hours, `Completed "${title.slice(0, 50)}"`, iso]
     );
+
+    // The author who received the help awards a badge for it. Walking the
+    // catalogue by index spreads the awards across all four dimensions
+    // instead of piling them onto one.
+    const badge = AWARD_BADGES[i % AWARD_BADGES.length];
+    await q(
+      `INSERT INTO appreciations (id, to_user_id, from_user_id, post_id, application_id, badge_id, message, created_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+      [
+        `apr_hist_${i}`, helperId, author, postId, appId, badge.id,
+        HISTORY_BADGE_NOTES[i % HISTORY_BADGE_NOTES.length], iso
+      ]
+    );
   }
 
   // Bring contribution totals and tiers in line with the history just written.
@@ -352,6 +382,13 @@ export async function seedIfEmpty(): Promise<void> {
     });
     await q(`UPDATE users SET tier = $1 WHERE id = $2`, [earned.name, t.id]);
   }
+
+  // Roll the awarded badges up into contribution_score and rating_breakdown,
+  // using the same routine the live award path calls.
+  const { rows: recognised } = await q<{ to_user_id: string }>(
+    `SELECT DISTINCT to_user_id FROM appreciations`
+  );
+  for (const r of recognised) await recomputeRecognition(r.to_user_id);
 
   // ---- Bandwidth offers
   for (const b of INITIAL_BANDWIDTH_OFFERS) {

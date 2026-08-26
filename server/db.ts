@@ -111,6 +111,7 @@ export async function applyMigrations(): Promise<void> {
       from_user_id TEXT NOT NULL REFERENCES users(id),
       post_id TEXT,
       application_id TEXT,
+      badge_id TEXT NOT NULL DEFAULT '',
       message TEXT NOT NULL DEFAULT '',
       rating INTEGER,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -150,7 +151,11 @@ export async function applyMigrations(): Promise<void> {
     `DELETE FROM saved_items WHERE item_type = 'listing'`,
     `ALTER TABLE saved_items DROP CONSTRAINT IF EXISTS saved_items_item_type_check`,
     `ALTER TABLE saved_items ADD CONSTRAINT saved_items_item_type_check CHECK (item_type IN ('work','training','community','carpool'))`,
-    `DROP TABLE IF EXISTS listings`
+    `DROP TABLE IF EXISTS listings`,
+    // Recognition is a badge award now, not a free-text note plus a star
+    // rating that everybody set to 5. The rating column is left in place but
+    // is no longer written to.
+    `ALTER TABLE appreciations ADD COLUMN IF NOT EXISTS badge_id TEXT NOT NULL DEFAULT ''`
   ];
   for (const sql of migrations) {
     await q(sql);
