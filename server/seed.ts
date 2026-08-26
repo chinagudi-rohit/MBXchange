@@ -42,13 +42,13 @@ export const SEED_ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD || 'MBXAdmin@
 
 // Tuned weekly capacities so the seeded approval queue demonstrates every AI verdict
 const CAPACITY_OVERRIDES: Record<string, number> = {
-  usr_rakesh: 6,   // 8h request  -> Not Recommended (the capacity bug showcase)
-  usr_arjun: 8,    // 6h request  -> Approve
-  usr_priya: 8,    // 12h request -> Not Recommended
-  usr_anand: 10,   // 8h request  -> Approve
-  usr_sneha: 10,   // 10h request -> Approve
-  usr_vikram: 9,   // 8h request  -> Review Capacity band
-  usr_maya: 5
+  usr_rakesh: 6,    // 8h request  -> Not Recommended (the capacity bug showcase)
+  usr_rohit: 8,     // 6h request  -> Approve
+  usr_sangeeta: 8,  // 12h request -> Not Recommended
+  usr_ishana: 10,   // 8h request  -> Approve
+  usr_upasana: 10,  // 10h request -> Approve
+  usr_sunil: 9,     // 8h request  -> Review Capacity band
+  usr_rashmi: 5
 };
 
 const STATUS_MAP: Record<string, string> = {
@@ -160,28 +160,25 @@ export async function seedIfEmpty(): Promise<void> {
     );
     inserted.add(u.id);
   }
-  // Demo user with NO registered manager (exercises the admin registration flow)
-  await q(
-    `INSERT INTO users (id, email, name, initials, role, system_role, status, department, campus,
-      experience_years, primary_skills, interests, available_for, typical_availability,
-      available_hours_week, contribution_score, rating_breakdown, badges, bio, manager_id, password_hash, must_change_password)
-     VALUES ($1,$2,$3,$4,$5,'employee','active',$6,$7,$8,$9,$10,$11,$12,$13,$14,'{}','[]',$15,NULL,$16,FALSE)`,
-    [
-      'usr_nikhil', 'nikhil.verma@mercedes-benz.com', 'Nikhil Verma', 'NV', 'QA / Test Engineer',
-      'PT-THIS', 'MBRDI Bengaluru Hub', 5,
-      JSON.stringify(['Selenium', 'Playwright', 'Python', 'API Testing']),
-      JSON.stringify(['Test Automation', 'Quality Engineering']),
-      JSON.stringify(['Test Suite Reviews', 'Automation Pairing']),
-      '4–6 hours/month', 5, 4.6,
-      'QA automation engineer. Recently onboarded — manager assignment pending.',
-      userHash
-    ]
-  );
+  const accountByName = new Map<string, (typeof INITIAL_USER_ACCOUNTS)[number]>();
+  for (const u of INITIAL_USER_ACCOUNTS) accountByName.set(u.name, u);
+  const uid = (name?: string) => (name && accountByName.get(name)?.id) || null;
 
-  const nameToId = new Map<string, string>();
-  for (const u of INITIAL_USER_ACCOUNTS) nameToId.set(u.name, u.id);
-  nameToId.set('Nikhil Verma', 'usr_nikhil');
-  const uid = (name?: string) => (name && nameToId.get(name)) || null;
+  /**
+   * Denormalised author/seller columns, resolved from the account itself.
+   *
+   * The demo dataset carries its own `role`/`initials` next to every author
+   * name, and those literals drift the moment somebody's title changes. When
+   * the name maps to a real account the account wins, so a person's role and
+   * initials read the same everywhere in the app.
+   */
+  const denorm = (name?: string, fallbackRole?: unknown, fallbackInitials?: unknown) => {
+    const acct = name ? accountByName.get(name) : undefined;
+    return {
+      role: String(acct?.role ?? fallbackRole ?? ''),
+      initials: String(acct?.initials ?? fallbackInitials ?? '')
+    };
+  };
 
   // ---- Work posts
   for (const p of INITIAL_WORK_POSTS) {
@@ -196,7 +193,8 @@ export async function seedIfEmpty(): Promise<void> {
         String(p.id), p.title, p.department, p.team || '', STATUS_MAP[p.status] || 'Open',
         p.urgency, p.duration, p.expectedEffortHours, effMin, effMax, p.location,
         p.managerApprovalRequired, seats, JSON.stringify(p.tags || []),
-        uid(p.author), p.author, String(p.role), p.initials,
+        uid(p.author), p.author, denorm(p.author, p.role, p.initials).role,
+        denorm(p.author, p.role, p.initials).initials,
         p.description, p.whyOpportunity || '', new Date(p.timestamp).toISOString()
       ]
     );
@@ -261,23 +259,23 @@ export async function seedIfEmpty(): Promise<void> {
   // measurable rather than assumed.
   const historyPairs: Array<[string, string, string, number, string]> = [
     ['usr_rakesh', 'PT-THIA', 'Terraform modules for the GenAI inference cluster', 8, 'Cloud'],
-    ['usr_priya', 'PT-THIS', 'LLM gateway rate-limiting review', 6, 'AI'],
-    ['usr_arjun', 'PT-THIM', 'Telemetry pipeline for thermal rig exports', 10, 'Data'],
-    ['usr_sneha', 'PT-THIT', 'CAN bus capture tooling for the security team', 6, 'Embedded'],
-    ['usr_anand', 'PT-THIF', 'Thermal model cross-check for fuel-cell HARA', 12, 'CAE'],
-    ['usr_vikram', 'PT-THIC', 'HiL rig automation for calibration sweeps', 8, 'Test'],
-    ['usr_maya', 'PT-THIG', 'Motor efficiency curves for the test bench', 6, 'Calibration'],
+    ['usr_sangeeta', 'PT-THIS', 'LLM gateway rate-limiting review', 6, 'AI'],
+    ['usr_rohit', 'PT-THIM', 'Telemetry pipeline for thermal rig exports', 10, 'Data'],
+    ['usr_upasana', 'PT-THIT', 'CAN bus capture tooling for the security team', 6, 'Embedded'],
+    ['usr_ishana', 'PT-THIF', 'Thermal model cross-check for fuel-cell HARA', 12, 'CAE'],
+    ['usr_sunil', 'PT-THIC', 'HiL rig automation for calibration sweeps', 8, 'Test'],
+    ['usr_rashmi', 'PT-THIG', 'Motor efficiency curves for the test bench', 6, 'Calibration'],
     ['usr_rakesh', 'PT-THID', 'Kubernetes autoscaling for the BI workloads', 8, 'Cloud'],
-    ['usr_priya', 'PT-THIP', 'RAG evaluation harness for release governance docs', 10, 'AI'],
-    ['usr_arjun', 'PT-THIE', 'Kafka topic design for in-vehicle event capture', 8, 'Data'],
-    ['usr_sneha', 'PT-THIA', 'Embedded profiling for on-device inference', 6, 'Embedded'],
-    ['usr_anand', 'PT-THIS', 'Simulation workload sizing on the shared cluster', 8, 'CAE'],
-    ['usr_vikram', 'PT-THIF', 'Fault-injection rig for ASIL D validation', 12, 'Test'],
-    ['usr_maya', 'PT-THID', 'Signal decoding for calibration telemetry', 6, 'Calibration'],
+    ['usr_sangeeta', 'PT-THIP', 'RAG evaluation harness for release governance docs', 10, 'AI'],
+    ['usr_rohit', 'PT-THIE', 'Kafka topic design for in-vehicle event capture', 8, 'Data'],
+    ['usr_upasana', 'PT-THIA', 'Embedded profiling for on-device inference', 6, 'Embedded'],
+    ['usr_ishana', 'PT-THIS', 'Simulation workload sizing on the shared cluster', 8, 'CAE'],
+    ['usr_sunil', 'PT-THIF', 'Fault-injection rig for ASIL D validation', 12, 'Test'],
+    ['usr_rashmi', 'PT-THID', 'Signal decoding for calibration telemetry', 6, 'Calibration'],
     ['usr_rakesh', 'PT-THIT', 'Private endpoints and DNS for the platform VPC', 8, 'Cloud'],
-    ['usr_priya', 'PT-THIM', 'Vision model for surface-defect screening', 10, 'AI'],
-    ['usr_arjun', 'PT-THIG', 'Test-run analytics dashboard for the HiL fleet', 8, 'Data'],
-    ['usr_sneha', 'PT-THIC', 'AUTOSAR adapter for calibration tooling', 6, 'Embedded']
+    ['usr_sangeeta', 'PT-THIM', 'Vision model for surface-defect screening', 10, 'AI'],
+    ['usr_rohit', 'PT-THIG', 'Test-run analytics dashboard for the HiL fleet', 8, 'Data'],
+    ['usr_upasana', 'PT-THIC', 'AUTOSAR adapter for calibration tooling', 6, 'Embedded']
   ];
 
   for (const [i, [helperId, deptNeedingHelp, title, hours, tag]] of historyPairs.entries()) {
@@ -288,7 +286,7 @@ export async function seedIfEmpty(): Promise<void> {
 
     const postId = `wp_hist_${i}`;
     const appId = `app_hist_${i}`;
-    const author = deptNeedingHelp === 'PT-THIA' ? 'usr_priya' : 'usr_elena';
+    const author = deptNeedingHelp === 'PT-THIA' ? 'usr_sangeeta' : 'usr_kalyan';
 
     await q(
       `INSERT INTO work_posts (id, title, description, department, status, urgency, duration,
@@ -351,7 +349,7 @@ export async function seedIfEmpty(): Promise<void> {
 
   // ---- Bandwidth offers
   for (const b of INITIAL_BANDWIDTH_OFFERS) {
-    const authorId = uid(b.author) || uid(b.author.replace('Johannes Brandner', 'Dr. Johannes Brandner'));
+    const authorId = uid(b.author);
     if (!authorId) continue;
     await q(
       `INSERT INTO bandwidth_offers (id, author_id, available_hours, skills, notes, created_at)
@@ -369,8 +367,9 @@ export async function seedIfEmpty(): Promise<void> {
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)`,
       [
         String(l.id), l.listingType || 'Sell', l.title, l.price, l.currency || '€', l.isFree || false,
-        l.category, String(l.condition), l.location, uid(l.seller), l.seller, String(l.sellerRole),
-        l.initials, l.description, JSON.stringify(l.specs || {}), l.eventDate || null,
+        l.category, String(l.condition), l.location, uid(l.seller), l.seller,
+        denorm(l.seller, l.sellerRole, l.initials).role,
+        denorm(l.seller, l.sellerRole, l.initials).initials, l.description, JSON.stringify(l.specs || {}), l.eventDate || null,
         l.ticketQuantity || null, new Date(l.timestamp).toISOString()
       ]
     );
@@ -386,8 +385,8 @@ export async function seedIfEmpty(): Promise<void> {
   }
   const memberships: Array<[string, string]> = [
     ['grp_cloud', 'usr_rakesh'], ['grp_ai', 'usr_rakesh'],
-    ['grp_cloud', 'usr_elena'], ['grp_ai', 'usr_priya'],
-    ['grp_ev', 'usr_maya'], ['grp_cloud', 'usr_arjun']
+    ['grp_cloud', 'usr_kalyan'], ['grp_ai', 'usr_sangeeta'],
+    ['grp_ev', 'usr_rashmi'], ['grp_cloud', 'usr_rohit']
   ];
   for (const [g, u] of memberships) {
     await q(`INSERT INTO group_members (group_id, user_id) VALUES ($1,$2) ON CONFLICT DO NOTHING`, [g, u]);
@@ -401,7 +400,9 @@ export async function seedIfEmpty(): Promise<void> {
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
       [
         String(p.id), p.type, p.groupName || null, p.title, p.description, uid(p.author), p.author,
-        String(p.authorRole), p.initials, p.location || '', p.dateInfo || '', new Date(p.timestamp).toISOString()
+        denorm(p.author, p.authorRole, p.initials).role,
+        denorm(p.author, p.authorRole, p.initials).initials,
+        p.location || '', p.dateInfo || '', new Date(p.timestamp).toISOString()
       ]
     );
   }
@@ -413,7 +414,9 @@ export async function seedIfEmpty(): Promise<void> {
         tags, votes, has_accepted, created_at)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
       [
-        kq.id, kq.title, kq.details, uid(kq.author), kq.author, kq.authorRole, kq.initials,
+        kq.id, kq.title, kq.details, uid(kq.author), kq.author,
+        denorm(kq.author, kq.authorRole, kq.initials).role,
+        denorm(kq.author, kq.authorRole, kq.initials).initials,
         JSON.stringify(kq.tags), kq.votes, kq.hasAcceptedAnswer, new Date(kq.timestamp).toISOString()
       ]
     );
@@ -423,7 +426,9 @@ export async function seedIfEmpty(): Promise<void> {
           text, accepted, likes, created_at)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
         [
-          ans.id, kq.id, uid(ans.author), ans.author, String(ans.role), ans.initials,
+          ans.id, kq.id, uid(ans.author), ans.author,
+          denorm(ans.author, ans.role, ans.initials).role,
+          denorm(ans.author, ans.role, ans.initials).initials,
           ans.text, ans.isAcceptedAnswer || false, ans.likes || 0, new Date(ans.timestamp).toISOString()
         ]
       );
@@ -452,7 +457,7 @@ export async function seedIfEmpty(): Promise<void> {
         ]
       );
       for (const pax of r.passengers || []) {
-        const riderId = nameToId.has(pax.name) ? nameToId.get(pax.name)! : (INITIAL_USER_ACCOUNTS.some(u => u.id === pax.id) ? pax.id : null);
+        const riderId = uid(pax.name) ?? (INITIAL_USER_ACCOUNTS.some(u => u.id === pax.id) ? pax.id : null);
         if (!riderId) continue;
         await q(
           `INSERT INTO carpool_bookings (id, trip_id, rider_id, days) VALUES ($1,$2,$3,$4) ON CONFLICT DO NOTHING`,
@@ -511,15 +516,19 @@ export async function seedIfEmpty(): Promise<void> {
     }
   }
 
-  // ---- Demo registration request (Nikhil has no registered manager)
+  // ---- Demo registration request
+  // Every manager in the PT-THIF hierarchy is already registered, so the
+  // "unregistered manager" case cannot arise from the seeded org. The other
+  // half of the same admin flow still can: a new joiner who needs an account
+  // before work can be routed to them.
   await q(
     `INSERT INTO registration_requests (id, requested_by, subject_name, subject_email, subject_kind,
       subject_role, subject_department, for_user_id, note, status)
-     VALUES ($1,$2,$3,$4,'manager',$5,$6,$7,$8,'pending')`,
+     VALUES ($1,$2,$3,$4,'employee',$5,$6,NULL,$7,'pending')`,
     [
-      'reg_demo_1', 'usr_nikhil', 'Sandeep Iyer', 'sandeep.iyer@mercedes-benz.com',
-      'Engineering Manager', 'PT-THIS', 'usr_nikhil',
-      'Nikhil Verma joined the QA team last month; his manager Sandeep Iyer is not yet registered on MBXchange.'
+      'reg_demo_1', 'usr_kalyan', 'Deepak Menon', 'deepak.menon@mercedes-benz.com',
+      'Full Stack Developer', 'PT-THIF',
+      'Deepak Menon joins the core product squad next week. He needs an MBXchange account before opportunities can be assigned to him.'
     ]
   );
   await q(
@@ -527,8 +536,8 @@ export async function seedIfEmpty(): Promise<void> {
      VALUES ($1, NULL, 'admin', 'registration_request', $2, $3, 'admin')`,
     [
       newId('n'),
-      'Registration Needed: Sandeep Iyer',
-      'Nikhil Verma requires his manager Sandeep Iyer to be registered before approvals can flow.'
+      'Registration Needed: Deepak Menon',
+      'Kalyan Thirupathi requested an account for Deepak Menon, a new joiner on the core product squad.'
     ]
   );
 

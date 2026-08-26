@@ -4,6 +4,7 @@ import {
   Tag, ChevronRight, ThumbsUp, CheckCircle2, Leaf
 } from 'lucide-react';
 import { useStore } from '../lib/store';
+import { TiltCard } from '../components/TiltCard';
 import { api, timeAgo, type Listing, type CarpoolTrip } from '../lib/api';
 import {
   Button, Card, Chip, Avatar, Modal, Field, TextInput, TextArea, Select, EmptyState, SaveButton, StatusBadge, SkeletonGrid, Reveal
@@ -94,7 +95,8 @@ function Marketplace() {
       ) : (
         <Reveal stagger className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
           {filtered.map((l) => (
-            <Card key={l.id} className={`p-5 h-full flex flex-col ${l.sold ? 'opacity-60' : ''}`} onClick={() => setDetail(l)}>
+            <TiltCard key={l.id}>
+            <Card className={`p-5 h-full flex flex-col ${l.sold ? 'opacity-60' : ''}`} onClick={() => setDetail(l)}>
               <div className="flex items-start justify-between gap-2 mb-2">
                 <Chip>{l.category}</Chip>
                 <SaveButton saved={s.isSaved('listing', l.id)} onToggle={async () => {
@@ -115,6 +117,7 @@ function Marketplace() {
                 <span className="text-xs text-ink-3 shrink-0">{timeAgo(l.createdAt)}</span>
               </div>
             </Card>
+            </TiltCard>
           ))}
         </Reveal>
       )}
