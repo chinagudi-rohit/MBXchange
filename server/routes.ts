@@ -2080,57 +2080,59 @@ api.get('/insights', requireAuth(), async (_req, res) => {
 api.get('/leaderboard', requireAuth(), async (req, res) => {
   const { user } = req as AuthedRequest;
   const scope = String(req.query.scope || 'organisation');
-  const metric = String(req.query.metric || 'score');
+  const metric = String(req.query.metric || 'badges');
+  const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit || '5'), 10) || 5));
+  const offset = Math.max(0, parseInt(String(req.query.offset || '0'), 10) || 0);
 
+  // The contribution score is deliberately NOT rankable here. It is a
+  // personal figure shown to its owner; publishing an ordered list of it
+  // turns the platform into a performance ranking, which is not what this
+  // is for. Everything below measures collaboration reach instead.
   const ORDER: Record<string, string> = {
-    score: 'u.contribution_score',
     badges: 'u.badges_count',
     hours: 'u.hours_contributed',
     engagements: 'u.collaborations_count',
     departments: 'u.departments_supported'
   };
-  const orderBy = ORDER[metric] || ORDER.score;
+  const orderBy = ORDER[metric] || ORDER.badges;
+  const metricCol = ORDER[metric] ? metric : 'badges';
 
-  let where = `u.status = 'active'`;
+  let where = `u.status = 'active' AND u.system_role <> 'admin'`;
   const params: any[] = [];
   if (scope === 'department') {
     params.push(user.department);
     where += ` AND u.department = $${params.length}`;
   } else if (scope === 'team') {
-    // A manager sees their own reports; everybody else sees their peer group
-    // (same manager) with that manager included.
     const anchor = user.systemRole === 'manager' ? user.id : user.managerId;
-    if (!anchor) return res.json({ scope, metric, rows: [], me: null, unavailable: 'no-manager' });
+    if (!anchor) return res.json({ scope, metric: metricCol, rows: [], me: null, total: 0, unavailable: 'no-manager' });
     params.push(anchor);
     where += ` AND (u.manager_id = $${params.length} OR u.id = $${params.length})`;
   }
 
-  const { rows } = await q(
-    `SELECT u.id, u.name, u.initials, u.role, u.department, u.avatar_url AS "avatarUrl",
-       u.contribution_score AS score, u.badges_count AS badges, u.hours_contributed AS hours,
-       u.collaborations_count AS engagements, u.departments_supported AS departments,
-       u.tier
-     FROM users u
-     WHERE ${where}
-     ORDER BY ${orderBy} DESC, u.name ASC`,
-    params
-  );
+  // Rank in SQL so a page of 5 out of 20 000 people still carries true
+  // positions, and dense ranking so equal values share a place rather than
+  // being split by a tiebreak nobody can see.
+  const ranked = `
+    SELECT u.id, u.name, u.initials, u.role, u.department, u.avatar_url AS "avatarUrl",
+      u.tier, ${orderBy} AS value,
+      DENSE_RANK() OVER (ORDER BY ${orderBy} DESC) AS rank,
+      ROW_NUMBER() OVER (ORDER BY ${orderBy} DESC, u.name ASC) AS seq
+    FROM users u WHERE ${where}`;
 
-  // Ranks are dense, so equal scores share a place rather than being split
-  // by an arbitrary tiebreak the viewer cannot see.
-  let lastValue: number | null = null;
-  let lastRank = 0;
-  const ranked = rows.map((r: any, i: number) => {
-    const value = Number(r[metric] ?? 0);
-    if (lastValue === null || value !== lastValue) { lastRank = i + 1; lastValue = value; }
-    return { ...r, rank: lastRank, value };
-  });
+  const { rows } = await q(
+    `SELECT * FROM (${ranked}) r ORDER BY r.seq LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+    [...params, limit, offset]
+  );
+  const totalRow = await one<{ n: string }>(
+    `SELECT COUNT(*)::text AS n FROM users u WHERE ${where}`, params);
+  const meRow = await one(`SELECT * FROM (${ranked}) r WHERE r.id = $${params.length + 1}`, [...params, user.id]);
 
   res.json({
-    scope, metric,
-    rows: ranked.slice(0, 25),
-    me: ranked.find((r: any) => r.id === user.id) || null,
-    total: ranked.length
+    scope, metric: metricCol,
+    rows,
+    me: meRow || null,
+    total: parseInt(totalRow?.n || '0', 10),
+    offset, limit
   });
 });
 
