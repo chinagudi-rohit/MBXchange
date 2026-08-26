@@ -4,7 +4,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { initSchema, applyMigrations, closeDb } from './db.ts';
-import { seedIfEmpty, backfillReferenceData } from './seed.ts';
+import { seedIfEmpty, backfillReferenceData, seedRecognitionDefaults } from './seed.ts';
 import { api } from './routes.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -42,6 +42,8 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
 async function main() {
   await initSchema();
   await applyMigrations();
+  // Badges and tiers must exist before the demo seed computes anybody's tier.
+  await seedRecognitionDefaults();
   await seedIfEmpty();
   await backfillReferenceData();
   app.listen(PORT, () => {

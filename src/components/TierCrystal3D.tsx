@@ -1,26 +1,14 @@
 import React, { useRef, useEffect, useState } from 'react';
 import * as THREE from 'three';
+import { getArtifact } from './tierArtifacts';
 
 /**
  * The contribution tier, rendered as a turning solid.
  *
- * The shape is the point: each rung of the ladder gets a more complex
- * polyhedron, and Principal adds an orbiting ring, so the badge reads as
- * earned progress rather than decoration. It replaces a static glyph in the
- * tier card and shows the same tier the text beside it names.
+ * Which solid is now a property of the tier itself, chosen by an admin from
+ * the artifact catalogue — the shape used to be derived from a position in a
+ * hardcoded ladder, so a renamed or newly added tier had nothing to draw.
  */
-
-const TIER_ORDER = ['Contributor', 'Collaborator', 'Connector', 'Catalyst', 'Principal'];
-
-function geometryForTier(index: number): THREE.BufferGeometry {
-  switch (index) {
-    case 0: return new THREE.TetrahedronGeometry(1);
-    case 1: return new THREE.OctahedronGeometry(1);
-    case 2: return new THREE.DodecahedronGeometry(1);
-    case 3: return new THREE.IcosahedronGeometry(1);
-    default: return new THREE.IcosahedronGeometry(1, 1);
-  }
-}
 
 function cssVar(name: string, fallback: string): string {
   if (typeof window === 'undefined') return fallback;
@@ -38,18 +26,19 @@ function supportsWebGL(): boolean {
 }
 
 export function TierCrystal3D({
-  tier,
+  artifact,
   className = '',
   fallback = null
 }: {
-  tier: string;
+  /** Artifact key from the catalogue; falls back to a plain octahedron. */
+  artifact?: string;
   className?: string;
   /** Shown instead of the canvas where WebGL is unavailable. */
   fallback?: React.ReactNode;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [webgl] = useState(supportsWebGL);
-  const tierIndex = Math.max(0, TIER_ORDER.indexOf(tier));
+  const artifactKey = artifact || 'octahedron';
 
   useEffect(() => {
     const container = containerRef.current;
@@ -78,7 +67,8 @@ export function TierCrystal3D({
     const group = new THREE.Group();
     scene.add(group);
 
-    const geom = track(geometryForTier(tierIndex));
+    const spec = getArtifact(artifactKey);
+    const geom = track(spec.build());
     const solid = track(new THREE.MeshStandardMaterial({
       color: accent, roughness: 0.35, metalness: 0.6,
       emissive: accent, emissiveIntensity: 0.18
@@ -95,9 +85,10 @@ export function TierCrystal3D({
     wire.scale.setScalar(0.83);
     group.add(wire);
 
-    // Principal is the top of the ladder — it gets an orbit nothing else has.
+    // Some artifacts carry an orbiting ring — the cheapest way to make the
+    // top of a ladder look like the top.
     let ring: THREE.Mesh | null = null;
-    if (tierIndex >= TIER_ORDER.length - 1) {
+    if (spec.orbit) {
       const ringGeom = track(new THREE.TorusGeometry(1.25, 0.03, 10, 64));
       const ringMat = track(new THREE.MeshBasicMaterial({
         color: accent, transparent: true, opacity: 0.75
@@ -156,7 +147,7 @@ export function TierCrystal3D({
       renderer.dispose();
       if (renderer.domElement.parentNode === container) container.removeChild(renderer.domElement);
     };
-  }, [webgl, tierIndex]);
+  }, [webgl, artifactKey]);
 
   if (!webgl) return <>{fallback}</>;
 

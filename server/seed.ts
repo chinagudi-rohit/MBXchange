@@ -5,8 +5,9 @@
  */
 import bcrypt from 'bcryptjs';
 import { q, one, newId } from './db.ts';
-import { computeRecommendation, parseHoursRange, computeTier } from './rules.ts';
-import { AWARD_BADGES, recomputeRecognition } from './badges.ts';
+import { computeRecommendation, parseHoursRange } from './rules.ts';
+import { recomputeRecognition } from './badges.ts';
+import { getBadgeDefs, computeTierFromDb } from './recognition.ts';
 
 /** Short notes attached to the seeded badge awards, so the feed reads real. */
 const HISTORY_BADGE_NOTES = [
@@ -127,6 +128,64 @@ export async function ensureBootstrapAdmin(): Promise<void> {
     ]
   );
   console.log(`[seed] bootstrap admin created: ${email} (must change password on first sign-in)`);
+}
+
+/**
+ * Badge vocabulary and tier ladder defaults.
+ *
+ * Both are admin-editable at runtime, so this only ever fills an empty
+ * table — it never overwrites what an administrator has since changed.
+ */
+export async function seedRecognitionDefaults(): Promise<void> {
+  const haveBadges = await one<{ n: string }>('SELECT COUNT(*)::text AS n FROM badge_definitions');
+  if (parseInt(haveBadges?.n || '0', 10) === 0) {
+    const defaults: Array<[string, string, string, string, string, string]> = [
+      ['unblocker', 'Unblocker', '🔓', 'Cleared a blocker that was holding up the whole team.', 'helping', 'Use when someone removed an obstacle that others were stuck behind.'],
+      ['mentor', 'Generous Mentor', '🧭', 'Taught as they worked, so the knowledge stayed behind.', 'helping', 'Use when the team can now do it themselves because of them.'],
+      ['first_responder', 'First Responder', '⚡', 'Picked it up immediately when it mattered most.', 'helping', 'Use for speed when speed genuinely changed the outcome.'],
+      ['deep_diver', 'Deep Diver', '🔬', 'Chased the problem to its actual root cause.', 'technicalExpertise', 'Use when they went past the symptom rather than patching it.'],
+      ['out_of_the_box', 'Out of the Box', '💡', 'Found an approach nobody else in the room had considered.', 'technicalExpertise', 'Use for a genuinely different idea, not a well-executed obvious one.'],
+      ['quality_champion', 'Quality Champion', '🛡️', 'Raised the bar on quality instead of just shipping it.', 'technicalExpertise', 'Use when they left the work better than the brief required.'],
+      ['bridge_builder', 'Bridge Builder', '🌉', 'Connected two teams that were solving the same problem apart.', 'collaboration', 'Use when their introduction or framing saved duplicated effort.'],
+      ['team_player', 'Team Player', '🤝', 'Made the group work better, not just their own part of it.', 'collaboration', 'Use when the whole group moved faster because of how they worked.'],
+      ['customer_first', 'Customer First', '🎯', 'Kept the person on the other end of the work in view throughout.', 'collaboration', 'Use when they pushed back toward what the end user actually needed.'],
+      ['dependable', 'Rock Solid', '🪨', 'Said they would do it, and it was done.', 'reliability', 'Use for follow-through you never had to chase.'],
+      ['calm_under_pressure', 'Calm Under Pressure', '🧊', 'Stayed steady and clear-headed when the deadline got tight.', 'reliability', 'Use when their composure kept the work on track.'],
+      ['above_and_beyond', 'Above & Beyond', '🚀', 'Went well past what was actually asked of them.', 'reliability', 'Use sparingly, so it keeps meaning something.']
+    ];
+    for (const [i, [id, name, icon, description, dimension, criteria]] of defaults.entries()) {
+      await q(
+        `INSERT INTO badge_definitions (id, name, icon, description, dimension, criteria, sort_order)
+         VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (id) DO NOTHING`,
+        [id, name, icon, description, dimension, criteria, i]
+      );
+    }
+  }
+
+  const haveTiers = await one<{ n: string }>('SELECT COUNT(*)::text AS n FROM tier_definitions');
+  if (parseInt(haveTiers?.n || '0', 10) === 0) {
+    // Thresholds are points out of 100 from the weighted formula, not raw
+    // hours — an admin retunes the weighting without touching these.
+    const tiers: Array<[string, string, string, string, string, number]> = [
+      ['contributor', 'Contributor', 'tetrahedron', '◇', 'Getting started on the exchange', 0],
+      ['collaborator', 'Collaborator', 'octahedron', '◆', 'Regularly lending time to other teams', 12],
+      ['connector', 'Connector', 'dodecahedron', '✦', 'Working well beyond a single team', 30],
+      ['catalyst', 'Catalyst', 'icosahedron', '✧', 'A dependable source of cross-team momentum', 55],
+      ['principal', 'Principal', 'orbital', '★', 'Among the most widely relied-on people on the exchange', 80]
+    ];
+    for (const [i, [id, name, artifact, icon, blurb, minPoints]] of tiers.entries()) {
+      await q(
+        `INSERT INTO tier_definitions (id, name, artifact, icon, blurb, min_points, sort_order)
+         VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (id) DO NOTHING`,
+        [id, name, artifact, icon, blurb, minPoints, i]
+      );
+    }
+  }
+
+  await q(
+    `INSERT INTO tier_settings (id, hours_weight, contributions_weight, hours_target, contributions_target)
+     VALUES (1, 0.6, 0.4, 250, 25) ON CONFLICT (id) DO NOTHING`
+  );
 }
 
 export async function seedIfEmpty(): Promise<void> {
@@ -301,6 +360,7 @@ export async function seedIfEmpty(): Promise<void> {
     ['usr_upasana', 'PT-THIC', 'AUTOSAR adapter for calibration tooling', 6, 'Embedded']
   ];
 
+  const seedBadges = await getBadgeDefs();
   for (const [i, [helperId, deptNeedingHelp, title, hours, tag]] of historyPairs.entries()) {
     const when = new Date();
     when.setMonth(when.getMonth() - (5 - Math.floor(i / 3)));
@@ -338,7 +398,7 @@ export async function seedIfEmpty(): Promise<void> {
     // The author who received the help awards a badge for it. Walking the
     // catalogue by index spreads the awards across all four dimensions
     // instead of piling them onto one.
-    const badge = AWARD_BADGES[i % AWARD_BADGES.length];
+    const badge = seedBadges[i % seedBadges.length];
     await q(
       `INSERT INTO appreciations (id, to_user_id, from_user_id, post_id, application_id, badge_id, message, created_at)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
@@ -375,12 +435,11 @@ export async function seedIfEmpty(): Promise<void> {
     `SELECT id, hours_contributed, collaborations_count, departments_supported FROM users`
   );
   for (const t of forTier) {
-    const earned = computeTier({
+    const { tier } = await computeTierFromDb({
       hoursContributed: Number(t.hours_contributed || 0),
-      collaborationsCount: Number(t.collaborations_count || 0),
-      departmentsSupported: Number(t.departments_supported || 0)
+      collaborationsCount: Number(t.collaborations_count || 0)
     });
-    await q(`UPDATE users SET tier = $1 WHERE id = $2`, [earned.name, t.id]);
+    await q(`UPDATE users SET tier = $1 WHERE id = $2`, [tier.name, t.id]);
   }
 
   // Roll awarded badges up into contribution_score and rating_breakdown using

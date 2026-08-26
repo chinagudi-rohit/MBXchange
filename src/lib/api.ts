@@ -342,3 +342,34 @@ export interface ScoreResponse {
   tier: string;
   breakdown: ScoreRow[];
 }
+
+/** A rung of the admin-editable tier ladder. */
+export interface TierDef {
+  id: string;
+  name: string;
+  /** Key into the 3D artifact catalogue. */
+  artifact: string;
+  icon: string;
+  blurb: string;
+  minPoints: number;
+  sortOrder: number;
+  active: boolean;
+}
+
+export interface BadgeDef {
+  id: string;
+  name: string;
+  icon: string;
+  description: string;
+  dimension: 'helping' | 'technicalExpertise' | 'collaboration' | 'reliability';
+  criteria: string;
+  active: boolean;
+  sortOrder: number;
+}
+
+export interface TierSettings {
+  hoursWeight: number;
+  contributionsWeight: number;
+  hoursTarget: number;
+  contributionsTarget: number;
+}

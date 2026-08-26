@@ -366,3 +366,45 @@ CREATE INDEX IF NOT EXISTS idx_messages_pair ON messages(sender_id, recipient_id
 CREATE INDEX IF NOT EXISTS idx_notifications_recipient ON notifications(recipient_id);
 CREATE INDEX IF NOT EXISTS idx_collab_requester ON collab_requests(requester_id);
 CREATE INDEX IF NOT EXISTS idx_collab_target ON collab_requests(target_id);
+
+-- ── Recognition configuration, editable by an administrator ──────────────
+-- The badge vocabulary and the tier ladder were compiled into the server.
+-- They live here so an admin can add a badge, reword one, retune the tier
+-- thresholds or rename a rung without a deploy.
+
+CREATE TABLE IF NOT EXISTS badge_definitions (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  icon TEXT NOT NULL DEFAULT '🏅',
+  description TEXT NOT NULL DEFAULT '',
+  dimension TEXT NOT NULL DEFAULT 'collaboration'
+    CHECK (dimension IN ('helping','technicalExpertise','collaboration','reliability')),
+  -- Free text shown to the giver: when this badge is the right one to award.
+  criteria TEXT NOT NULL DEFAULT '',
+  active BOOLEAN NOT NULL DEFAULT TRUE,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS tier_definitions (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  -- Key into the 3D artifact catalogue (see components/TierArtifacts).
+  artifact TEXT NOT NULL DEFAULT 'octahedron',
+  icon TEXT NOT NULL DEFAULT '◇',
+  blurb TEXT NOT NULL DEFAULT '',
+  -- A tier is reached at a points score out of 100, computed from the
+  -- weighted formula in tier_settings.
+  min_points NUMERIC NOT NULL DEFAULT 0,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  active BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+-- Single-row table: the weighting behind the tier points score.
+CREATE TABLE IF NOT EXISTS tier_settings (
+  id INTEGER PRIMARY KEY DEFAULT 1,
+  hours_weight NUMERIC NOT NULL DEFAULT 0.6,
+  contributions_weight NUMERIC NOT NULL DEFAULT 0.4,
+  hours_target NUMERIC NOT NULL DEFAULT 250,
+  contributions_target NUMERIC NOT NULL DEFAULT 25
+);

@@ -140,7 +140,7 @@ export function HomeDashboard() {
             <span className="w-12 h-12 rounded-2xl bg-amber-soft text-amber flex items-center justify-center text-xl shrink-0 overflow-hidden">
               <React.Suspense fallback={<span>{tierIcon}</span>}>
                 <TierCrystal3D
-                  tier={s.user?.tier || 'Contributor'}
+                  artifact={s.tiers.find((t) => t.name === s.user?.tier)?.artifact}
                   className="w-full h-full"
                   fallback={<span>{tierIcon}</span>}
                 />

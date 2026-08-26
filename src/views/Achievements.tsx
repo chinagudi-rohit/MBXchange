@@ -167,7 +167,7 @@ export function Achievements() {
             </p>
           </div>
           <React.Suspense fallback={null}>
-            <TierCrystal3D tier={milestones.totals.tier} className="hidden sm:block w-20 h-20 shrink-0" />
+            <TierCrystal3D artifact={s.tiers.find((t) => t.name === milestones.totals.tier)?.artifact} className="hidden sm:block w-20 h-20 shrink-0" />
           </React.Suspense>
         </Card>
         {[

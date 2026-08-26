@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import { api, setToken, getToken, ApiError, type User, type WorkPost, type Notification, type Message } from './api';
+import { api, setToken, getToken, ApiError, type User, type WorkPost, type Notification, type Message, type TierDef } from './api';
 
 export type MainTab = 'home' | 'work' | 'people' | 'requests' | 'achievements' | 'insights' | 'learning' | 'beyond' | 'manager' | 'admin';
 
@@ -32,12 +32,15 @@ interface Store {
 
   // global data
   users: User[];
+  /** Admin-editable tier ladder — components read each tier's 3D artifact from it. */
+  tiers: TierDef[];
   posts: WorkPost[];
   notifications: Notification[];
   messages: Message[];
   saved: Array<{ itemType: string; itemId: string }>;
   counts: { unreadNotifications: number; unreadMessages: number; pendingApprovals: number };
   loadUsers: () => Promise<void>;
+  loadTiers: () => Promise<void>;
   loadPosts: () => Promise<void>;
   loadNotifications: () => Promise<void>;
   loadMessages: () => Promise<void>;
@@ -82,6 +85,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [beyondSection, setBeyondSection] = useState<'carpool' | 'community'>('carpool');
 
   const [users, setUsers] = useState<User[]>([]);
+  const [tiers, setTiers] = useState<TierDef[]>([]);
   const [posts, setPosts] = useState<WorkPost[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -124,6 +128,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setUsers(users);
   }, []);
 
+  const loadTiers = useCallback(async () => {
+    try {
+      const { tiers } = await api.get('/recognition/config');
+      setTiers(tiers);
+    } catch { /* the ladder is decorative here; failure must not block boot */ }
+  }, []);
+
   const loadPosts = useCallback(async () => {
     const { posts } = await api.get('/work-posts');
     setPosts(posts);
@@ -152,8 +163,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const bootstrap = useCallback(async () => {
-    await Promise.all([loadUsers(), loadPosts(), loadNotifications(), loadMessages(), loadSaved(), loadCounts()]);
-  }, [loadUsers, loadPosts, loadNotifications, loadMessages, loadSaved, loadCounts]);
+    await Promise.all([loadUsers(), loadTiers(), loadPosts(), loadNotifications(), loadMessages(), loadSaved(), loadCounts()]);
+  }, [loadUsers, loadTiers, loadPosts, loadNotifications, loadMessages, loadSaved, loadCounts]);
 
   // Session restore on mount
   useEffect(() => {
@@ -209,7 +220,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setToken(null);
     setUser(null);
     setImpersonating(false);
-    setUsers([]); setPosts([]); setNotifications([]); setMessages([]); setSaved([]);
+    setUsers([]); setTiers([]); setPosts([]); setNotifications([]); setMessages([]); setSaved([]);
     setTabState('home');
   }, []);
 
@@ -258,8 +269,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const value: Store = {
     user, impersonating, realUserName, booting, login, logout, refreshMe, impersonate, stopImpersonating,
     tab, setTab, openWorkId, setOpenWorkId, beyondSection, setBeyondSection,
-    users, posts, notifications, messages, saved, counts,
-    loadUsers, loadPosts, loadNotifications, loadMessages, loadSaved, toggleSaved, isSaved,
+    users, tiers, posts, notifications, messages, saved, counts,
+    loadUsers, loadTiers, loadPosts, loadNotifications, loadMessages, loadSaved, toggleSaved, isSaved,
     toasts, toast, dismissToast, dark, toggleDark: () => setDark((d) => !d),
     sidebarCollapsed, toggleSidebar: () => setSidebarCollapsed((c) => !c),
     messagesOpen, setMessagesOpen, messagePartnerId, setMessagePartnerId,

@@ -6,14 +6,16 @@ import {
   getUserById, generateTempPassword, PUBLIC_USER_FIELDS, type AuthedRequest
 } from './auth.ts';
 import {
-  computeRecommendation, parseHoursRange, computeTier, nextTierProgress, TIERS,
+  computeRecommendation, parseHoursRange,
   computeMatch, remainingBandwidth, type MatchResult
 } from './rules.ts';
 import { SEED_USER_PASSWORD, SEED_ADMIN_PASSWORD } from './seed.ts';
+import { recomputeRecognition, computeContributionScore } from './badges.ts';
 import {
-  AWARD_BADGES, BADGE_DIMENSIONS, getBadge, isBadgeId, recomputeRecognition,
-  computeContributionScore
-} from './badges.ts';
+  BADGE_DIMENSIONS, getBadgeDefs, getBadgeDef, isAwardableBadge,
+  getTierDefs, getTierSettings, computeTierFromDb, tierPoints,
+  invalidateRecognitionCache
+} from './recognition.ts';
 
 export const api = Router();
 
@@ -136,27 +138,32 @@ async function settleCompletion(post: any, reverse = false): Promise<void> {
 /** Recompute and persist a user's earned tier; notify them if it moved up. */
 async function refreshTier(userId: string): Promise<void> {
   const u = await one(
-    `SELECT id, tier, hours_contributed, collaborations_count, departments_supported FROM users WHERE id = $1`,
+    `SELECT id, tier, hours_contributed, collaborations_count FROM users WHERE id = $1`,
     [userId]
   );
   if (!u) return;
-  const earned = computeTier({
+  const { tier: earned, points } = await computeTierFromDb({
     hoursContributed: Number(u.hours_contributed || 0),
-    collaborationsCount: Number(u.collaborations_count || 0),
-    departmentsSupported: Number(u.departments_supported || 0)
+    collaborationsCount: Number(u.collaborations_count || 0)
   });
   // The score leans on the same totals the tier does, so it is refreshed
   // here too rather than only when a badge is awarded.
   await recomputeRecognition(userId);
   if (earned.name === u.tier) return;
-  const climbed = TIERS.findIndex((t) => t.name === earned.name) > TIERS.findIndex((t) => t.name === u.tier);
+
+  // "Climbed" is decided on the points threshold, not on list position — an
+  // admin can reorder the ladder, and a rename must not read as a promotion.
+  const ladder = await getTierDefs();
+  const prev = ladder.find((t) => t.name === u.tier);
+  const climbed = !prev || earned.minPoints > prev.minPoints;
+
   await q(`UPDATE users SET tier = $1 WHERE id = $2`, [earned.name, userId]);
   if (climbed) {
     await notify(userId, null, 'feedback_received', `New tier reached: ${earned.name}`,
-      `${earned.icon} You are now a ${earned.name} — ${earned.blurb}.`, 'insights', null);
+      `${earned.icon} You are now a ${earned.name}${earned.blurb ? ` — ${earned.blurb}` : ''}. (${points} pts)`,
+      'achievements', null);
   }
 }
-
 
 /**
  * Build a match scorer bound to one user, so a list of posts can be scored
@@ -1811,49 +1818,83 @@ api.get('/recommendations', requireAuth(), async (req, res) => {
 /**
  * Recognition for finished work.
  *
- * Only two people can write it: the person who posted the requirement (they
- * received the help) and the helper's own manager (they authorised the time).
- * The work has to be finished — praise for something still in flight is not
- * recognition, it is encouragement, and it would dilute the signal.
+ * Anyone who took part in a completed piece of work may recognise anyone
+ * else who took part — the author who received the help, the people who did
+ * it, and either side's manager. Restricting it to the author and the
+ * helper's manager missed the most common case: two people who worked the
+ * problem together and are best placed to say so.
+ *
+ * Giving a badge is always optional. Nothing blocks or nags on the absence
+ * of one; the prompt to recognise somebody is a suggestion, never a gate.
  */
+
+/** Everyone entitled to give or receive recognition on a post. */
+async function postParticipants(postId: string): Promise<{
+  ids: Set<string>; authorId: string | null; postStatus: string; title: string;
+}> {
+  const post = await one<any>(
+    `SELECT id, title, author_id, status FROM work_posts WHERE id = $1`, [postId]);
+  if (!post) return { ids: new Set(), authorId: null, postStatus: '', title: '' };
+  const { rows } = await q<{ applicant_id: string; manager_id: string | null }>(
+    `SELECT applicant_id, manager_id FROM applications
+      WHERE post_id = $1 AND status = 'approved'`, [postId]);
+  const ids = new Set<string>();
+  if (post.author_id) ids.add(post.author_id);
+  for (const r of rows) {
+    ids.add(r.applicant_id);
+    if (r.manager_id) ids.add(r.manager_id);
+  }
+  return { ids, authorId: post.author_id, postStatus: post.status, title: post.title };
+}
+
 api.post('/appreciations', requireAuth(), async (req, res) => {
   const { user } = req as AuthedRequest;
-  const { applicationId, badgeId, message = '' } = req.body || {};
-  if (!applicationId) return res.status(400).json({ error: 'applicationId is required' });
-  if (!isBadgeId(badgeId)) return res.status(400).json({ error: 'Pick a badge to award' });
+  const { applicationId, toUserId, badgeId, message = '' } = req.body || {};
+  if (!applicationId && !toUserId) {
+    return res.status(400).json({ error: 'applicationId or toUserId is required' });
+  }
+  if (!(await isAwardableBadge(badgeId))) return res.status(400).json({ error: 'Pick a badge to award' });
 
-  const app = await one(
-    `SELECT a.id, a.applicant_id, a.manager_id, a.status,
-            p.id AS post_id, p.title, p.author_id, p.status AS post_status
-       FROM applications a JOIN work_posts p ON p.id = a.post_id
-      WHERE a.id = $1`,
+  const app = await one<any>(
+    `SELECT a.id, a.applicant_id, a.manager_id, a.status, a.post_id
+       FROM applications a WHERE a.id = $1`,
     [applicationId]
   );
   if (!app) return res.status(404).json({ error: 'Engagement not found' });
   if (app.status !== 'approved') return res.status(400).json({ error: 'Only approved engagements can be recognised' });
-  if (app.post_status !== 'Completed') return res.status(400).json({ error: 'Award the badge once the requirement is completed' });
-  if (app.applicant_id === user.id) return res.status(400).json({ error: 'You cannot award yourself a badge' });
 
-  const isAuthor = app.author_id === user.id;
-  const isTheirManager = app.manager_id === user.id;
-  if (!isAuthor && !isTheirManager && user.systemRole !== 'admin') {
-    return res.status(403).json({ error: 'Only the requirement author or the helper\'s manager can award a badge here' });
+  const { ids, postStatus, title } = await postParticipants(app.post_id);
+  if (postStatus !== 'Completed') {
+    return res.status(400).json({ error: 'Award the badge once the requirement is completed' });
   }
 
-  const dup = await one(`SELECT id FROM appreciations WHERE application_id = $1 AND from_user_id = $2`, [applicationId, user.id]);
-  if (dup) return res.status(409).json({ error: 'You have already awarded a badge for this engagement' });
+  // Default recipient is the person the engagement belongs to; an explicit
+  // toUserId lets one participant recognise another.
+  const recipient = String(toUserId || app.applicant_id);
+  if (recipient === user.id) return res.status(400).json({ error: 'You cannot award yourself a badge' });
+  if (!ids.has(recipient)) return res.status(400).json({ error: 'That person did not work on this' });
+  if (!ids.has(user.id) && user.systemRole !== 'admin') {
+    return res.status(403).json({ error: 'Only people who worked on this can award a badge for it' });
+  }
 
-  const badge = getBadge(badgeId)!;
+  // One badge per giver per recipient per post — you can recognise several
+  // people on the same piece of work, but not the same person twice.
+  const dup = await one(
+    `SELECT id FROM appreciations WHERE post_id = $1 AND from_user_id = $2 AND to_user_id = $3`,
+    [app.post_id, user.id, recipient]);
+  if (dup) return res.status(409).json({ error: 'You have already recognised this person for this work' });
+
+  const badge = (await getBadgeDef(String(badgeId)))!;
   const id = newId('apr');
   await q(
     `INSERT INTO appreciations (id, to_user_id, from_user_id, post_id, application_id, badge_id, message)
      VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-    [id, app.applicant_id, user.id, app.post_id, applicationId, badgeId, String(message).trim()]
+    [id, recipient, user.id, app.post_id, applicationId, badgeId, String(message).trim()]
   );
-  await recomputeRecognition(app.applicant_id);
+  await recomputeRecognition(recipient);
 
-  await notify(app.applicant_id, null, 'feedback_received', `${user.name} awarded you "${badge.name}"`,
-    `${badge.icon} On "${app.title.slice(0, 46)}"${String(message).trim() ? ` — “${String(message).trim().slice(0, 70)}”` : ''}`,
+  await notify(recipient, null, 'feedback_received', `${user.name} awarded you "${badge.name}"`,
+    `${badge.icon} On "${String(title).slice(0, 46)}"${String(message).trim() ? ` — “${String(message).trim().slice(0, 70)}”` : ''}`,
     'achievements', app.post_id);
 
   const row = await one(
@@ -1871,7 +1912,7 @@ api.post('/appreciations', requireAuth(), async (req, res) => {
 
 /** The badge vocabulary the award picker offers. */
 api.get('/badges/catalogue', requireAuth(), async (_req, res) => {
-  res.json({ badges: AWARD_BADGES, dimensions: BADGE_DIMENSIONS });
+  res.json({ badges: await getBadgeDefs(), dimensions: BADGE_DIMENSIONS });
 });
 
 /** The signed-in user's 0-5 contribution score with its working shown. */
@@ -1907,7 +1948,9 @@ api.get('/appreciations', requireAuth(), async (req, res) => {
     [target]
   );
   // Resolve each award against the catalogue so the client never has to.
-  res.json({ appreciations: rows.map((r: any) => ({ ...r, badge: getBadge(r.badgeId) || null })) });
+  const defs = await getBadgeDefs(true);
+  const byId = new Map(defs.map((b) => [b.id, b]));
+  res.json({ appreciations: rows.map((r: any) => ({ ...r, badge: byId.get(r.badgeId) || null })) });
 });
 
 /**
@@ -2221,6 +2264,193 @@ api.get('/reports', requireAuth(), requireRole('manager', 'admin'), async (req, 
     people, totals, byDepartment, topSkills,
     filters: { managers, departments: departments.map((d: any) => d.department) }
   });
+});
+
+/* ══════════ Recognition configuration (admin) ══════════ */
+
+/** The tier ladder, its weighting, and the artifact catalogue keys. */
+api.get('/recognition/config', requireAuth(), async (_req, res) => {
+  const [tiers, settings] = await Promise.all([getTierDefs(true), getTierSettings()]);
+  res.json({ tiers, settings, dimensions: BADGE_DIMENSIONS });
+});
+
+/** Preview what the current formula would award, without saving. */
+api.post('/admin/recognition/preview', requireAuth(), requireRealAdmin(), async (req, res) => {
+  const { hoursWeight, contributionsWeight, hoursTarget, contributionsTarget, samples } = req.body || {};
+  const st = {
+    hoursWeight: Number(hoursWeight) || 0,
+    contributionsWeight: Number(contributionsWeight) || 0,
+    hoursTarget: Number(hoursTarget) || 1,
+    contributionsTarget: Number(contributionsTarget) || 1
+  };
+  const tiers = (await getTierDefs()).slice().sort((a, b) => a.minPoints - b.minPoints);
+  const rows = (Array.isArray(samples) ? samples : []).map((sm: any) => {
+    const { points } = tierPoints({
+      hoursContributed: Number(sm.hours) || 0,
+      collaborationsCount: Number(sm.contributions) || 0
+    }, st);
+    let tier = tiers[0]?.name || 'Contributor';
+    for (const t of tiers) if (points >= t.minPoints) tier = t.name;
+    return { ...sm, points, tier };
+  });
+  res.json({ rows });
+});
+
+api.patch('/admin/recognition/settings', requireAuth(), requireRealAdmin(), async (req, res) => {
+  const { realUser } = req as AuthedRequest;
+  const b = req.body || {};
+  const num = (v: any, min: number) => Math.max(min, Number(v) || 0);
+  await q(
+    `INSERT INTO tier_settings (id, hours_weight, contributions_weight, hours_target, contributions_target)
+     VALUES (1,$1,$2,$3,$4)
+     ON CONFLICT (id) DO UPDATE SET hours_weight = $1, contributions_weight = $2,
+       hours_target = $3, contributions_target = $4`,
+    [num(b.hoursWeight, 0), num(b.contributionsWeight, 0), num(b.hoursTarget, 1), num(b.contributionsTarget, 1)]
+  );
+  invalidateRecognitionCache();
+  await audit(realUser.id, 'recognition_settings_updated', 'tier_settings', b);
+  await refreshAllTiers();
+  res.json({ ok: true });
+});
+
+/** Re-evaluate everybody after the ladder or its weighting changes. */
+async function refreshAllTiers(): Promise<void> {
+  const { rows } = await q<{ id: string }>(`SELECT id FROM users WHERE status = 'active'`);
+  for (const u of rows) await refreshTier(u.id);
+}
+
+api.get('/admin/badges', requireAuth(), requireRealAdmin(), async (_req, res) => {
+  res.json({ badges: await getBadgeDefs(true), dimensions: BADGE_DIMENSIONS });
+});
+
+api.post('/admin/badges', requireAuth(), requireRealAdmin(), async (req, res) => {
+  const { realUser } = req as AuthedRequest;
+  const b = req.body || {};
+  if (!String(b.name || '').trim()) return res.status(400).json({ error: 'Name is required' });
+  if (!Object.keys(BADGE_DIMENSIONS).includes(b.dimension)) {
+    return res.status(400).json({ error: 'Pick a valid dimension' });
+  }
+  const id = String(b.id || '').trim() ||
+    String(b.name).toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 40);
+  const exists = await one(`SELECT id FROM badge_definitions WHERE id = $1`, [id]);
+  if (exists) return res.status(409).json({ error: 'A badge with that id already exists' });
+  await q(
+    `INSERT INTO badge_definitions (id, name, icon, description, dimension, criteria, active, sort_order)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+    [id, String(b.name).trim(), b.icon || '🏅', b.description || '', b.dimension,
+      b.criteria || '', b.active !== false, Number(b.sortOrder) || 0]
+  );
+  invalidateRecognitionCache();
+  await audit(realUser.id, 'badge_created', id, { name: b.name });
+  res.status(201).json({ ok: true, id });
+});
+
+api.patch('/admin/badges/:id', requireAuth(), requireRealAdmin(), async (req, res) => {
+  const { realUser } = req as AuthedRequest;
+  const b = req.body || {};
+  const existing = await one(`SELECT id FROM badge_definitions WHERE id = $1`, [req.params.id]);
+  if (!existing) return res.status(404).json({ error: 'Badge not found' });
+  if (b.dimension && !Object.keys(BADGE_DIMENSIONS).includes(b.dimension)) {
+    return res.status(400).json({ error: 'Pick a valid dimension' });
+  }
+  await q(
+    `UPDATE badge_definitions SET
+       name = COALESCE($1, name), icon = COALESCE($2, icon),
+       description = COALESCE($3, description), dimension = COALESCE($4, dimension),
+       criteria = COALESCE($5, criteria), active = COALESCE($6, active),
+       sort_order = COALESCE($7, sort_order)
+     WHERE id = $8`,
+    [b.name ?? null, b.icon ?? null, b.description ?? null, b.dimension ?? null,
+      b.criteria ?? null, b.active ?? null,
+      b.sortOrder != null ? Number(b.sortOrder) : null, req.params.id]
+  );
+  invalidateRecognitionCache();
+  // Dimension changes move existing awards between columns.
+  if (b.dimension) {
+    const { rows } = await q<{ to_user_id: string }>(
+      `SELECT DISTINCT to_user_id FROM appreciations WHERE badge_id = $1`, [req.params.id]);
+    for (const r of rows) await recomputeRecognition(r.to_user_id);
+  }
+  await audit(realUser.id, 'badge_updated', req.params.id, b);
+  res.json({ ok: true });
+});
+
+/**
+ * Retiring a badge keeps every award already made — deleting the row would
+ * blank out history that people earned. Only a badge nobody holds can be
+ * removed outright.
+ */
+api.delete('/admin/badges/:id', requireAuth(), requireRealAdmin(), async (req, res) => {
+  const { realUser } = req as AuthedRequest;
+  const used = await one<{ n: string }>(
+    `SELECT COUNT(*)::text AS n FROM appreciations WHERE badge_id = $1`, [req.params.id]);
+  if (parseInt(used?.n || '0', 10) > 0) {
+    await q(`UPDATE badge_definitions SET active = FALSE WHERE id = $1`, [req.params.id]);
+    invalidateRecognitionCache();
+    await audit(realUser.id, 'badge_retired', req.params.id, { awardsHeld: used!.n });
+    return res.json({ ok: true, retired: true, awardsHeld: parseInt(used!.n, 10) });
+  }
+  await q(`DELETE FROM badge_definitions WHERE id = $1`, [req.params.id]);
+  invalidateRecognitionCache();
+  await audit(realUser.id, 'badge_deleted', req.params.id, {});
+  res.json({ ok: true, retired: false });
+});
+
+api.post('/admin/tiers', requireAuth(), requireRealAdmin(), async (req, res) => {
+  const { realUser } = req as AuthedRequest;
+  const b = req.body || {};
+  if (!String(b.name || '').trim()) return res.status(400).json({ error: 'Name is required' });
+  const id = String(b.id || '').trim() ||
+    String(b.name).toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 40);
+  const exists = await one(`SELECT id FROM tier_definitions WHERE id = $1`, [id]);
+  if (exists) return res.status(409).json({ error: 'A tier with that id already exists' });
+  await q(
+    `INSERT INTO tier_definitions (id, name, artifact, icon, blurb, min_points, sort_order, active)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+    [id, String(b.name).trim(), b.artifact || 'octahedron', b.icon || '◇', b.blurb || '',
+      Math.max(0, Number(b.minPoints) || 0), Number(b.sortOrder) || 0, b.active !== false]
+  );
+  invalidateRecognitionCache();
+  await audit(realUser.id, 'tier_created', id, { name: b.name, minPoints: b.minPoints });
+  await refreshAllTiers();
+  res.status(201).json({ ok: true, id });
+});
+
+api.patch('/admin/tiers/:id', requireAuth(), requireRealAdmin(), async (req, res) => {
+  const { realUser } = req as AuthedRequest;
+  const b = req.body || {};
+  const existing = await one(`SELECT id FROM tier_definitions WHERE id = $1`, [req.params.id]);
+  if (!existing) return res.status(404).json({ error: 'Tier not found' });
+  await q(
+    `UPDATE tier_definitions SET
+       name = COALESCE($1, name), artifact = COALESCE($2, artifact),
+       icon = COALESCE($3, icon), blurb = COALESCE($4, blurb),
+       min_points = COALESCE($5, min_points), sort_order = COALESCE($6, sort_order),
+       active = COALESCE($7, active)
+     WHERE id = $8`,
+    [b.name ?? null, b.artifact ?? null, b.icon ?? null, b.blurb ?? null,
+      b.minPoints != null ? Math.max(0, Number(b.minPoints)) : null,
+      b.sortOrder != null ? Number(b.sortOrder) : null,
+      b.active ?? null, req.params.id]
+  );
+  invalidateRecognitionCache();
+  await audit(realUser.id, 'tier_updated', req.params.id, b);
+  await refreshAllTiers();
+  res.json({ ok: true });
+});
+
+api.delete('/admin/tiers/:id', requireAuth(), requireRealAdmin(), async (req, res) => {
+  const { realUser } = req as AuthedRequest;
+  const remaining = await one<{ n: string }>(
+    `SELECT COUNT(*)::text AS n FROM tier_definitions WHERE active = TRUE AND id <> $1`, [req.params.id]);
+  if (parseInt(remaining?.n || '0', 10) < 1) {
+    return res.status(400).json({ error: 'At least one tier must remain' });
+  }
+  await q(`DELETE FROM tier_definitions WHERE id = $1`, [req.params.id]);
+  invalidateRecognitionCache();
+  await audit(realUser.id, 'tier_deleted', req.params.id, {});
+  await refreshAllTiers();
+  res.json({ ok: true });
 });
 
 api.get('/admin/overview', requireAuth(), requireRole('manager', 'admin'), async (_req, res) => {
