@@ -10,6 +10,7 @@ import {
 } from '../components/ui';
 import { WorkFormModal } from './WorkExchange';
 import { ActivityTelemetry } from './ActivityTelemetry';
+import { MyExchangePanel } from './MyExchangePanel';
 import { TiltCard } from '../components/TiltCard';
 import { MatchBadge } from '../components/Match';
 
@@ -214,6 +215,8 @@ export function HomeDashboard() {
           )}
         </Card>
       </div>
+
+      <MyExchangePanel />
 
       <ActivityTelemetry />
 
