@@ -250,6 +250,10 @@ CREATE TABLE IF NOT EXISTS carpool_bookings (
   trip_id TEXT NOT NULL REFERENCES carpool_trips(id) ON DELETE CASCADE,
   rider_id TEXT NOT NULL REFERENCES users(id),
   days JSONB NOT NULL DEFAULT '[]',
+  -- A booking starts pending until the driver decides. A rejected row is kept
+  -- (not deleted) so the message thread it belongs to can still show what was
+  -- decided; asking again clears the old row first, see the book route.
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','approved','rejected')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   UNIQUE (trip_id, rider_id)
 );
@@ -261,6 +265,9 @@ CREATE TABLE IF NOT EXISTS messages (
   text TEXT NOT NULL,
   context_type TEXT NOT NULL DEFAULT 'general',
   context_title TEXT NOT NULL DEFAULT '',
+  -- Points at the record this message is about (e.g. a carpool booking id),
+  -- so the recipient can act on it inline from the thread itself.
+  context_id TEXT,
   read BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );

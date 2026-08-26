@@ -466,7 +466,11 @@ export async function seedIfEmpty(): Promise<void> {
         const riderId = uid(pax.name) ?? (INITIAL_USER_ACCOUNTS.some(u => u.id === pax.id) ? pax.id : null);
         if (!riderId) continue;
         await q(
-          `INSERT INTO carpool_bookings (id, trip_id, rider_id, days) VALUES ($1,$2,$3,$4) ON CONFLICT DO NOTHING`,
+          // Seeded passengers are people already riding, so they land as
+          // confirmed rather than picking up the 'pending' default that new
+          // seat requests get.
+          `INSERT INTO carpool_bookings (id, trip_id, rider_id, days, status)
+           VALUES ($1,$2,$3,$4,'approved') ON CONFLICT DO NOTHING`,
           [newId('cb'), t.id, riderId, JSON.stringify(days)]
         );
       }

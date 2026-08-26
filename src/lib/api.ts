@@ -258,8 +258,14 @@ export interface CarpoolTrip {
   driverRole: string;
   driverDepartment: string;
   driverInitials: string;
+  /** True only once the driver has confirmed the seat. */
   iAmBooked: boolean;
-  riders: Array<{ name: string; initials: string; department: string }>;
+  /** Where the viewer's own seat request stands, if they made one. */
+  myBookingStatus: 'pending' | 'approved' | 'rejected' | null;
+  seatsPending: number;
+  riders: Array<{ bookingId: string; riderId: string; name: string; initials: string; department: string }>;
+  /** Seat requests awaiting this trip's driver — only populated for them. */
+  pendingRiders: Array<{ bookingId: string; riderId: string; name: string; initials: string; department: string }>;
 }
 
 export interface Notification {
@@ -280,6 +286,12 @@ export interface Message {
   text: string;
   contextType: string;
   contextTitle: string;
+  /** The record this message is about — a carpool booking id, for instance. */
+  contextId: string | null;
+  /** Live state of the linked carpool booking, when there is one. */
+  bookingStatus?: 'pending' | 'approved' | 'rejected' | null;
+  /** True when the viewer is the driver and the booking is still pending. */
+  canDecide?: boolean | null;
   read: boolean;
   createdAt: string;
 }

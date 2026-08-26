@@ -130,7 +130,20 @@ export async function applyMigrations(): Promise<void> {
     `ALTER TABLE collab_requests DROP CONSTRAINT IF EXISTS collab_requests_status_check`,
     `ALTER TABLE collab_requests ADD CONSTRAINT collab_requests_status_check CHECK (status IN ('pending','pending_manager','accepted','declined','completed','withdrawn'))`,
     `ALTER TABLE collab_requests ADD COLUMN IF NOT EXISTS manager_id TEXT REFERENCES users(id)`,
-    `ALTER TABLE collab_requests ADD COLUMN IF NOT EXISTS target_decided_at TIMESTAMPTZ`
+    `ALTER TABLE collab_requests ADD COLUMN IF NOT EXISTS target_decided_at TIMESTAMPTZ`,
+    // Carpool bookings now gate on the driver's decision instead of being
+    // instantly confirmed. Rows that predate the gate were effectively already
+    // confirmed, so the column is added defaulting to 'approved' (which
+    // backfills them) and only then switched to 'pending' for new bookings.
+    // Doing it in that order avoids a backfill UPDATE, which on every restart
+    // would wrongly confirm bookings that are legitimately still pending.
+    `ALTER TABLE carpool_bookings ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'approved'`,
+    `ALTER TABLE carpool_bookings ALTER COLUMN status SET DEFAULT 'pending'`,
+    `ALTER TABLE carpool_bookings DROP CONSTRAINT IF EXISTS carpool_bookings_status_check`,
+    `ALTER TABLE carpool_bookings ADD CONSTRAINT carpool_bookings_status_check CHECK (status IN ('pending','approved','rejected'))`,
+    // Lets a message point at the record it concerns, so a booking request
+    // can carry inline approve/reject actions in the thread itself.
+    `ALTER TABLE messages ADD COLUMN IF NOT EXISTS context_id TEXT`
   ];
   for (const sql of migrations) {
     await q(sql);

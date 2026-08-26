@@ -8,6 +8,7 @@ export function MessagesDrawer() {
   const s = useStore();
   const [query, setQuery] = useState('');
   const [text, setText] = useState('');
+  const [deciding, setDeciding] = useState<string | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
   const partnerId = s.messagePartnerId;
@@ -54,6 +55,22 @@ export function MessagesDrawer() {
     await api.post('/messages', { recipientId: partnerId, text });
     setText('');
     await s.loadMessages();
+  };
+
+  /** Carpool seat requests are decided from the thread itself. */
+  const decideBooking = async (bookingId: string, decision: 'approved' | 'rejected') => {
+    setDeciding(bookingId);
+    try {
+      await api.post(`/carpool/bookings/${bookingId}/decision`, { decision });
+      s.toast(decision === 'approved' ? 'success' : 'info',
+        decision === 'approved' ? 'Seat confirmed' : 'Request declined',
+        `${partner?.name || 'The rider'} has been notified.`);
+      await s.loadMessages();
+    } catch (e: any) {
+      s.toast('error', 'Could not save that decision', e.message);
+    } finally {
+      setDeciding(null);
+    }
   };
 
   const candidates = query
@@ -154,6 +171,38 @@ export function MessagesDrawer() {
                     }`}>
                       {m.text}
                     </div>
+
+                    {/* A seat request is actionable right here for the driver,
+                        and shows its outcome to everyone once decided. */}
+                    {m.contextType === 'carpool_booking' && m.contextId && (
+                      m.canDecide ? (
+                        <div className="flex gap-2 mt-1.5">
+                          <button
+                            onClick={() => decideBooking(m.contextId!, 'rejected')}
+                            disabled={deciding === m.contextId}
+                            className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-red-soft text-red hover:brightness-95 disabled:opacity-40 transition"
+                          >
+                            Decline
+                          </button>
+                          <button
+                            onClick={() => decideBooking(m.contextId!, 'approved')}
+                            disabled={deciding === m.contextId}
+                            className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-primary text-on-primary hover:bg-primary-strong disabled:opacity-40 transition"
+                          >
+                            {deciding === m.contextId ? 'Saving…' : 'Approve seat'}
+                          </button>
+                        </div>
+                      ) : m.bookingStatus && m.bookingStatus !== 'pending' ? (
+                        <span className={`text-xs font-semibold mt-1.5 px-2 py-0.5 rounded-md ${
+                          m.bookingStatus === 'approved' ? 'bg-green-soft text-green' : 'bg-red-soft text-red'
+                        }`}>
+                          {m.bookingStatus === 'approved' ? 'Seat confirmed' : 'Seat declined'}
+                        </span>
+                      ) : m.bookingStatus === 'pending' ? (
+                        <span className="text-xs font-semibold text-ink-3 mt-1.5">Awaiting the driver's decision</span>
+                      ) : null
+                    )}
+
                     <span className="text-xs text-ink-3 mt-1">{timeAgo(m.createdAt)}</span>
                   </div>
                 </div>

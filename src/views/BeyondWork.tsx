@@ -283,15 +283,26 @@ function Carpool() {
   const book = async (t: CarpoolTrip) => {
     try {
       await api.post(`/carpool/trips/${t.id}/book`);
-      s.toast('success', 'Seat reserved', `${t.origin} → ${t.destination} at ${t.departureTime}.`);
-      load();
-    } catch (e: any) { s.toast('error', 'Could not book', e.message); }
+      s.toast('success', 'Seat requested', `${t.driverName.split(' ')[0]} has been messaged and will approve or decline.`);
+      await Promise.all([load(), s.loadMessages()]);
+    } catch (e: any) { s.toast('error', 'Could not request a seat', e.message); }
   };
 
   const cancelBooking = async (t: CarpoolTrip) => {
     await api.post(`/carpool/trips/${t.id}/cancel-booking`);
-    s.toast('info', 'Booking cancelled');
+    s.toast('info', t.myBookingStatus === 'pending' ? 'Seat request withdrawn' : 'Booking cancelled');
     load();
+  };
+
+  /** Driver-side decision on a rider's seat request. */
+  const decideBooking = async (bookingId: string, decision: 'approved' | 'rejected', riderName: string) => {
+    try {
+      await api.post(`/carpool/bookings/${bookingId}/decision`, { decision });
+      s.toast(decision === 'approved' ? 'success' : 'info',
+        decision === 'approved' ? 'Seat confirmed' : 'Request declined',
+        `${riderName} has been notified.`);
+      await Promise.all([load(), s.loadMessages()]);
+    } catch (e: any) { s.toast('error', 'Could not save that decision', e.message); }
   };
 
   const submitOffer = async () => {
@@ -427,6 +438,11 @@ function Carpool() {
                   </span>
                   {isDriver ? (
                     <Chip>Your trip</Chip>
+                  ) : t.myBookingStatus === 'pending' ? (
+                    <>
+                      <Chip tone="primary">Awaiting driver</Chip>
+                      <Button size="sm" variant="secondary" onClick={() => cancelBooking(t)}>Withdraw</Button>
+                    </>
                   ) : t.iAmBooked ? (
                     <Button size="sm" variant="danger" onClick={() => cancelBooking(t)}>Cancel Seat</Button>
                   ) : seatsLeft > 0 ? (
@@ -434,6 +450,32 @@ function Carpool() {
                   ) : null}
                 </div>
               </div>
+
+              {/* Seat requests waiting on this driver — decided right here, and
+                  mirrored into the rider's message thread either way. */}
+              {isDriver && t.pendingRiders.length > 0 && (
+                <div className="mt-3.5 pt-3.5 border-t border-line space-y-2">
+                  <p className="text-xs font-semibold text-ink-2">
+                    {t.pendingRiders.length} seat request{t.pendingRiders.length > 1 ? 's' : ''} waiting on you
+                  </p>
+                  {t.pendingRiders.map((r) => (
+                    <div key={r.bookingId} className="flex items-center gap-2 p-2 rounded-xl bg-surface-2">
+                      <Avatar initials={r.initials} size="sm" name={r.name} />
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-xs font-semibold text-ink truncate">{r.name}</span>
+                        <span className="block text-xs text-ink-3 truncate">{r.department}</span>
+                      </span>
+                      <Button size="sm" variant="danger" onClick={() => decideBooking(r.bookingId, 'rejected', r.name)}>
+                        Decline
+                      </Button>
+                      <Button size="sm" disabled={seatsLeft <= 0}
+                        onClick={() => decideBooking(r.bookingId, 'approved', r.name)}>
+                        Approve
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </Card>
           );
         })}

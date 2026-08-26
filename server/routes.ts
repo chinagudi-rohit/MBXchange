@@ -1230,21 +1230,40 @@ api.get('/carpool/trips', requireAuth(), async (req, res) => {
        t.vehicle_type AS "vehicleType", t.seats_total AS "seatsTotal", t.cost_per_ride AS "costPerRide",
        t.women_only AS "womenOnly", t.notes, t.amenities, t.status, t.created_at AS "createdAt",
        d.name AS "driverName", d.role AS "driverRole", d.department AS "driverDepartment", d.initials AS "driverInitials",
-       (SELECT COUNT(*)::int FROM carpool_bookings b WHERE b.trip_id = t.id) AS "seatsBooked",
-       EXISTS(SELECT 1 FROM carpool_bookings b WHERE b.trip_id = t.id AND b.rider_id = $1) AS "iAmBooked"
+       (SELECT COUNT(*)::int FROM carpool_bookings b WHERE b.trip_id = t.id AND b.status = 'approved') AS "seatsBooked",
+       (SELECT COUNT(*)::int FROM carpool_bookings b WHERE b.trip_id = t.id AND b.status = 'pending') AS "seatsPending",
+       EXISTS(SELECT 1 FROM carpool_bookings b
+               WHERE b.trip_id = t.id AND b.rider_id = $1 AND b.status = 'approved') AS "iAmBooked",
+       (SELECT b.status FROM carpool_bookings b
+         WHERE b.trip_id = t.id AND b.rider_id = $1) AS "myBookingStatus"
      FROM carpool_trips t JOIN users d ON d.id = t.driver_id
      WHERE t.status <> 'cancelled' ORDER BY t.created_at DESC`,
     [user.id]
   );
+  // Riders are grouped per trip below. Pending ones ride along in the same
+  // payload so a driver can act on seat requests from the trip card itself.
   const { rows: riders } = await q(
-    `SELECT b.trip_id AS "tripId", u.name, u.initials, u.department FROM carpool_bookings b JOIN users u ON u.id = b.rider_id`
+    `SELECT b.id AS "bookingId", b.trip_id AS "tripId", b.status, u.id AS "riderId",
+       u.name, u.initials, u.department
+     FROM carpool_bookings b JOIN users u ON u.id = b.rider_id
+     WHERE b.status IN ('approved','pending')`
   );
   const ridersByTrip = new Map<string, any[]>();
   for (const r of riders) {
     if (!ridersByTrip.has(r.tripId)) ridersByTrip.set(r.tripId, []);
     ridersByTrip.get(r.tripId)!.push(r);
   }
-  res.json({ trips: rows.map((t: any) => ({ ...t, riders: ridersByTrip.get(t.id) || [] })) });
+  res.json({
+    trips: rows.map((t: any) => {
+      const all = ridersByTrip.get(t.id) || [];
+      return {
+        ...t,
+        riders: all.filter((r) => r.status === 'approved'),
+        // Only the driver needs to see who is still waiting on a decision.
+        pendingRiders: t.driverId === user.id ? all.filter((r) => r.status === 'pending') : []
+      };
+    })
+  });
 });
 
 api.post('/carpool/trips', requireAuth(), async (req, res) => {
@@ -1289,23 +1308,86 @@ api.patch('/carpool/trips/:id', requireAuth(), async (req, res) => {
   res.json({ ok: true });
 });
 
+/** Booking a seat is a request now: the driver approves or rejects it. */
 api.post('/carpool/trips/:id/book', requireAuth(), async (req, res) => {
   const { user } = req as AuthedRequest;
-  const t = await one(
-    `SELECT t.*, (SELECT COUNT(*)::int FROM carpool_bookings b WHERE b.trip_id = t.id) AS booked
-     FROM carpool_trips t WHERE t.id = $1`, [req.params.id]);
+  const t = await one<any>(
+    `SELECT t.*, d.name AS driver_name,
+       (SELECT COUNT(*)::int FROM carpool_bookings b
+         WHERE b.trip_id = t.id AND b.status = 'approved') AS booked
+     FROM carpool_trips t JOIN users d ON d.id = t.driver_id WHERE t.id = $1`, [req.params.id]);
   if (!t) return res.status(404).json({ error: 'Trip not found' });
   if (t.status !== 'active') return res.status(400).json({ error: 'Trip is not active' });
   if (t.driver_id === user.id) return res.status(400).json({ error: 'You are the driver of this trip' });
   if (t.booked >= t.seats_total) return res.status(400).json({ error: 'No seats left on this trip' });
-  const dup = await one(`SELECT id FROM carpool_bookings WHERE trip_id = $1 AND rider_id = $2`, [req.params.id, user.id]);
-  if (dup) return res.status(400).json({ error: 'You already booked this trip' });
+
+  // A previous rejection is kept on the row so the old thread still reads
+  // correctly; clear it here so the rider can ask again.
+  const dup = await one<{ id: string; status: string }>(
+    `SELECT id, status FROM carpool_bookings WHERE trip_id = $1 AND rider_id = $2`, [req.params.id, user.id]);
+  if (dup?.status === 'approved') return res.status(400).json({ error: 'Your seat on this trip is already confirmed' });
+  if (dup?.status === 'pending') return res.status(400).json({ error: 'You already asked for a seat — the driver has not decided yet' });
+  if (dup) await q(`DELETE FROM carpool_bookings WHERE id = $1`, [dup.id]);
+
   const days = Array.isArray(req.body?.days) ? req.body.days : [];
-  await q(`INSERT INTO carpool_bookings (id, trip_id, rider_id, days) VALUES ($1,$2,$3,$4)`,
-    [newId('cb'), req.params.id, user.id, JSON.stringify(days)]);
-  await notify(t.driver_id, null, 'help_offer', 'New Carpool Booking',
-    `${user.name} booked a seat: ${t.origin} → ${t.destination} (${t.departure_time}).`, 'beyond');
-  res.status(201).json({ ok: true });
+  const bookingId = newId('cb');
+  await q(`INSERT INTO carpool_bookings (id, trip_id, rider_id, days, status) VALUES ($1,$2,$3,$4,'pending')`,
+    [bookingId, req.params.id, user.id, JSON.stringify(days)]);
+
+  const route = `${t.origin} → ${t.destination}`;
+  // The request also lands in the driver's inbox as a message, so it can be
+  // approved or rejected from the conversation without leaving Messages.
+  await q(
+    `INSERT INTO messages (id, sender_id, recipient_id, text, context_type, context_title, context_id)
+     VALUES ($1,$2,$3,$4,'carpool_booking',$5,$6)`,
+    [newId('msg'), user.id, t.driver_id,
+      `Hi ${String(t.driver_name || '').split(' ')[0] || 'there'} — could I take a seat on your ${t.departure_time} ride? (${route})`,
+      route, bookingId]
+  );
+  await notify(t.driver_id, null, 'help_offer', 'Seat Request',
+    `${user.name} asked for a seat: ${route} (${t.departure_time}). Approve or decline it from Messages.`, 'beyond');
+  res.status(201).json({ ok: true, bookingId });
+});
+
+/** The driver's decision on a seat request. Reachable from the trip card and
+ *  from the booking's message thread — both post here. */
+api.post('/carpool/bookings/:id/decision', requireAuth(), async (req, res) => {
+  const { user } = req as AuthedRequest;
+  const { decision } = req.body || {};
+  if (!['approved', 'rejected'].includes(decision)) {
+    return res.status(400).json({ error: 'decision must be approved or rejected' });
+  }
+  const b = await one<any>(
+    `SELECT b.*, t.driver_id, t.origin, t.destination, t.departure_time, t.seats_total,
+       r.name AS rider_name,
+       (SELECT COUNT(*)::int FROM carpool_bookings x WHERE x.trip_id = b.trip_id AND x.status = 'approved') AS booked
+     FROM carpool_bookings b
+     JOIN carpool_trips t ON t.id = b.trip_id
+     JOIN users r ON r.id = b.rider_id
+     WHERE b.id = $1`, [req.params.id]);
+  if (!b) return res.status(404).json({ error: 'Booking not found' });
+  if (b.driver_id !== user.id) return res.status(403).json({ error: 'Only the driver can decide this' });
+  if (b.status !== 'pending') return res.status(400).json({ error: 'This request has already been decided' });
+  if (decision === 'approved' && b.booked >= b.seats_total) {
+    return res.status(400).json({ error: 'No seats left to confirm' });
+  }
+
+  await q(`UPDATE carpool_bookings SET status = $1 WHERE id = $2`, [decision, req.params.id]);
+
+  const route = `${b.origin} → ${b.destination}`;
+  const reply = decision === 'approved'
+    ? `Seat confirmed for the ${b.departure_time} ride (${route}). See you there.`
+    : `Sorry — I can't fit you on the ${b.departure_time} ride (${route}) this time.`;
+  await q(
+    `INSERT INTO messages (id, sender_id, recipient_id, text, context_type, context_title, context_id)
+     VALUES ($1,$2,$3,$4,'carpool_booking',$5,$6)`,
+    [newId('msg'), user.id, b.rider_id, reply, route, req.params.id]
+  );
+  await notify(b.rider_id, null, 'help_offer',
+    decision === 'approved' ? 'Seat Confirmed ✓' : 'Seat Request Declined',
+    `${user.name}: ${reply}`, 'beyond');
+  await audit(user.id, `carpool_booking_${decision}`, req.params.id, { rider: b.rider_name, route });
+  res.json({ ok: true });
 });
 
 api.post('/carpool/trips/:id/cancel-booking', requireAuth(), async (req, res) => {
@@ -1318,10 +1400,18 @@ api.post('/carpool/trips/:id/cancel-booking', requireAuth(), async (req, res) =>
 
 api.get('/messages', requireAuth(), async (req, res) => {
   const { user } = req as AuthedRequest;
+  // A carpool booking message carries its booking's live state so the driver
+  // can decide inline; `canDecide` is what the thread actually gates on.
   const { rows } = await q(
     `SELECT m.id, m.sender_id AS "senderId", m.recipient_id AS "recipientId", m.text,
-       m.context_type AS "contextType", m.context_title AS "contextTitle", m.read, m.created_at AS "createdAt"
-     FROM messages m WHERE m.sender_id = $1 OR m.recipient_id = $1 ORDER BY m.created_at`,
+       m.context_type AS "contextType", m.context_title AS "contextTitle",
+       m.context_id AS "contextId", m.read, m.created_at AS "createdAt",
+       b.status AS "bookingStatus",
+       (b.status = 'pending' AND t.driver_id = $1) AS "canDecide"
+     FROM messages m
+     LEFT JOIN carpool_bookings b ON m.context_type = 'carpool_booking' AND b.id = m.context_id
+     LEFT JOIN carpool_trips t ON t.id = b.trip_id
+     WHERE m.sender_id = $1 OR m.recipient_id = $1 ORDER BY m.created_at`,
     [user.id]
   );
   res.json({ messages: rows });
@@ -1329,14 +1419,14 @@ api.get('/messages', requireAuth(), async (req, res) => {
 
 api.post('/messages', requireAuth(), async (req, res) => {
   const { user } = req as AuthedRequest;
-  const { recipientId, text, contextType = 'general', contextTitle = '' } = req.body || {};
+  const { recipientId, text, contextType = 'general', contextTitle = '', contextId = null } = req.body || {};
   if (!recipientId || !text) return res.status(400).json({ error: 'recipientId and text are required' });
   const recipient = await getUserById(recipientId);
   if (!recipient) return res.status(404).json({ error: 'Recipient not found' });
   await q(
-    `INSERT INTO messages (id, sender_id, recipient_id, text, context_type, context_title)
-     VALUES ($1,$2,$3,$4,$5,$6)`,
-    [newId('msg'), user.id, recipientId, text, contextType, contextTitle]
+    `INSERT INTO messages (id, sender_id, recipient_id, text, context_type, context_title, context_id)
+     VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+    [newId('msg'), user.id, recipientId, text, contextType, contextTitle, contextId]
   );
   res.status(201).json({ ok: true });
 });
