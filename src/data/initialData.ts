@@ -44,7 +44,7 @@ import {
  * staff account: admins are filtered out of the People directory, so granting
  * it to an engineer hides them from the colleagues who need to find them; and
  * admins can act on any request, which puts a person who also applies for work
- * next to their own approvals. Rohit and Rakesh built MBXchange and operate it
+ * next to their own approvals. Arjun and Karthik built MBXchange and operate it
  * — they do that by signing into this account, and stay ordinary engineers in
  * the directory and in the approval chain.
  */
@@ -136,7 +136,7 @@ export const MANAGER_SANILA: UserAccount = {
   departmentsSupportedCount: 7,
   peopleHelpedCount: 48,
   hoursContributed: 118,
-  bio: 'Senior manager for the platform and delivery squads under Kalyan and Swati. Protects team capacity while still saying yes to cross-team work that grows people.'
+  bio: 'Senior manager for the platform and delivery squads under Vikram and Priya. Protects team capacity while still saying yes to cross-team work that grows people.'
 };
 
 export const MANAGER_IRFAN: UserAccount = {
@@ -167,7 +167,7 @@ export const MANAGER_IRFAN: UserAccount = {
   departmentsSupportedCount: 6,
   peopleHelpedCount: 40,
   hoursContributed: 102,
-  bio: 'Senior manager for the data and reliability squads under Nitin and Prabhat. Focused on keeping platforms boringly dependable and engineers unblocked.'
+  bio: 'Senior manager for the data and reliability squads under Ajay and Vivek. Focused on keeping platforms boringly dependable and engineers unblocked.'
 };
 
 /* ── Line managers (first line) ────────────────────────────────────────── */
@@ -303,10 +303,10 @@ export const MANAGER_PRABHAT: UserAccount = {
 /* ── Vikram Subramanian's squad (9) ─────────────────────────────────────── */
 
 /**
- * Rohit and Rakesh built MBXchange and look after it, but they hold no
+ * Arjun and Karthik built MBXchange and look after it, but they hold no
  * elevated rights on their own accounts — they administer it through
- * ADMIN_USER. Here they are ordinary engineers on Kalyan's squad, visible in
- * the People directory and routed through Kalyan for approvals like everyone
+ * ADMIN_USER. Here they are ordinary engineers on Vikram's squad, visible in
+ * the People directory and routed through Vikram for approvals like everyone
  * else.
  */
 export const CURRENT_USER: UserAccount = {
@@ -338,7 +338,7 @@ export const CURRENT_USER: UserAccount = {
   departmentsSupportedCount: 5,
   peopleHelpedCount: 22,
   hoursContributed: 52,
-  bio: 'Full stack developer on the core PT-THIF product squad, working across .NET Core services and Angular front ends. Co-built MBXchange and keeps it running day to day with Rakesh — happy to pair on RxJS, EF Core query tuning, or untangling a slow endpoint.'
+  bio: 'Full stack developer on the core PT-THIF product squad, working across .NET Core services and Angular front ends. Co-built MBXchange and keeps it running day to day with Karthik — happy to pair on RxJS, EF Core query tuning, or untangling a slow endpoint.'
 };
 
 export const EMP_RAKESH: UserAccount = {
@@ -372,7 +372,7 @@ export const EMP_RAKESH: UserAccount = {
   departmentsSupportedCount: 7,
   peopleHelpedCount: 31,
   hoursContributed: 82,
-  bio: 'Lead DevOps engineer on the core PT-THIF squad, focused on developer productivity, immutable infrastructure, and helping other teams scale safely on AWS/Azure Kubernetes. Co-built MBXchange and looks after its deployment and operations alongside Rohit.'
+  bio: 'Lead DevOps engineer on the core PT-THIF squad, focused on developer productivity, immutable infrastructure, and helping other teams scale safely on AWS/Azure Kubernetes. Co-built MBXchange and looks after its deployment and operations alongside Arjun.'
 };
 
 export const EMP_SANGEETA: UserAccount = {
@@ -786,7 +786,7 @@ export const INITIAL_USER_ACCOUNTS: UserAccount[] = [
   MANAGER_SWATI,
   MANAGER_NITIN,
   MANAGER_PRABHAT,
-  // Kalyan's squad
+  // Vikram's squad
   CURRENT_USER,
   EMP_RAKESH,
   EMP_SANGEETA,
@@ -796,13 +796,13 @@ export const INITIAL_USER_ACCOUNTS: UserAccount[] = [
   EMP_RASHMI,
   EMP_SHITAL,
   EMP_AMAN,
-  // Swati's squad
+  // Priya's squad
   EMP_AMITH,
   EMP_ROHIT_SHET,
-  // Nitin's squad
+  // Ajay's squad
   EMP_AVINASH,
   EMP_SOUMYA,
-  // Prabhat's squad
+  // Vivek's squad
   EMP_PAWAN,
   EMP_RAGHAV
 ];
@@ -821,7 +821,7 @@ export const INITIAL_DIRECT_MESSAGES: DirectMessage[] = [
     recipientName: 'Karthik Iyer',
     recipientInitials: 'KI',
     recipientRole: 'Lead DevOps Engineer',
-    text: 'Hi Rakesh, thank you for the tips on AKS private cluster DNS. The GenAI copilot search latency dropped from 420ms to 65ms after we configured internal endpoint caching!',
+    text: 'Hi Karthik, thank you for the tips on AKS private cluster DNS. The GenAI copilot search latency dropped from 420ms to 65ms after we configured internal endpoint caching!',
     timestamp: Date.now() - 3600000 * 3,
     time: '3h ago',
     read: false,
@@ -857,7 +857,7 @@ export const INITIAL_DIRECT_MESSAGES: DirectMessage[] = [
     recipientName: 'Karthik Iyer',
     recipientInitials: 'KI',
     recipientRole: 'Lead DevOps Engineer',
-    text: 'Hi Rakesh, I approved your 8-hour cross-department collaboration request for PT-THIA. Great to see our cloud patterns being leveraged by AI squads.',
+    text: 'Hi Karthik, I approved your 8-hour cross-department collaboration request for PT-THIA. Great to see our cloud patterns being leveraged by AI squads.',
     timestamp: Date.now() - 3600000 * 5,
     time: '5h ago',
     read: false,
@@ -874,7 +874,7 @@ export const INITIAL_DIRECT_MESSAGES: DirectMessage[] = [
     recipientName: 'Vikram Subramanian',
     recipientInitials: 'VS',
     recipientRole: 'Engineering Manager & Tech Lead',
-    text: 'Hi Elena, I submitted a request to support the Powertrain Telemetry Pipeline gig for 6 hours next week. My sprint commitments for MBRDI Kafka streaming are on track.',
+    text: 'Hi Vikram, I submitted a request to support the Powertrain Telemetry Pipeline gig for 6 hours next week. My sprint commitments for MBRDI Kafka streaming are on track.',
     timestamp: Date.now() - 3600000 * 1,
     time: '1h ago',
     read: false,
@@ -1595,7 +1595,7 @@ export const INITIAL_MANAGER_APPROVALS: ManagerApprovalItem[] = [
     period: '20–22 Aug 2026',
     currentProject: 'Cloud Foundation Platform & MBRDI Kubernetes',
     aiRecommendation: 'Approve',
-    aiRecommendationReason: 'Rakesh has 6 declared available hours this sprint, zero sprint blockers in Jira, and high cross-department feedback (⭐ 4.82/5).',
+    aiRecommendationReason: 'Karthik has 6 declared available hours this sprint, zero sprint blockers in Jira, and high cross-department feedback (⭐ 4.82/5).',
     status: 'Pending',
     requestedAt: '1 hour ago'
   },
@@ -2121,7 +2121,7 @@ export const INITIAL_KNOWLEDGE_QUESTIONS: KnowledgeQuestion[] = [
         initials: 'VS',
         time: '14 hours ago',
         timestamp: Date.now() - 50400000,
-        text: `+1 to Rakesh's approach. Also make sure to configure the \`kubelet\` with \`--resolv-conf\` pointing to CoreDNS forwarders to avoid hairpin DNS timeouts.`,
+        text: `+1 to Karthik's approach. Also make sure to configure the \`kubelet\` with \`--resolv-conf\` pointing to CoreDNS forwarders to avoid hairpin DNS timeouts.`,
         likes: 8
       }
     ]
@@ -2169,14 +2169,14 @@ export const INITIAL_CAPABILITY_HEATMAP: CapabilityHeatmapItem[] = [
 ];
 
 export const INITIAL_NOTIFICATIONS: NotificationItem[] = [
-  // Elena's Manager Notifications (Direct Reports: Rakesh, Arjun)
+  // Vikram's Manager Notifications (Direct Reports: Karthik, Arjun)
   {
     id: 'n_elena_1',
     recipientId: 'usr_kalyan',
     recipientRole: 'manager',
     type: 'manager_approval',
     title: 'Manager Approval: Karthik Iyer',
-    description: 'Rakesh requested approval to allocate 8h to PT-THIA deployment automation on AWS & EKS.',
+    description: 'Karthik requested approval to allocate 8h to PT-THIA deployment automation on AWS & EKS.',
     time: '1h ago',
     timestamp: Date.now() - 3600000,
     read: false,
@@ -2235,7 +2235,7 @@ export const INITIAL_NOTIFICATIONS: NotificationItem[] = [
     targetTab: 'manager'
   },
 
-  // Rakesh's Employee Notifications
+  // Karthik's Employee Notifications
   {
     id: 'n_rakesh_1',
     recipientId: 'usr_rakesh',

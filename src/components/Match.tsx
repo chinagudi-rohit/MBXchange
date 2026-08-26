@@ -17,30 +17,45 @@ export function fitLevel(score: number): FitLevel {
   return 'Low';
 }
 
-const LEVEL_STYLE: Record<FitLevel, string> = {
-  High: 'bg-green-soft text-green',
-  Medium: 'bg-primary-soft text-primary-text',
-  Low: 'bg-surface-2 text-ink-3'
-};
-
-/** Level colours for the chart's plotted points. */
+/** Level colours for the chart's plotted points and the compact meter. */
 const LEVEL_STROKE: Record<FitLevel, string> = {
   High: 'var(--accent-green)',
   Medium: 'var(--primary)',
   Low: 'var(--ink-3)'
 };
 
-/** Compact fit pill for feed cards and search results. */
+const LEVEL_BAR: Record<FitLevel, string> = LEVEL_STROKE;
+
+/**
+ * Compact fit meter for feed cards and search results.
+ *
+ * A segmented bar rather than a word: three ticks that fill in proportion to
+ * the match, with the level named beside them. It reads at a glance in a
+ * dense grid — you can compare two cards without reading either label — and
+ * still says the level out loud for anyone who cannot use the colour.
+ */
 export function MatchBadge({ score, className = '' }: { score?: number | null; className?: string }) {
   if (score == null) return null;
   const level = fitLevel(score);
+  // One segment per band, filled up to the level reached.
+  const filled = level === 'High' ? 3 : level === 'Medium' ? 2 : 1;
+  const fill = LEVEL_BAR[level];
+
   return (
     <span
-      title={`${level} fit against your declared skills and remaining bandwidth`}
-      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold ${LEVEL_STYLE[level]} ${className}`}
+      className={`inline-flex items-center gap-1.5 ${className}`}
+      title={`${level} fit against your declared skills and the bandwidth you have offered`}
     >
-      <Sparkles className="w-3 h-3" />
-      {level} fit
+      <span className="flex items-center gap-0.5" aria-hidden="true">
+        {[0, 1, 2].map((i) => (
+          <span
+            key={i}
+            className="block h-1.5 w-4 rounded-full transition-colors"
+            style={{ background: i < filled ? fill : 'var(--surface-2)' }}
+          />
+        ))}
+      </span>
+      <span className="text-xs font-semibold" style={{ color: fill }}>{level} match</span>
     </span>
   );
 }
@@ -177,7 +192,6 @@ export function MatchBreakdown({
   crossDepartment?: boolean;
 }) {
   if (score == null) return null;
-  const level = fitLevel(score);
 
   return (
     <div className="p-4 rounded-2xl bg-surface-2">
@@ -186,9 +200,7 @@ export function MatchBreakdown({
           <Sparkles className="w-4 h-4 text-primary-text" />
           Why this matches you
         </p>
-        <span className={`px-2.5 py-1 rounded-lg text-xs font-semibold ${LEVEL_STYLE[level]}`}>
-          {level} fit
-        </span>
+        <MatchBadge score={score} />
       </div>
 
       <FitLineChart

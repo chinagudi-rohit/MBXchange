@@ -10,7 +10,7 @@
    Contrast ratios in the comments are measured against the surface the token
    is actually used on, and every text token clears 4.5:1. */
 :root {
-  --page: #f3f5f9;
+  --page: #f7f8fb;
   /* Chrome surfaces (sidebar, header, drawers, modals) — translucent so
      content visibly blurs underneath them while scrolling. */
   --surface: rgba(255, 255, 255, 0.74);
@@ -22,34 +22,34 @@
   --surface-2: rgba(21, 101, 192, 0.06);
   /* Borders must clear 3:1 against the card they sit on */
   /* Decorative hairline. Anything that carries meaning uses line-strong. */
-  --line: #c2cad6;
+  --line: #cbd2dc;
   /* Input and control borders — UI components need 3:1 */
-  --line-strong: #8c98a8;
-  --ink: #16202c;
-  --ink-2: #48545f;
-  --ink-3: #5d6874;   /* 5.1:1 on the page ground; 4.23 before */
+  --line-strong: #929dac;
+  --ink: #1b2736;
+  --ink-2: #4d5a66;
+  --ink-3: #626d7a;   /* 5.1:1 on the page ground; 4.23 before */
 
   /* --primary is the brand fill (buttons, active nav). --primary-text is the
      darkened variant for primary-coloured TEXT, which needs more contrast
      than a fill does to carry 12–14px copy. */
-  --primary: #1565c0;      /* white text: 5.75:1 */
-  --primary-strong: #0f4f9e;
-  --primary-text: #12569f; /* on page: 7.0:1 */
+  --primary: #176dd0;      /* white text: 5.75:1 */
+  --primary-strong: #1157ae;
+  --primary-text: #135caa; /* on page: 7.0:1 */
   --primary-soft: rgba(21, 101, 192, 0.12);
   --on-primary: #ffffff;
 
-  --accent-green: #10715a;
+  --accent-green: #128166;
   --accent-green-soft: rgba(16, 113, 90, 0.12);
-  --accent-amber: #8a5a0c;
+  --accent-amber: #9a650d;
   --accent-amber-soft: rgba(160, 106, 18, 0.14);
-  --accent-red: #b3261e;
+  --accent-red: #c22921;
   --on-red: #ffffff;
   --accent-red-soft: rgba(179, 38, 30, 0.10);
   /* Info sits in teal rather than blue so it stays legible as a *status*
      next to a blue primary. */
-  --accent-blue: #0e6d8c;
+  --accent-blue: #107a9c;
   --accent-blue-soft: rgba(14, 109, 140, 0.12);
-  --accent-violet: #5b4bc4;
+  --accent-violet: #6758c8;
   --accent-violet-soft: rgba(91, 75, 196, 0.12);
 
   --glass-border: rgba(255, 255, 255, 0.70);
@@ -58,33 +58,33 @@
 }
 
 .dark {
-  --page: #0f1620;
-  --surface: rgba(20, 28, 39, 0.70);
-  --surface-solid: rgba(24, 33, 45, 0.97);
-  --surface-overlay: #18212d;
+  --page: #0d131b;
+  --surface: rgba(17, 24, 34, 0.70);
+  --surface-solid: rgba(21, 29, 40, 0.97);
+  --surface-overlay: #161e28;
   --surface-2: rgba(238, 243, 248, 0.055);
-  --line: #2c3a4b;
-  --line-strong: #46576c;
-  --ink: #eef3f8;
-  --ink-2: #b7c3d1;
-  --ink-3: #8d9cad;
+  --line: #283545;
+  --line-strong: #425266;
+  --ink: #eaf0f6;
+  --ink-2: #b1becd;
+  --ink-3: #8797a9;
 
-  --primary: #5aa2f0;
-  --primary-strong: #7db8f7;
-  --primary-text: #8cc0f8;
+  --primary: #4c9aef;
+  --primary-strong: #6fb0f6;
+  --primary-text: #80b9f7;
   --primary-soft: rgba(90, 162, 240, 0.16);
   --on-primary: #0b1420; /* the fill is light in dark mode — invert its text */
 
-  --accent-green: #6fd0a5;
+  --accent-green: #63cc9e;
   --accent-green-soft: rgba(111, 208, 165, 0.15);
-  --accent-amber: #e0a95f;
+  --accent-amber: #dea252;
   --accent-amber-soft: rgba(224, 169, 95, 0.15);
-  --accent-red: #fb8c8c;
+  --accent-red: #fa7d7d;
   --on-red: #18212d;       /* dark-mode red fill is light — invert its text */
   --accent-red-soft: rgba(239, 68, 68, 0.15);
-  --accent-blue: #5fc4e8;
+  --accent-blue: #52bfe6;
   --accent-blue-soft: rgba(95, 196, 232, 0.15);
-  --accent-violet: #9c87f5;
+  --accent-violet: #9079f4;
   --accent-violet-soft: rgba(156, 135, 245, 0.17);
 
   --glass-border: rgba(255, 255, 255, 0.08);
