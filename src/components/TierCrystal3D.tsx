@@ -56,7 +56,7 @@ export function TierCrystal3D({
     if (!container || !webgl) return;
 
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const readAccent = () => new THREE.Color(cssVar('--primary', '#b55635'));
+    const readAccent = () => new THREE.Color(cssVar('--primary', '#1565c0'));
     let accent = readAccent();
 
     const scene = new THREE.Scene();

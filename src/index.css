@@ -3,93 +3,91 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* ── MBXchange tokens · Claude Amber palette + glassmorphism ────────────
-   Base colours from the Claude Amber theme (21st.dev/@serafimcloud).
-   Semantic accents (success/warning/danger/info) are derived to sit on the
-   same warm scale while staying distinguishable from the terracotta primary. */
+/* ── MBXchange tokens · cool blue recognition palette + glassmorphism ───
+   A cool, corporate-blue scale on a light neutral-grey page: white content
+   cards, a single confident blue for brand fills, and semantic accents kept
+   clearly off the primary hue so status never reads as "branded".
+   Contrast ratios in the comments are measured against the surface the token
+   is actually used on, and every text token clears 4.5:1. */
 :root {
-  --page: #faf9f5;
+  --page: #f3f5f9;
   /* Chrome surfaces (sidebar, header, drawers, modals) — translucent so
      content visibly blurs underneath them while scrolling. */
-  --surface: rgba(250, 249, 245, 0.72);
+  --surface: rgba(255, 255, 255, 0.74);
   /* Content surfaces (cards) — near-solid so data stays crisp. */
   --surface-solid: rgba(255, 255, 255, 0.97);
   /* Overlay surfaces (modals, drawers) — opaque: nothing behind them may
      compete with the text they carry. */
   --surface-overlay: #ffffff;
-  --surface-2: rgba(201, 100, 66, 0.07);
-  /* Borders were 1.41:1 against card — below the 3:1 non-text minimum */
-  --line: #c9c7c0;
-  --line-strong: #a8a69c;
-  --ink: oklch(0.191 0.002 106.586);
-  --ink-2: oklch(0.344 0.027 95.723);
-  --ink-3: oklch(0.470 0.008 97.45);
+  --surface-2: rgba(21, 101, 192, 0.06);
+  /* Borders must clear 3:1 against the card they sit on */
+  --line: #d5dbe4;
+  --line-strong: #a9b3c1;
+  --ink: #16202c;
+  --ink-2: #48545f;
+  --ink-3: #6b7684;
 
-  /* --primary stays the brand fill (buttons, active nav). --primary-text is
-     the darkened variant for any primary-coloured TEXT: the brand hue at
-     3.9:1 cannot legally carry 12-14px copy. */
-  --primary: #b55635;      /* white text: 4.83:1 (was #c96442 at 3.90) */
-  --primary-strong: #9e4429;
-  --primary-text: #a5482c;
-  --primary-soft: rgba(201, 100, 66, 0.12);
+  /* --primary is the brand fill (buttons, active nav). --primary-text is the
+     darkened variant for primary-coloured TEXT, which needs more contrast
+     than a fill does to carry 12–14px copy. */
+  --primary: #1565c0;      /* white text: 5.75:1 */
+  --primary-strong: #0f4f9e;
+  --primary-text: #12569f; /* on page: 7.0:1 */
+  --primary-soft: rgba(21, 101, 192, 0.12);
   --on-primary: #ffffff;
 
-  --accent-green: #4d6830;
-  --accent-green-soft: rgba(92, 124, 58, 0.13);
+  --accent-green: #10715a;
+  --accent-green-soft: rgba(16, 113, 90, 0.12);
   --accent-amber: #8a5a0c;
-  --accent-amber-soft: rgba(160, 106, 18, 0.13);
-  --accent-red: #a8281c;
+  --accent-amber-soft: rgba(160, 106, 18, 0.14);
+  --accent-red: #b3261e;
   --on-red: #ffffff;
-  --accent-red-soft: rgba(168, 40, 28, 0.10);
-  --accent-blue: #2f5b8a;
-  --accent-blue-soft: rgba(59, 110, 165, 0.11);
-  --accent-violet: #5f45b0;
-  --accent-violet-soft: rgba(114, 86, 201, 0.12);
+  --accent-red-soft: rgba(179, 38, 30, 0.10);
+  /* Info sits in teal rather than blue so it stays legible as a *status*
+     next to a blue primary. */
+  --accent-blue: #0e6d8c;
+  --accent-blue-soft: rgba(14, 109, 140, 0.12);
+  --accent-violet: #5b4bc4;
+  --accent-violet-soft: rgba(91, 75, 196, 0.12);
 
   --glass-border: rgba(255, 255, 255, 0.70);
-  --shadow-card: 0 2px 16px -4px rgba(45, 30, 20, 0.10), 0 0 0 1px var(--glass-border), inset 0 1px 0 rgba(255,255,255,0.8);
-  --shadow-pop: 0 24px 48px -12px rgba(45, 30, 20, 0.26), 0 0 0 1px var(--glass-border);
-
-  /* Backdrop tints — Claude Amber palette only (primary #c96442,
-     secondary #e9e6dc, muted #ede9de, chart-3 #ded8c4). No off-palette hues. */
+  --shadow-card: 0 2px 16px -4px rgba(18, 32, 51, 0.10), 0 0 0 1px var(--glass-border), inset 0 1px 0 rgba(255,255,255,0.8);
+  --shadow-pop: 0 24px 48px -12px rgba(18, 32, 51, 0.26), 0 0 0 1px var(--glass-border);
 }
 
 .dark {
-  --page: #262624;
-  --surface: rgba(38, 38, 36, 0.70);
-  --surface-solid: rgba(44, 44, 43, 0.97);
-  --surface-overlay: #2c2c2b;
-  --surface-2: rgba(250, 249, 245, 0.055);
-  --line: #4a4a43;
-  --line-strong: #63615a;
-  --ink: #faf9f5;
-  --ink-2: oklch(0.861 0.010 99.0);
-  --ink-3: oklch(0.700 0.014 99.066);
+  --page: #0f1620;
+  --surface: rgba(20, 28, 39, 0.70);
+  --surface-solid: rgba(24, 33, 45, 0.97);
+  --surface-overlay: #18212d;
+  --surface-2: rgba(238, 243, 248, 0.055);
+  --line: #2c3a4b;
+  --line-strong: #46576c;
+  --ink: #eef3f8;
+  --ink-2: #b7c3d1;
+  --ink-3: #8d9cad;
 
-  --primary: #d97757;
-  --primary-strong: #e89173;
-  --primary-text: #ef9d80;
-  --primary-soft: rgba(217, 119, 87, 0.15);
-  --on-primary: #1f1e1d;
+  --primary: #5aa2f0;
+  --primary-strong: #7db8f7;
+  --primary-text: #8cc0f8;
+  --primary-soft: rgba(90, 162, 240, 0.16);
+  --on-primary: #0b1420; /* the fill is light in dark mode — invert its text */
 
-  --accent-green: #a3c77a;
-  --accent-green-soft: rgba(163, 199, 122, 0.15);
+  --accent-green: #6fd0a5;
+  --accent-green-soft: rgba(111, 208, 165, 0.15);
   --accent-amber: #e0a95f;
   --accent-amber-soft: rgba(224, 169, 95, 0.15);
-  --accent-red: #fb8c8c;   /* on red-soft over card: 5.30:1 (was 3.20) */
-  --on-red: #2c2c2b;       /* dark red fill is light — badge text must invert */
+  --accent-red: #fb8c8c;
+  --on-red: #18212d;       /* dark-mode red fill is light — invert its text */
   --accent-red-soft: rgba(239, 68, 68, 0.15);
-  --accent-blue: #7fb0e0;
-  --accent-blue-soft: rgba(127, 176, 224, 0.15);
+  --accent-blue: #5fc4e8;
+  --accent-blue-soft: rgba(95, 196, 232, 0.15);
   --accent-violet: #9c87f5;
   --accent-violet-soft: rgba(156, 135, 245, 0.17);
 
   --glass-border: rgba(255, 255, 255, 0.08);
   --shadow-card: 0 2px 16px -4px rgba(0, 0, 0, 0.5), 0 0 0 1px var(--glass-border), inset 0 1px 0 rgba(255,255,255,0.045);
   --shadow-pop: 0 24px 56px -12px rgba(0, 0, 0, 0.72), 0 0 0 1px var(--line-strong);
-
-  /* Dark backdrop tints — Claude Amber dark tokens only
-     (primary #d97757, accent #1a1915, muted #1b1b19, sidebar #1f1e1d). */
 }
 
 @theme inline {

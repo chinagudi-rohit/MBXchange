@@ -81,7 +81,7 @@ export function LoginScreen() {
         <div className="flex items-center gap-3">
           <MercedesStar className="w-11 h-11" />
           <span className="text-lg font-semibold tracking-tight">
-            MB<span className="text-[#d97757]">X</span>change
+            MB<span className="text-[#5aa2f0]">X</span>change
           </span>
         </div>
 
@@ -100,7 +100,7 @@ export function LoginScreen() {
               'Build a portfolio of gigs, badges and recognition'
             ].map((line) => (
               <li key={line} className="flex items-start gap-2.5 text-sm text-white/85">
-                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-[#d97757] shrink-0" />
+                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-[#5aa2f0] shrink-0" />
                 {line}
               </li>
             ))}

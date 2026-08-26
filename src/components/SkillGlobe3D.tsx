@@ -87,7 +87,7 @@ export function SkillGlobe3D({
     // Theme-derived palette. Re-read on theme change so the globe follows the
     // rest of the UI instead of staying stuck in whichever mode it mounted in.
     const readPalette = () => ({
-      accent: new THREE.Color(cssVar('--primary', '#b55635')),
+      accent: new THREE.Color(cssVar('--primary', '#1565c0')),
       ink: new THREE.Color(cssVar('--ink-3', '#8a8a85')),
       line: new THREE.Color(cssVar('--line', '#e3e0d8'))
     });
