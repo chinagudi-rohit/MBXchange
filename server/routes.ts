@@ -11,7 +11,7 @@ import {
   computeMatch, remainingBandwidth, type MatchResult
 } from './rules.ts';
 import { SEED_USER_PASSWORD, SEED_ADMIN_PASSWORD } from './seed.ts';
-import { recomputeRecognition } from './badges.ts';
+import { recomputeRecognition, recomputeContributionScore } from './badges.ts';
 import {
   BADGE_DIMENSIONS, getBadgeDefs, getBadgeDef, isAwardableBadge,
   getTierDefs, getTierSettings, computeTierFromDb, tierPoints,
@@ -1861,7 +1861,10 @@ async function postParticipants(postId: string): Promise<{
 
 api.post('/appreciations', requireAuth(), async (req, res) => {
   const { user } = req as AuthedRequest;
-  const { applicationId, toUserId, badgeId, message = '' } = req.body || {};
+  const { applicationId, toUserId, badgeId, message = '', rating } = req.body || {};
+  if (rating != null && (Number(rating) < 1 || Number(rating) > 5)) {
+    return res.status(400).json({ error: 'Rating must be between 1 and 5' });
+  }
   if (!applicationId && !toUserId) {
     return res.status(400).json({ error: 'applicationId or toUserId is required' });
   }
@@ -1899,11 +1902,15 @@ api.post('/appreciations', requireAuth(), async (req, res) => {
   const badge = (await getBadgeDef(String(badgeId)))!;
   const id = newId('apr');
   await q(
-    `INSERT INTO appreciations (id, to_user_id, from_user_id, post_id, application_id, badge_id, message)
-     VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-    [id, recipient, user.id, app.post_id, applicationId, badgeId, String(message).trim()]
+    `INSERT INTO appreciations (id, to_user_id, from_user_id, post_id, application_id, badge_id, message, rating)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+    [id, recipient, user.id, app.post_id, applicationId, badgeId, String(message).trim(),
+      rating != null ? Number(rating) : null]
   );
   await recomputeRecognition(recipient);
+  // The score is still the mean of the 1–5 peer ratings, exactly as before —
+  // the rating is optional, and only supplying one moves it.
+  if (rating != null) await recomputeContributionScore(recipient);
 
   await notify(recipient, null, 'feedback_received', `${user.name} awarded you "${badge.name}"`,
     `${badge.icon} On "${String(title).slice(0, 46)}"${String(message).trim() ? ` — “${String(message).trim().slice(0, 70)}”` : ''}`,
@@ -1957,7 +1964,10 @@ api.get('/score', requireAuth(), async (req, res) => {
 
 api.post('/appreciations', requireAuth(), async (req, res) => {
   const { user } = req as AuthedRequest;
-  const { applicationId, toUserId, badgeId, message = '' } = req.body || {};
+  const { applicationId, toUserId, badgeId, message = '', rating } = req.body || {};
+  if (rating != null && (Number(rating) < 1 || Number(rating) > 5)) {
+    return res.status(400).json({ error: 'Rating must be between 1 and 5' });
+  }
   if (!applicationId && !toUserId) {
     return res.status(400).json({ error: 'applicationId or toUserId is required' });
   }
@@ -1995,11 +2005,15 @@ api.post('/appreciations', requireAuth(), async (req, res) => {
   const badge = (await getBadgeDef(String(badgeId)))!;
   const id = newId('apr');
   await q(
-    `INSERT INTO appreciations (id, to_user_id, from_user_id, post_id, application_id, badge_id, message)
-     VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-    [id, recipient, user.id, app.post_id, applicationId, badgeId, String(message).trim()]
+    `INSERT INTO appreciations (id, to_user_id, from_user_id, post_id, application_id, badge_id, message, rating)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+    [id, recipient, user.id, app.post_id, applicationId, badgeId, String(message).trim(),
+      rating != null ? Number(rating) : null]
   );
   await recomputeRecognition(recipient);
+  // The score is still the mean of the 1–5 peer ratings, exactly as before —
+  // the rating is optional, and only supplying one moves it.
+  if (rating != null) await recomputeContributionScore(recipient);
 
   await notify(recipient, null, 'feedback_received', `${user.name} awarded you "${badge.name}"`,
     `${badge.icon} On "${String(title).slice(0, 46)}"${String(message).trim() ? ` — “${String(message).trim().slice(0, 70)}”` : ''}`,

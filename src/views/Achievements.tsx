@@ -3,7 +3,7 @@ import { Award, Heart, Sparkles, Send, Trophy, Check } from 'lucide-react';
 import { useStore } from '../lib/store';
 import { api, timeAgo } from '../lib/api';
 import {
-  Card, Button, Avatar, Modal, Field, TextArea, EmptyState, RowSkeleton, Reveal, Chip
+  Card, Button, Avatar, Modal, Field, TextArea, Select, EmptyState, RowSkeleton, Reveal, Chip
 } from '../components/ui';
 
 interface AwardBadge {
@@ -49,7 +49,7 @@ export function Achievements() {
   const [target, setTarget] = useState<PendingEngagement | null>(null);
   const [catalogue, setCatalogue] = useState<AwardBadge[]>([]);
   const [dimensions, setDimensions] = useState<Record<string, string>>({});
-  const [form, setForm] = useState({ message: '', badgeId: '' });
+  const [form, setForm] = useState({ message: '', badgeId: '', rating: '' });
   const [busy, setBusy] = useState(false);
 
   const load = async () => {
@@ -78,11 +78,13 @@ export function Achievements() {
       await api.post('/appreciations', {
         applicationId: target.applicationId,
         badgeId: form.badgeId,
-        message: form.message
+        message: form.message,
+        // Optional — only a supplied rating moves their score.
+        rating: form.rating ? Number(form.rating) : undefined
       });
       s.toast('success', 'Badge awarded', `${target.applicantName} has been notified.`);
       setTarget(null);
-      setForm({ message: '', badgeId: '' });
+      setForm({ message: '', badgeId: '', rating: '' });
       await Promise.all([load(), s.loadUsers()]);
     } catch (e: any) {
       s.toast('error', 'Could not award', e.message);
@@ -334,6 +336,20 @@ export function Achievements() {
               {catalogue.find((b) => b.id === form.badgeId)?.description}
             </p>
           )}
+
+          <Field
+            label="Rating (optional)"
+            hint="Feeds their contribution score. Leave it blank to award the badge on its own."
+          >
+            <Select value={form.rating} onChange={(e) => setForm({ ...form, rating: e.target.value })}>
+              <option value="">No rating</option>
+              <option value="5">5 — Exceptional</option>
+              <option value="4">4 — Above expectations</option>
+              <option value="3">3 — Solid contribution</option>
+              <option value="2">2 — Some gaps</option>
+              <option value="1">1 — Did not work out</option>
+            </Select>
+          </Field>
 
           <Field label="Add a note (optional)" hint="A specific sentence makes the badge land harder.">
             <TextArea
