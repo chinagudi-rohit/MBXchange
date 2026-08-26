@@ -442,10 +442,9 @@ export async function seedIfEmpty(): Promise<void> {
     await q(`UPDATE users SET tier = $1 WHERE id = $2`, [tier.name, t.id]);
   }
 
-  // Roll awarded badges up into contribution_score and rating_breakdown using
-  // the same routine the live award path calls. This runs for EVERY user, not
-  // just those with awards: the fixture file still carries the old 1–5 star
-  // averages, and anyone left un-recomputed would read as "4.97 badges".
+  // Only the badge tally is recomputed. contribution_score and
+  // rating_breakdown keep the seeded 1–5 peer-rating values — that is what
+  // the score has always been, and no badge award writes to it.
   const { rows: allUsers } = await q<{ id: string }>(`SELECT id FROM users`);
   for (const u of allUsers) await recomputeRecognition(u.id);
 

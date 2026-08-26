@@ -63,7 +63,7 @@ export interface User {
   availableFor: string[];
   typicalAvailability: string;
   availableHoursWeek: number;
-  /** 0-5, derived from badges plus contribution totals. */
+  /** 0-5 mean of the peer ratings this person has been given. */
   contributionScore: number;
   /** Raw number of badges awarded to this person. */
   badgesCount: number;
@@ -324,23 +324,14 @@ export function timeAgo(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 }
 
-/** One row of the working behind a contribution score. */
-export interface ScoreRow {
-  key: 'recognition' | 'impact' | 'reach' | 'consistency';
-  label: string;
-  hint: string;
-  target: number;
-  weight: number;
-  value: number;
-  ratio: number;
-  points: number;
-}
-
 export interface ScoreResponse {
   score: number;
   outOf: number;
   tier: string;
-  breakdown: ScoreRow[];
+  ratingCount: number;
+  badgesCount: number;
+  /** Peer rating per dimension, each out of 5. */
+  breakdown: Record<string, number>;
 }
 
 /** A rung of the admin-editable tier ladder. */

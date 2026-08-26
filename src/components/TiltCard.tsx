@@ -8,6 +8,10 @@ import React, { useRef, useState, useEffect, type ReactNode } from 'react';
  * for `prefers-reduced-motion`, and on touch devices — where there is no hover
  * state and the transform just fights scrolling.
  *
+ * There is deliberately no cursor-tracked glare. A radial highlight under
+ * the pointer washed out whatever text sat beneath it, so the part of the
+ * card you were looking at was the least legible part of it.
+ *
  * The z-index lift is what actually separates a hovered card from its
  * neighbours in a dense grid; without it the raised card is overlapped by the
  * ones after it in DOM order.
@@ -25,19 +29,16 @@ export function TiltCard({
   className = '',
   maxTilt = 4,
   scale = 1.015,
-  glare = true,
   onClick
 }: {
   children: ReactNode;
   className?: string;
   maxTilt?: number;
   scale?: number;
-  glare?: boolean;
   onClick?: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
-  const [glarePos, setGlarePos] = useState({ x: 50, y: 50 });
   const [hovered, setHovered] = useState(false);
   const [enabled, setEnabled] = useState(false);
 
@@ -56,7 +57,6 @@ export function TiltCard({
       x: -((y - r.height / 2) / (r.height / 2)) * maxTilt,
       y: ((x - r.width / 2) / (r.width / 2)) * maxTilt
     });
-    setGlarePos({ x: (x / r.width) * 100, y: (y / r.height) * 100 });
   };
 
   const reset = () => {
@@ -84,16 +84,6 @@ export function TiltCard({
         backfaceVisibility: 'hidden'
       }}
     >
-      {glare && lifted && (
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 rounded-[1rem] z-20 overflow-hidden"
-          style={{
-            background: `radial-gradient(circle at ${glarePos.x}% ${glarePos.y}%, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 60%)`,
-            mixBlendMode: 'overlay'
-          }}
-        />
-      )}
       <div className="h-full">{children}</div>
     </div>
   );

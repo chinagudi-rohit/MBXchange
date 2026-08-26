@@ -2,14 +2,19 @@ import React from 'react';
 import { Star } from 'lucide-react';
 import type { ScoreResponse } from '../lib/api';
 
+const DIMENSIONS: Array<[string, string]> = [
+  ['helping', 'Helping & mentorship'],
+  ['technicalExpertise', 'Technical expertise'],
+  ['collaboration', 'Cross-team collaboration'],
+  ['reliability', 'Reliability & follow-through']
+];
+
 /**
- * The contribution score, out of 5, with the working shown.
+ * The peer score, out of 5 — the mean of the ratings colleagues have given.
  *
- * This measures participation in the exchange — nothing else. It is not a
- * performance rating, it feeds no review, and it is visible only to the
- * person it belongs to and the manager they report to. The breakdown is
- * shown rather than hidden so it reads as "here is what you have taken part
- * in", with each bar a concrete thing to do next.
+ * Access is enforced on the server (GET /score refuses anyone but the
+ * subject, their manager, and admins), so the card does not advertise who
+ * can see it; a privacy notice on every render is noise.
  */
 export function ScoreCard({
   data, compact = false, onOpenDetail
@@ -23,12 +28,11 @@ export function ScoreCard({
   }
 
   const pct = Math.max(0, Math.min(1, data.score / data.outOf));
-  // The weakest component is the honest answer to "what do I do next".
-  const weakest = [...data.breakdown].sort((a, b) => a.ratio - b.ratio)[0];
-
-  // Ring geometry: r=42 in a 100-box, stroke sits inside the viewBox.
   const R = 42;
   const CIRC = 2 * Math.PI * R;
+  const dims = DIMENSIONS
+    .map(([key, label]) => ({ key, label, value: Number((data.breakdown as any)?.[key] ?? 0) }))
+    .filter((d) => d.value > 0);
 
   return (
     <div className="panel rounded-[1rem] shadow-card p-6 h-full flex flex-col">
@@ -55,41 +59,36 @@ export function ScoreCard({
         <div className="min-w-0 flex-1">
           <p className="text-xs font-semibold uppercase tracking-wide text-ink-3 flex items-center gap-1.5">
             <Star className="w-3.5 h-3.5 text-amber fill-amber" /> Contribution score
-            <span className="normal-case tracking-normal font-medium text-ink-3">· only you see this</span>
           </p>
           <p className="text-base font-semibold text-ink mt-1.5 leading-snug">{data.tier}</p>
           <p className="text-xs text-ink-2 mt-1 leading-relaxed">
-            {weakest && weakest.ratio < 1 ? (
-              <>Easiest next step: <b className="text-ink">{weakest.label.toLowerCase()}</b> — {weakest.hint.toLowerCase()}.</>
-            ) : (
-              <>Every component is maxed out. You are at the top of the scale.</>
-            )}
+            {data.badgesCount > 0
+              ? <>{data.badgesCount} badge{data.badgesCount === 1 ? '' : 's'} from colleagues you have worked with.</>
+              : <>Take on a piece of cross-team work and colleagues can recognise it here.</>}
           </p>
           {onOpenDetail && (
             <button
               onClick={onOpenDetail}
               className="text-xs font-semibold text-primary-text hover:underline underline-offset-2 mt-2"
             >
-              See how it is calculated →
+              See milestones and recognition →
             </button>
           )}
         </div>
       </div>
 
-      {!compact && (
+      {!compact && dims.length > 0 && (
         <div className="mt-5 space-y-2.5">
-          {data.breakdown.map((b) => (
-            <div key={b.key} title={`${b.hint} — ${b.value} of ${b.target}`}>
+          {dims.map((d) => (
+            <div key={d.key}>
               <div className="flex items-center justify-between text-xs mb-1">
-                <span className="font-medium text-ink-2">{b.label}</span>
-                <span className="font-semibold text-ink tabular-nums">
-                  {b.value}<span className="text-ink-3 font-medium"> / {b.target}</span>
-                </span>
+                <span className="font-medium text-ink-2">{d.label}</span>
+                <span className="font-semibold text-ink tabular-nums">{d.value.toFixed(1)} / 5</span>
               </div>
               <div className="h-1.5 rounded-full bg-surface-2 overflow-hidden">
                 <div
                   className="h-full rounded-full bg-primary"
-                  style={{ width: `${b.ratio * 100}%`, transition: 'width 700ms cubic-bezier(0.2,0.8,0.3,1)' }}
+                  style={{ width: `${(d.value / 5) * 100}%`, transition: 'width 700ms cubic-bezier(0.2,0.8,0.3,1)' }}
                 />
               </div>
             </div>

@@ -142,73 +142,12 @@ export function isBadgeId(id: unknown): id is string {
 }
 
 /**
- * The four things that move a person's contribution score, and how much of
- * each counts as "fully there".
+ * Roll a person's badge tally onto their user row.
  *
- * The score is deliberately NOT a peer star rating. Everybody gave 5, so that
- * number said nothing. This one is computed from work the person actually
- * did, and every component is visible in the UI — so "improve your score"
- * translates into a specific next action rather than into hoping somebody
- * rates you well.
- */
-export interface ScoreComponent {
-  key: 'recognition' | 'impact' | 'reach' | 'consistency';
-  label: string;
-  hint: string;
-  /** Value at which this component is considered maxed out. */
-  target: number;
-  weight: number;
-}
-
-export const SCORE_COMPONENTS: ScoreComponent[] = [
-  { key: 'recognition', label: 'Recognition', hint: 'Badges awarded to you', target: 12, weight: 0.35 },
-  { key: 'impact', label: 'Impact', hint: 'Hours contributed to other teams', target: 100, weight: 0.25 },
-  { key: 'reach', label: 'Reach', hint: 'Departments you have supported', target: 5, weight: 0.20 },
-  { key: 'consistency', label: 'Consistency', hint: 'Engagements completed', target: 20, weight: 0.20 }
-];
-
-export interface ScoreInput {
-  badges: number;
-  hoursContributed: number;
-  departmentsSupported: number;
-  collaborationsCount: number;
-}
-
-export interface ScoreBreakdownRow extends ScoreComponent {
-  value: number;
-  /** 0–1 share of this component's target that has been reached. */
-  ratio: number;
-  /** How many points of the 5 this component currently contributes. */
-  points: number;
-}
-
-/** Score out of 5, plus the working that produced it. */
-export function computeContributionScore(input: ScoreInput): {
-  score: number;
-  breakdown: ScoreBreakdownRow[];
-} {
-  const raw: Record<ScoreComponent['key'], number> = {
-    recognition: input.badges,
-    impact: input.hoursContributed,
-    reach: input.departmentsSupported,
-    consistency: input.collaborationsCount
-  };
-  const breakdown = SCORE_COMPONENTS.map((c) => {
-    const value = Math.max(0, Number(raw[c.key]) || 0);
-    const ratio = Math.min(1, value / c.target);
-    return { ...c, value, ratio, points: Math.round(ratio * c.weight * 5 * 100) / 100 };
-  });
-  const score = breakdown.reduce((n, b) => n + b.points, 0);
-  return { score: Math.round(score * 100) / 100, breakdown };
-}
-
-/**
- * Roll a person's awarded badges — and everything else the score depends on —
- * up onto their user row.
- *
- * `badges_count` is how many badges they hold and `rating_breakdown` is the
- * count per dimension, so both are counts of real awards. `contribution_score`
- * is the 0–5 score derived from those counts plus their contribution totals.
+ * `contribution_score` is deliberately NOT touched here. It is the average of
+ * the 1–5 peer ratings on `appreciations`, exactly as it has always been, and
+ * is maintained by the rating path alone — a badge award carries no rating,
+ * so giving one does not move the score.
  *
  * Lives here rather than in routes.ts because the seed needs it too, and
  * routes.ts already imports from seed.ts.
@@ -219,34 +158,22 @@ export async function recomputeRecognition(userId: string): Promise<void> {
       WHERE to_user_id = $1 AND badge_id <> '' GROUP BY badge_id`,
     [userId]
   );
-  const byDimension: Record<BadgeDimension, number> = {
-    helping: 0, technicalExpertise: 0, collaboration: 0, reliability: 0
-  };
   let total = 0;
-  for (const r of rows) {
-    const badge = getBadge(r.badge_id);
-    const n = parseInt(r.n, 10);
-    total += n;
-    if (badge) byDimension[badge.dimension] += n;
-  }
+  for (const r of rows) total += parseInt(r.n, 10);
+  await q(`UPDATE users SET badges_count = $1 WHERE id = $2`, [total, userId]);
+}
 
-  const totals = await q<{
-    hours_contributed: number; departments_supported: number; collaborations_count: number;
-  }>(
-    `SELECT hours_contributed, departments_supported, collaborations_count
-       FROM users WHERE id = $1`,
-    [userId]
-  );
-  const t = totals.rows[0];
-  const { score } = computeContributionScore({
-    badges: total,
-    hoursContributed: Number(t?.hours_contributed || 0),
-    departmentsSupported: Number(t?.departments_supported || 0),
-    collaborationsCount: Number(t?.collaborations_count || 0)
-  });
-
+/**
+ * The original peer score: the mean of every 1–5 rating a person has been
+ * given. Kept as its own routine so the rating path is the only thing that
+ * ever writes contribution_score.
+ */
+export async function recomputeContributionScore(userId: string): Promise<void> {
   await q(
-    `UPDATE users SET badges_count = $1, rating_breakdown = $2, contribution_score = $3 WHERE id = $4`,
-    [total, JSON.stringify(byDimension), score, userId]
+    `UPDATE users SET contribution_score = COALESCE((
+       SELECT ROUND(AVG(rating)::numeric, 2) FROM appreciations
+        WHERE to_user_id = $1 AND rating IS NOT NULL
+     ), contribution_score) WHERE id = $1`,
+    [userId]
   );
 }

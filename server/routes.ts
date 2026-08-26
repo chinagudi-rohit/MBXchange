@@ -11,7 +11,7 @@ import {
   computeMatch, remainingBandwidth, type MatchResult
 } from './rules.ts';
 import { SEED_USER_PASSWORD, SEED_ADMIN_PASSWORD } from './seed.ts';
-import { recomputeRecognition, computeContributionScore } from './badges.ts';
+import { recomputeRecognition } from './badges.ts';
 import {
   BADGE_DIMENSIONS, getBadgeDefs, getBadgeDef, isAwardableBadge,
   getTierDefs, getTierSettings, computeTierFromDb, tierPoints,
@@ -1927,27 +1927,103 @@ api.get('/badges/catalogue', requireAuth(), async (_req, res) => {
   res.json({ badges: await getBadgeDefs(), dimensions: BADGE_DIMENSIONS });
 });
 
-/** The signed-in user's 0-5 contribution score with its working shown. */
+/**
+ * The signed-in user's peer score, out of 5.
+ *
+ * This is the mean of the 1–5 ratings colleagues have given them — the
+ * original measure, not a derived one. Restricted to the person, their
+ * manager, and admins.
+ */
 api.get('/score', requireAuth(), async (req, res) => {
   const { user } = req as AuthedRequest;
   const target = (req.query.userId as string) || user.id;
-  // A contribution score belongs to the person it describes.
   if (!(await canSeePrivateProfile(user, target))) {
     return res.status(403).json({ error: 'That score is not yours to view' });
   }
   const u = await one<any>(
-    `SELECT badges_count, hours_contributed, departments_supported, collaborations_count, tier
+    `SELECT contribution_score, rating_breakdown, badges_count, tier,
+            (SELECT COUNT(*)::int FROM appreciations WHERE to_user_id = $1 AND rating IS NOT NULL) AS ratings
        FROM users WHERE id = $1`, [target]);
   if (!u) return res.status(404).json({ error: 'User not found' });
-  const { score, breakdown } = computeContributionScore({
-    badges: Number(u.badges_count || 0),
-    hoursContributed: Number(u.hours_contributed || 0),
-    departmentsSupported: Number(u.departments_supported || 0),
-    collaborationsCount: Number(u.collaborations_count || 0)
+  res.json({
+    score: Number(u.contribution_score || 0),
+    outOf: 5,
+    tier: u.tier,
+    ratingCount: Number(u.ratings || 0),
+    badgesCount: Number(u.badges_count || 0),
+    breakdown: u.rating_breakdown || {}
   });
-  res.json({ score, outOf: 5, tier: u.tier, breakdown });
 });
 
+api.post('/appreciations', requireAuth(), async (req, res) => {
+  const { user } = req as AuthedRequest;
+  const { applicationId, toUserId, badgeId, message = '' } = req.body || {};
+  if (!applicationId && !toUserId) {
+    return res.status(400).json({ error: 'applicationId or toUserId is required' });
+  }
+  if (!(await isAwardableBadge(badgeId))) return res.status(400).json({ error: 'Pick a badge to award' });
+
+  const app = await one<any>(
+    `SELECT a.id, a.applicant_id, a.manager_id, a.status, a.post_id
+       FROM applications a WHERE a.id = $1`,
+    [applicationId]
+  );
+  if (!app) return res.status(404).json({ error: 'Engagement not found' });
+  if (app.status !== 'approved') return res.status(400).json({ error: 'Only approved engagements can be recognised' });
+
+  const { ids, postStatus, title } = await postParticipants(app.post_id);
+  if (postStatus !== 'Completed') {
+    return res.status(400).json({ error: 'Award the badge once the requirement is completed' });
+  }
+
+  // Default recipient is the person the engagement belongs to; an explicit
+  // toUserId lets one participant recognise another.
+  const recipient = String(toUserId || app.applicant_id);
+  if (recipient === user.id) return res.status(400).json({ error: 'You cannot award yourself a badge' });
+  if (!ids.has(recipient)) return res.status(400).json({ error: 'That person did not work on this' });
+  if (!ids.has(user.id) && user.systemRole !== 'admin') {
+    return res.status(403).json({ error: 'Only people who worked on this can award a badge for it' });
+  }
+
+  // One badge per giver per recipient per post — you can recognise several
+  // people on the same piece of work, but not the same person twice.
+  const dup = await one(
+    `SELECT id FROM appreciations WHERE post_id = $1 AND from_user_id = $2 AND to_user_id = $3`,
+    [app.post_id, user.id, recipient]);
+  if (dup) return res.status(409).json({ error: 'You have already recognised this person for this work' });
+
+  const badge = (await getBadgeDef(String(badgeId)))!;
+  const id = newId('apr');
+  await q(
+    `INSERT INTO appreciations (id, to_user_id, from_user_id, post_id, application_id, badge_id, message)
+     VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+    [id, recipient, user.id, app.post_id, applicationId, badgeId, String(message).trim()]
+  );
+  await recomputeRecognition(recipient);
+
+  await notify(recipient, null, 'feedback_received', `${user.name} awarded you "${badge.name}"`,
+    `${badge.icon} On "${String(title).slice(0, 46)}"${String(message).trim() ? ` — “${String(message).trim().slice(0, 70)}”` : ''}`,
+    'achievements', app.post_id);
+
+  const row = await one(
+    `SELECT ap.id, ap.message, ap.badge_id AS "badgeId", ap.created_at AS "createdAt",
+            u.name AS "fromName", u.initials AS "fromInitials", u.role AS "fromRole", u.avatar_url AS "fromAvatarUrl",
+            p.title AS "postTitle"
+       FROM appreciations ap
+       JOIN users u ON u.id = ap.from_user_id
+       LEFT JOIN work_posts p ON p.id = ap.post_id
+      WHERE ap.id = $1`,
+    [id]
+  );
+  res.status(201).json({ appreciation: { ...row, badge } });
+});
+
+/** The badge vocabulary the award picker offers. */
+api.get('/badges/catalogue', requireAuth(), async (_req, res) => {
+  res.json({ badges: await getBadgeDefs(), dimensions: BADGE_DIMENSIONS });
+});
+
+/** The signed-in user's 0-5 contribution score with its working shown. */
 /** Recognition received by a person (defaults to the signed-in user). */
 api.get('/appreciations', requireAuth(), async (req, res) => {
   const { user } = req as AuthedRequest;
