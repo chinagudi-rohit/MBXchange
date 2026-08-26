@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { useStore } from '../lib/store';
 import { TiltCard } from '../components/TiltCard';
+import { TagEditor } from '../components/TagEditor';
 import { api, timeAgo, type Listing, type CarpoolTrip } from '../lib/api';
 import {
   Button, Card, Chip, Avatar, Modal, Field, TextInput, TextArea, Select, SearchField, EmptyState, SaveButton, StatusBadge, SkeletonGrid, Reveal
@@ -553,7 +554,7 @@ function Communities() {
   const [openQuestion, setOpenQuestion] = useState<any>(null);
   const [answers, setAnswers] = useState<any[]>([]);
   const [answerText, setAnswerText] = useState('');
-  const [askForm, setAskForm] = useState({ title: '', details: '', tags: '' });
+  const [askForm, setAskForm] = useState({ title: '', details: '', tags: [] as string[] });
   const [postForm, setPostForm] = useState({ type: 'Notice', title: '', description: '', location: '', dateInfo: '' });
 
   const load = () => api.get('/community').then(setData);
@@ -698,11 +699,10 @@ function Communities() {
             <Button onClick={async () => {
               if (!askForm.title.trim()) { s.toast('error', 'Title required'); return; }
               await api.post('/community/questions', {
-                title: askForm.title, details: askForm.details,
-                tags: askForm.tags.split(',').map((t) => t.trim()).filter(Boolean)
+                title: askForm.title, details: askForm.details, tags: askForm.tags
               });
               setAskOpen(false);
-              setAskForm({ title: '', details: '', tags: '' });
+              setAskForm({ title: '', details: '', tags: [] });
               load();
               s.toast('success', 'Question posted');
             }}>Post Question</Button>
@@ -716,8 +716,8 @@ function Communities() {
           <Field label="Details">
             <TextArea value={askForm.details} onChange={(e) => setAskForm({ ...askForm, details: e.target.value })} />
           </Field>
-          <Field label="Tags" hint="Comma-separated">
-            <TextInput value={askForm.tags} onChange={(e) => setAskForm({ ...askForm, tags: e.target.value })} />
+          <Field label="Tags" hint="Same picker as your profile's skills">
+            <TagEditor tags={askForm.tags} onChange={(tags) => setAskForm({ ...askForm, tags })} placeholder="Add a tag…" useCatalogue />
           </Field>
         </div>
       </Modal>

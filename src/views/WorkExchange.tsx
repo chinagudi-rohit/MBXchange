@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { useStore } from '../lib/store';
 import { TiltCard } from '../components/TiltCard';
+import { TagEditor } from '../components/TagEditor';
 import { MatchBadge, MatchBreakdown } from '../components/Match';
 import { api, timeAgo, type WorkPost, type User } from '../lib/api';
 import {
@@ -26,7 +27,7 @@ export function WorkFormModal({ open, onClose, existing }: {
   const [form, setForm] = useState({
     title: '', department: s.user?.department || DEPARTMENTS[0], urgency: 'Medium',
     duration: '', effortHours: '', location: 'Remote / Hybrid', seats: 1,
-    tags: '', description: '', whyOpportunity: '', approvalRequired: true
+    tags: [] as string[], description: '', whyOpportunity: '', approvalRequired: true
   });
   const [busy, setBusy] = useState(false);
 
@@ -35,11 +36,11 @@ export function WorkFormModal({ open, onClose, existing }: {
       setForm({
         title: existing.title, department: existing.department, urgency: existing.urgency,
         duration: existing.duration, effortHours: existing.effortHours, location: existing.location,
-        seats: existing.seats, tags: existing.tags.join(', '), description: existing.description,
+        seats: existing.seats, tags: existing.tags, description: existing.description,
         whyOpportunity: existing.whyOpportunity, approvalRequired: existing.approvalRequired
       });
     } else if (open) {
-      setForm((f) => ({ ...f, title: '', duration: '', effortHours: '', tags: '', description: '', whyOpportunity: '', seats: 1 }));
+      setForm((f) => ({ ...f, title: '', duration: '', effortHours: '', tags: [], description: '', whyOpportunity: '', seats: 1 }));
     }
   }, [open, existing]);
 
@@ -50,11 +51,7 @@ export function WorkFormModal({ open, onClose, existing }: {
     }
     setBusy(true);
     try {
-      const payload = {
-        ...form,
-        seats: Number(form.seats) || 1,
-        tags: form.tags.split(',').map((t) => t.trim()).filter(Boolean)
-      };
+      const payload = { ...form, seats: Number(form.seats) || 1 };
       if (existing) {
         await api.patch(`/work-posts/${existing.id}`, payload);
         s.toast('success', 'Requirement updated');
@@ -103,8 +100,8 @@ export function WorkFormModal({ open, onClose, existing }: {
         <Field label="Duration" hint="e.g. 2 days">
           <TextInput value={form.duration} onChange={(e) => setForm({ ...form, duration: e.target.value })} placeholder="2 days" />
         </Field>
-        <Field label="Expected Effort" hint="e.g. 8–12 hours — used by the AI capacity check">
-          <TextInput value={form.effortHours} onChange={(e) => setForm({ ...form, effortHours: e.target.value })} placeholder="8–12 hours" />
+        <Field label="Total Effort to Complete" hint="Total hours for the whole engagement, not a weekly rate — e.g. 8–12 hours total. Checked against the applicant's declared weekly bandwidth.">
+          <TextInput value={form.effortHours} onChange={(e) => setForm({ ...form, effortHours: e.target.value })} placeholder="8–12 hours total" />
         </Field>
         <Field label="Location">
           <TextInput value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} />
@@ -114,8 +111,8 @@ export function WorkFormModal({ open, onClose, existing }: {
             onChange={(e) => setForm({ ...form, seats: Math.max(1, parseInt(e.target.value) || 1) })} />
         </Field>
         <div className="sm:col-span-2">
-          <Field label="Skill Tags" hint="Comma-separated, e.g. AWS, Terraform, Kubernetes">
-            <TextInput value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} placeholder="AWS, Terraform" />
+          <Field label="Skill Tags" hint="What a helper needs to know — same picker as your profile's skills">
+            <TagEditor tags={form.tags} onChange={(tags) => setForm({ ...form, tags })} placeholder="Add a skill…" useCatalogue />
           </Field>
         </div>
         <div className="sm:col-span-2">
@@ -431,7 +428,7 @@ export function WorkExchange() {
   const [section, setSection] = useState<'requirements' | 'bandwidth'>('requirements');
   const [offers, setOffers] = useState<any[]>([]);
   const [offerModal, setOfferModal] = useState(false);
-  const [offerForm, setOfferForm] = useState({ availableHours: '', skills: '', notes: '' });
+  const [offerForm, setOfferForm] = useState({ availableHours: '', skills: [] as string[], notes: '' });
 
   useEffect(() => {
     if (section === 'bandwidth') api.get('/bandwidth-offers').then((d) => setOffers(d.offers));
@@ -476,11 +473,11 @@ export function WorkExchange() {
     }
     await api.post('/bandwidth-offers', {
       availableHours: offerForm.availableHours,
-      skills: offerForm.skills.split(',').map((x) => x.trim()).filter(Boolean),
+      skills: offerForm.skills,
       notes: offerForm.notes
     });
     setOfferModal(false);
-    setOfferForm({ availableHours: '', skills: '', notes: '' });
+    setOfferForm({ availableHours: '', skills: [], notes: '' });
     s.toast('success', 'Bandwidth registered', 'Your available hours are visible to all squads.');
     const d = await api.get('/bandwidth-offers');
     setOffers(d.offers);
@@ -692,11 +689,11 @@ export function WorkExchange() {
         }
       >
         <div className="space-y-4">
-          <Field label="Available Hours" required hint='e.g. "6 hours this month"'>
+          <Field label="Available Hours" required hint='Weekly — e.g. "6 hours this week"'>
             <TextInput value={offerForm.availableHours} onChange={(e) => setOfferForm({ ...offerForm, availableHours: e.target.value })} />
           </Field>
-          <Field label="Skills Offered" hint="Comma-separated">
-            <TextInput value={offerForm.skills} onChange={(e) => setOfferForm({ ...offerForm, skills: e.target.value })} placeholder="AWS, Kubernetes" />
+          <Field label="Skills Offered" hint="Same picker as your profile's skills">
+            <TagEditor tags={offerForm.skills} onChange={(skills) => setOfferForm({ ...offerForm, skills })} placeholder="Add a skill…" useCatalogue />
           </Field>
           <Field label="Notes">
             <TextArea value={offerForm.notes} onChange={(e) => setOfferForm({ ...offerForm, notes: e.target.value })} />
