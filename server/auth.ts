@@ -28,26 +28,70 @@ export function verifyToken(token: string): TokenPayload {
   return jwt.verify(token, JWT_SECRET) as TokenPayload;
 }
 
+/**
+ * What one colleague may see about another.
+ *
+ * Data minimisation: the directory exists so people can find the right person
+ * and ask them for help, and everything here serves that. Fields that serve
+ * only the person themselves — their contact address, who they report to,
+ * their personal score, how loaded they currently are — are deliberately
+ * absent and live in DIRECTORY_PRIVATE_FIELDS instead.
+ *
+ * Contribution totals (hours, engagements, departments) and recognition
+ * (badges, tier) stay visible: they are what the leaderboard and profiles are
+ * for, and they describe work done for other teams rather than anything
+ * private about the person.
+ */
 const PUBLIC_USER_FIELDS = `
-  id, email, name, initials, role, system_role AS "systemRole", status, department, campus,
+  id, name, initials, role, system_role AS "systemRole", status, department, campus,
   specialisation, experience_years AS "experienceYears", primary_skills AS "primarySkills", interests,
   available_for AS "availableFor", typical_availability AS "typicalAvailability",
-  available_hours_week AS "availableHoursWeek", contribution_score AS "contributionScore",
+  available_hours_week AS "availableHoursWeek",
   rating_breakdown AS "ratingBreakdown", badges, badges_count AS "badgesCount",
   collaborations_count AS "collaborationsCount",
   departments_supported AS "departmentsSupported", people_helped AS "peopleHelped",
-  hours_contributed AS "hoursContributed", bio, manager_id AS "managerId",
-  must_change_password AS "mustChangePassword",
+  hours_contributed AS "hoursContributed", bio,
   avatar_url AS "avatarUrl", bandwidth_period AS "bandwidthPeriod",
-  hours_consumed AS "hoursConsumed", tier, last_seen AS "lastSeen",
+  tier,
   (last_seen IS NOT NULL AND last_seen > now() - interval '90 seconds') AS "isOnline"
 `;
 
+/**
+ * Added on top of the public set for the person themselves, their manager,
+ * and administrators. `last_seen` is an exact timestamp — a presence *dot*
+ * is fine for everyone, a precise "last active at" is monitoring.
+ */
+const DIRECTORY_PRIVATE_FIELDS = `
+  email, manager_id AS "managerId",
+  contribution_score AS "contributionScore",
+  hours_consumed AS "hoursConsumed",
+  must_change_password AS "mustChangePassword",
+  last_seen AS "lastSeen"
+`;
+
+/** Everything — only ever for the signed-in user, their manager, or an admin. */
+const FULL_USER_FIELDS = `${PUBLIC_USER_FIELDS}, ${DIRECTORY_PRIVATE_FIELDS}`;
+
 export async function getUserById(id: string) {
-  return one(`SELECT ${PUBLIC_USER_FIELDS} FROM users WHERE id = $1`, [id]);
+  return one(`SELECT ${FULL_USER_FIELDS} FROM users WHERE id = $1`, [id]);
 }
 
-export { PUBLIC_USER_FIELDS };
+/**
+ * True when `viewer` is entitled to the private half of `subject`'s record:
+ * themselves, the manager they report to, or an administrator.
+ */
+export async function canSeePrivateProfile(
+  viewer: { id: string; systemRole: string },
+  subjectId: string
+): Promise<boolean> {
+  if (viewer.id === subjectId) return true;
+  if (viewer.systemRole === 'admin') return true;
+  const row = await one<{ manager_id: string | null }>(
+    `SELECT manager_id FROM users WHERE id = $1`, [subjectId]);
+  return !!row && row.manager_id === viewer.id;
+}
+
+export { PUBLIC_USER_FIELDS, DIRECTORY_PRIVATE_FIELDS, FULL_USER_FIELDS };
 
 export function requireAuth() {
   return async (req: Request, res: Response, next: NextFunction) => {

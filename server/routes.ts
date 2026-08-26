@@ -3,7 +3,8 @@ import bcrypt from 'bcryptjs';
 import { q, one, newId } from './db.ts';
 import {
   requireAuth, requireRole, requireRealAdmin, signToken,
-  getUserById, generateTempPassword, PUBLIC_USER_FIELDS, type AuthedRequest
+  getUserById, generateTempPassword, canSeePrivateProfile,
+  PUBLIC_USER_FIELDS, FULL_USER_FIELDS, type AuthedRequest
 } from './auth.ts';
 import {
   computeRecommendation, parseHoursRange,
@@ -380,11 +381,22 @@ api.get('/users', requireAuth(), async (req, res) => {
   // Admins need to see deactivated accounts to reactivate them; everyone else
   // only ever sees colleagues they can actually work with.
   const includeInactive = req.query.includeInactive === 'true' && user.systemRole === 'admin';
+  // An admin administers accounts and needs the whole record. A manager gets
+  // the private half only for their own reports; everybody else sees the
+  // directory fields and nothing more.
+  const fields = user.systemRole === 'admin'
+    ? FULL_USER_FIELDS
+    : `${PUBLIC_USER_FIELDS},
+       CASE WHEN manager_id = $2 THEN email ELSE NULL END AS email,
+       CASE WHEN manager_id = $2 OR id = $2 THEN manager_id ELSE NULL END AS "managerId",
+       CASE WHEN manager_id = $2 OR id = $2 THEN contribution_score ELSE NULL END AS "contributionScore",
+       CASE WHEN manager_id = $2 OR id = $2 THEN hours_consumed ELSE NULL END AS "hoursConsumed"`;
+  const params: any[] = user.systemRole === 'admin' ? [includeInactive] : [includeInactive, user.id];
   const { rows } = await q(
-    `SELECT ${PUBLIC_USER_FIELDS} FROM users
+    `SELECT ${fields} FROM users
       WHERE ($1::boolean OR status = 'active')
       ORDER BY name`,
-    [includeInactive]
+    params
   );
   res.json({ users: rows });
 });
@@ -1919,6 +1931,10 @@ api.get('/badges/catalogue', requireAuth(), async (_req, res) => {
 api.get('/score', requireAuth(), async (req, res) => {
   const { user } = req as AuthedRequest;
   const target = (req.query.userId as string) || user.id;
+  // A contribution score belongs to the person it describes.
+  if (!(await canSeePrivateProfile(user, target))) {
+    return res.status(403).json({ error: 'That score is not yours to view' });
+  }
   const u = await one<any>(
     `SELECT badges_count, hours_contributed, departments_supported, collaborations_count, tier
        FROM users WHERE id = $1`, [target]);
@@ -1959,6 +1975,9 @@ api.get('/appreciations', requireAuth(), async (req, res) => {
  */
 api.get('/appreciations/pending', requireAuth(), async (req, res) => {
   const { user } = req as AuthedRequest;
+  // Anyone who worked on a completed post may recognise anyone else who did.
+  // The viewer qualifies as a participant by being the author, one of the
+  // approved helpers, or the manager who signed one of them off.
   const { rows } = await q(
     `SELECT a.id AS "applicationId", a.applicant_id AS "applicantId", a.commitment,
             u.name AS "applicantName", u.initials AS "applicantInitials",
@@ -1969,11 +1988,19 @@ api.get('/appreciations/pending', requireAuth(), async (req, res) => {
        FROM applications a
        JOIN work_posts p ON p.id = a.post_id
        JOIN users u ON u.id = a.applicant_id
-       LEFT JOIN appreciations ap ON ap.application_id = a.id AND ap.from_user_id = $1
+       LEFT JOIN appreciations ap
+              ON ap.post_id = p.id AND ap.from_user_id = $1 AND ap.to_user_id = a.applicant_id
       WHERE a.status = 'approved'
         AND p.status = 'Completed'
         AND a.applicant_id <> $1
-        AND (p.author_id = $1 OR a.manager_id = $1)
+        AND (
+          p.author_id = $1
+          OR EXISTS (
+            SELECT 1 FROM applications mine
+             WHERE mine.post_id = p.id AND mine.status = 'approved'
+               AND (mine.applicant_id = $1 OR mine.manager_id = $1)
+          )
+        )
       ORDER BY p.created_at DESC`,
     [user.id]
   );
@@ -1990,6 +2017,9 @@ api.get('/appreciations/pending', requireAuth(), async (req, res) => {
 api.get('/milestones', requireAuth(), async (req, res) => {
   const { user } = req as AuthedRequest;
   const target = (req.query.userId as string) || user.id;
+  if (!(await canSeePrivateProfile(user, target))) {
+    return res.status(403).json({ error: 'Those milestones are not yours to view' });
+  }
   const u = await one(
     `SELECT hours_contributed, collaborations_count, departments_supported, people_helped, tier
        FROM users WHERE id = $1`,
