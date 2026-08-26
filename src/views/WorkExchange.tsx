@@ -8,7 +8,7 @@ import { TiltCard } from '../components/TiltCard';
 import { MatchBadge, MatchBreakdown } from '../components/Match';
 import { api, timeAgo, type WorkPost, type User } from '../lib/api';
 import {
-  Button, Modal, Field, TextInput, TextArea, Select, StatusBadge, UrgencyBadge, Chip, Avatar, SaveButton, EmptyState, Card, SeatsIndicator, Reveal, SkeletonGrid
+  Button, Modal, Field, TextInput, TextArea, Select, SearchField, StatusBadge, UrgencyBadge, Chip, Avatar, SaveButton, EmptyState, Card, SeatsIndicator, Reveal, SkeletonGrid
 } from '../components/ui';
 
 
@@ -521,7 +521,7 @@ export function WorkExchange() {
         <>
           <div className="sticky-bar -mx-1 px-3 py-3 mb-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-2.5">
-              <TextInput
+              <SearchField
                 placeholder="Search title, tag, author…"
                 value={query} onChange={(e) => setQuery(e.target.value)}
                 className="xl:col-span-2"

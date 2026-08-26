@@ -3,7 +3,7 @@ import { Star, MessageSquare, Handshake, Award, X } from 'lucide-react';
 import { useStore } from '../lib/store';
 import { TiltCard } from '../components/TiltCard';
 import { api, type User } from '../lib/api';
-import { Button, Card, Chip, Avatar, Modal, Field, TextInput, TextArea, EmptyState, Reveal } from '../components/ui';
+import { Button, Card, Chip, Avatar, Modal, Field, TextInput, TextArea, Select, SearchField, EmptyState, Reveal } from '../components/ui';
 
 
 
@@ -76,29 +76,20 @@ export function PeopleView() {
 
       <div className="sticky-bar -mx-1 px-1 py-2.5 mb-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2.5 max-w-4xl">
-          <TextInput placeholder="Search by name, skill, or role…" value={query} onChange={(e) => setQuery(e.target.value)} />
-          <select
-            value={dept} onChange={(e) => setDept(e.target.value)} aria-label="Filter by department"
-            className="w-full px-3.5 py-2.5 rounded-xl panel border border-line-strong text-sm text-ink focus:border-primary focus:outline-none"
-          >
+          <SearchField placeholder="Search by name, skill, or role…" value={query} onChange={(e) => setQuery(e.target.value)} />
+          <Select value={dept} onChange={(e) => setDept(e.target.value)} aria-label="Filter by department">
             <option value="All">All departments</option>
             {DEPARTMENTS.filter((d) => d !== 'All').map((d) => <option key={d}>{d}</option>)}
-          </select>
-          <select
-            value={skill} onChange={(e) => setSkill(e.target.value)} aria-label="Filter by skill"
-            className="w-full px-3.5 py-2.5 rounded-xl panel border border-line-strong text-sm text-ink focus:border-primary focus:outline-none"
-          >
+          </Select>
+          <Select value={skill} onChange={(e) => setSkill(e.target.value)} aria-label="Filter by skill">
             <option value="All">Any skill</option>
             {skillOptions.map((sk) => <option key={sk}>{sk}</option>)}
-          </select>
-          <select
-            value={sort} onChange={(e) => setSort(e.target.value as typeof sort)} aria-label="Sort colleagues"
-            className="w-full px-3.5 py-2.5 rounded-xl panel border border-line-strong text-sm text-ink focus:border-primary focus:outline-none"
-          >
+          </Select>
+          <Select value={sort} onChange={(e) => setSort(e.target.value as typeof sort)} aria-label="Sort colleagues">
             <option value="contribution">Highest rated</option>
             <option value="availability">Most bandwidth free</option>
             <option value="name">Name A–Z</option>
-          </select>
+          </Select>
         </div>
         <p className="text-xs text-ink-3 mt-2 px-1">
           Showing <b className="text-ink-2">{people.length}</b> of {s.users.length - 1} colleagues

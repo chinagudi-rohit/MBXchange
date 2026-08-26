@@ -7,7 +7,7 @@ import { useStore } from '../lib/store';
 import { TiltCard } from '../components/TiltCard';
 import { api, timeAgo, type Listing, type CarpoolTrip } from '../lib/api';
 import {
-  Button, Card, Chip, Avatar, Modal, Field, TextInput, TextArea, Select, EmptyState, SaveButton, StatusBadge, SkeletonGrid, Reveal
+  Button, Card, Chip, Avatar, Modal, Field, TextInput, TextArea, Select, SearchField, EmptyState, SaveButton, StatusBadge, SkeletonGrid, Reveal
 } from '../components/ui';
 
 
@@ -67,7 +67,7 @@ function Marketplace() {
   return (
     <div>
       <div className="flex flex-wrap gap-2.5 mb-4 items-center">
-        <TextInput placeholder="Search title, description, seller…" value={query} onChange={(e) => setQuery(e.target.value)} className="!w-64" />
+        <SearchField placeholder="Search title, description, seller…" value={query} onChange={(e) => setQuery(e.target.value)} className="!w-72" />
         <Select value={category} onChange={(e) => setCategory(e.target.value)} className="!w-48" aria-label="Filter by category">
           <option value="All">All categories</option>
           {CATEGORIES.filter((c) => c !== 'All').map((c) => <option key={c}>{c}</option>)}

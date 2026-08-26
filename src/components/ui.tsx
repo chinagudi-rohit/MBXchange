@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Bookmark, Check, AlertTriangle, Info, Inbox } from 'lucide-react';
+import { X, Bookmark, Check, AlertTriangle, Info, Inbox, Search } from 'lucide-react';
 
 /**
  * Renders overlays into document.body.
@@ -308,6 +308,28 @@ export function TextArea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement
 
 export function Select(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
   return <select {...props} className={`${inputCls} ${props.className || ''}`} />;
+}
+
+/**
+ * The primary search box in a page's filter row — every list page (
+ * Opportunities, People & Skills, the Marketplace) puts one search field
+ * beside several plain `Select` dropdowns, and it was previously styled
+ * identically to them: same height, same background, indistinguishable at a
+ * glance from "just another filter." This is taller, carries a search icon,
+ * and sits on a faint primary tint rather than the plain panel background —
+ * enough lift to read as the control that actually drives the results,
+ * without competing with the accent already spent elsewhere on the page.
+ */
+export function SearchField({ className = '', ...props }: React.InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <div className={`relative ${className}`}>
+      <Search className="w-4 h-4 text-primary-text absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+      <input
+        {...props}
+        className="w-full pl-10 pr-3.5 py-3 rounded-xl bg-primary-soft/70 border border-primary/20 text-sm text-ink placeholder:text-ink-3 focus:border-primary focus:outline-none focus:bg-surface-solid transition-colors"
+      />
+    </div>
+  );
 }
 
 /* ── Badges & chips ──────────────────────────────────────────────────── */
