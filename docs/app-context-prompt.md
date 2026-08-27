@@ -1,12 +1,3 @@
-# MBXchange — application context block
-
-Paste everything below the line into a prompt as the "here is the application"
-section. It is written to be read by a model, not by a person: it states what
-the product is, the rules it must not break, and the exact design tokens to
-build against. Keep it verbatim — the constraints are load-bearing.
-
----
-
 ## APPLICATION CONTEXT — MBXchange
 
 You are working on **MBXchange**, an internal web platform for Mercedes-Benz
