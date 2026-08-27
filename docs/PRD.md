@@ -1,383 +1,525 @@
 # MBXchange — Product Requirements Document
 
-**Status:** Describes the implemented product (v2.0.0) as it exists in this repository, not a forward-looking proposal. Every requirement below is backed by working code, a database table, or an API route — see the file references inline.
-**Owner:** Internal platform team
-**Last updated:** 2026-08-25
+**Status:** reflects the shipped build on branch `rohit` as of 2026-08-27.
+Every value, route, threshold and colour below was read off the running
+system, not proposed. Where something is a deliberate non-goal it says so.
 
 ---
 
-## 1. Problem statement
+## 1. What the product is
 
-Inside a large organization, useful work is trapped inside department silos. An
-engineer who wants to help a struggling team elsewhere has no discovery
-mechanism, no structured way to ask their manager for time against it, and no
-record afterward that it happened. Managers, in turn, have no visibility into
-who on their team is being asked to lend time, or whether that time is even
-available.
+MBXchange is an internal platform where a team can post a piece of work it
+needs help with, and any employee can offer the hours and skills they choose
+to bring to it — with the request routed through the right approvals and
+recorded as a history of what was actually done.
 
-MBXchange is an internal marketplace that turns "can anyone help with X"
-Slack messages into a structured, auditable flow: post a requirement, apply
-against real declared bandwidth, get a manager decision with a computed
-capacity check attached, and walk away with a durable record of the
-contribution.
+It exists because that exchange already happens: someone asks a colleague on
+chat, the colleague helps in the margins of their week, and nothing about it
+is visible, approved, or repeatable. MBXchange makes the same exchange
+findable, decidable, and creditable.
 
-## 2. Goals
+### 1.1 What it is not
 
-- Let any employee post cross-department work and have the right people find it.
-- Replace "just ask your manager informally" with a capacity-aware approval
-  step that shows the manager real numbers, not a blind yes/no.
-- Make cross-team contribution visible and rewarded (tiers, milestones,
-  recognition) instead of invisible unpaid extra work.
-- Give managers and admins a single place to see approvals, registrations,
-  and organization-wide skill supply/demand.
-- Extend the same "people helping people" idea past formal work into a
-  lightweight internal marketplace, carpool board, and interest communities
-  (Beyond Work), since that traffic already exists informally at most
-  companies and benefits from the same trust/identity layer.
+These are firm boundaries, not omissions.
 
-## 3. Non-goals
+- **Not a performance system.** No score, badge or tier feeds a review, and
+  nothing in the product suggests participation leads to advancement. The
+  contribution score is private to the person and their line manager.
+- **Not a utilisation or capacity tracker.** Declared hours are what somebody
+  *offers*, not a measurement of their spare time. The product never computes
+  "free capacity" from a sprint, and the copy avoids the word.
+- **Not a resourcing/allocation tool.** Nobody is assigned. Every engagement
+  starts as a voluntary application and passes two human decisions.
+- **Not a public league table.** The leaderboard ranks collaboration reach,
+  never the personal score.
 
-- Not a full HRIS, org chart, or performance-review system — `manager_id` is
-  the only reporting-line data it holds, and only what approvals need.
-- Not a project-management / ticketing tool. A work post is a request for a
-  person and a time commitment, not a tracked project with subtasks.
-- Not a payments or expense system — `listings` in Beyond Work display a
-  price but the platform does not process any transaction.
-- The "AI" in "AI Review", "AI Skill Match", and "AI capacity check" is a
-  deterministic, explainable rules engine (`server/rules.ts`), not a
-  model-backed recommendation — see §7. This is a deliberate choice, not a
-  placeholder for a future model integration.
+### 1.2 Primary users
 
-## 4. Personas / roles
+| Role | System role | What they can do |
+|---|---|---|
+| Employee | `employee` | Post requirements, apply to others', declare bandwidth, host and attend sessions, request collaboration, award badges, see their own score |
+| Line manager | `manager` | Everything an employee can, plus approve their reports' applications and collaboration sign-offs, and pull a report on their own reports only |
+| Administrator | `admin` | Account lifecycle, registration requests, the badge vocabulary, the tier ladder and its weighting, org-wide reporting, audit log |
 
-The system has exactly three roles, enforced server-side via
-`users.system_role` (`employee | manager | admin`, `server/schema.sql:7`):
+---
 
-| Role | Can do everything an Employee can, plus |
+## 2. Core domain model
+
+27 tables. The ones that carry the product:
+
+| Table | Holds |
 |---|---|
-| **Employee** | Post requirements, browse and apply to opportunities, offer spare bandwidth, message colleagues, build a skill profile, earn tiers/badges, buy/sell in Beyond Work, join carpools and communities. |
-| **Manager** | Everything above, **plus** an Approvals queue for every application where they are the applicant's `manager_id` — each with a computed capacity verdict — and Message/Decline/Approve actions on each. |
-| **Admin** | Everything above, **plus** the Admin Console: org-wide overview stats, full user directory (active + inactive), manager-registration requests, and a read-only audit log of every significant action in the system. |
+| `users` | Person, role, department, declared skills, declared weekly bandwidth, contribution totals, tier |
+| `work_posts` | A requirement: title, department, total effort, seats, skills, urgency, status |
+| `applications` | One row per person per requirement, carrying the two-stage approval state |
+| `collab_requests` | A direct ask to one named person, with its own two-stage state |
+| `appreciations` | One badge award: who, to whom, for which engagement |
+| `badge_definitions` | The admin-owned badge vocabulary |
+| `tier_definitions` | The admin-owned tier ladder, one row per rung |
+| `tier_settings` | Single row: the weighting behind tier points |
+| `training_sessions` / `training_registrations` | Colleague-run sessions and their attendees |
+| `carpool_trips` / `carpool_bookings` | One-way trips and seat requests |
+| `bandwidth_ledger` | Append-only record of hours consumed and released |
+| `audit_log` | Every administrative action |
 
-A person's role is fixed at the account level, not per-screen — a manager
-sees the Approvals tab in their own sidebar permanently, not only when they
-have pending items.
+**80 API routes.** Everything below `/api`, all behind `requireAuth()` except
+login and the demo-account list.
 
-## 5. Core user flow
+---
 
-This is the spine of the product; every other feature hangs off it. Verified
-end-to-end against the running app (see the session's functional test):
+## 3. Functional specification
 
-1. **Post.** An employee opens *Post Requirement*, sets title, department,
-   urgency, duration, expected effort range, seats, skill tags, and a
-   description. `POST /work-posts` creates a row in `work_posts`
-   (`server/schema.sql:39`).
-2. **Discover.** The post appears in *Opportunities* for every employee,
-   ranked by a computed match score (§7.2) against their declared skills and
-   remaining bandwidth. Filterable by department, status, urgency, skill;
-   searchable by title/tag/author.
-3. **Apply.** An interested employee opens the post, sees *why it matches
-   them* (skill overlap %, capacity fit %, cross-department flag), and clicks
-   *Apply to help*. The dialog shows their own current remaining capacity and
-   names the exact manager who will decide, resolved automatically from
-   `users.manager_id`. `POST /work-posts/:id/apply` creates a row in
-   `applications` with `status = 'pending'`.
-3a. If the applicant declares an available `manager_id` that isn't yet a
-    registered account, the flow degrades gracefully into a
-    `registration_requests` row instead of leaving the application stuck —
-    surfaced to admins as *Registration Needed* (§6.9).
-4. **Decide.** The resolved manager sees the request in *Approvals*, with a
-   computed verdict (`Approve` / `Review Capacity` / `Not Recommended`) and a
-   plain-English reason string generated by `computeRecommendation()`
-   (§7.1) — never a bare score. They can Message the applicant, Decline, or
-   Approve (with an optional note) via a confirmation step.
-   `POST /approvals/:id/decision`.
-5. **Notify.** Approval fires two independent notifications: the applicant
-   gets *Request Approved*, the original poster gets *Seat Confirmed* — both
-   rows in `notifications`, both visible immediately in the bell dropdown
-   and on `/api/sync`'s next poll.
-6. **Record.** The decision is written to `audit_log` with actor, action,
-   subject, and structured detail — visible to admins in the Audit Log tab,
-   attributable to a specific person and timestamp, never anonymous.
-7. **Close the loop.** Hours worked accrue to `bandwidth_ledger`, feed
-   `users.hours_contributed` / `collaborations_count` /
-   `departments_supported`, and are what `computeTier()` (§7.3) evaluates
-   against — so a completed engagement visibly moves the needle on the
-   helper's tier, milestones, and Home dashboard stats in the same session.
+### 3.1 Posting a requirement
 
-## 6. Feature requirements by area
+**Who:** any employee.
+**Where:** Opportunities → *Post Requirement*, or the global *Post / Request*
+menu, or the Home quick action.
 
-Each area below is a real, routed view under `src/views/`.
+Fields: title (required), description (required), department, urgency
+(Low/Medium/High/Critical), **total effort to complete**, location, seats,
+skill tags, "why it's a great opportunity", and a manager-approval toggle.
 
-### 6.1 Home Dashboard (`HomeDashboard.tsx`)
-- Four headline stats: open opportunities, my pending requests, active
-  engagements, approvals waiting on me (manager/admin only).
-- Quick actions: post a requirement, offer bandwidth, find experts, view my
-  requests.
-- *Your tier* card: current tier, hours/engagement count, up to two earned
-  badges, a progress bar toward the next tier with the exact shortfall
-  (`nextTierProgress()`).
-- *Exchange activity*: a 6-month hours-contributed chart, filterable by
-  Everyone/Me and by Hours/Synergy/Engagements, with month-over-month delta.
-- *Recommended for you*: opportunities ranked by `computeMatch()`, each
-  showing its score, matched skills, and the same plain-English reason
-  string used in the detail view — the recommendation logic is shared, not
-  duplicated, between the list and the detail page.
+**Effort is the total for the whole piece of work, not a weekly rate.** There
+is deliberately no separate "duration" field — it invited people to describe
+the same thing twice and disagree with themselves.
 
-### 6.2 Opportunities (`WorkExchange.tsx`)
-- Two tabs: *Open Requirements* (posted work) and *Bandwidth Pool* (people
-  who've proactively offered spare hours via `bandwidth_offers`).
-- Filter bar: free-text search, department, status, urgency, skill, sort
-  (best match / newest).
-- Card and detail view both surface seats-remaining, approval requirement,
-  skill tags, author, and a discussion thread (`work_comments`) scoped to
-  the post.
-- Interactive hover: cards use a cursor-tracked 3D tilt (`TiltCard.tsx`) with
-  a glare sweep — deliberately constrained to `(hover: hover) and
-  (pointer: fine)` devices and `prefers-reduced-motion`, and engineered so
-  the tilt never blurs the card's own text regardless of the tilt angle
-  (see `.tilt-active .panel` in `src/index.css`).
+Skill tags use the same catalogue-backed chip editor as the profile, so a tag
+here is the same token the matcher scores against.
 
-### 6.3 People & Skills (`PeopleView.tsx`)
-- Searchable directory of every active colleague: department, tier,
-  top-rated skill categories, badges, declared weekly/monthly bandwidth,
-  and total gigs/hours contributed.
-- *Request Collaboration* — a direct, informal ask to a specific person
-  (`collab_requests`), separate from the formal work-post/approval chain,
-  for a lighter-weight "can you help me for an hour" case.
+### 3.2 Finding work — the match
 
-### 6.4 My Requests (`MyRequests.tsx`)
-- *Submitted by me*: every application the user has sent, its status, and
-  the deciding manager.
-- *Received*: collaboration requests sent to this person by colleagues,
-  actionable inline (accept/decline).
-- Doubles as the applicant-facing mirror of the manager's Approvals queue —
-  the same `applications` row, viewed from the other side.
+Every requirement is scored against the viewer:
 
-### 6.5 Achievements (`Achievements.tsx`)
-- Current tier, hours given, departments reached, recognitions received.
-- Milestone grid (`server/rules.ts` isn't the source here — milestones are a
-  separate, explicit checklist rendered from `/api/milestones`) each with
-  earned/in-progress state and a numeric progress bar.
-- Tier ladder is fixed and earned, never assigned — see §7.3; a user cannot
-  buy or be granted a tier.
+- **Skill overlap** — share of the requirement's tags the viewer has declared.
+- **Bandwidth fit** — how the total effort sits against the hours the viewer
+  has offered, minus what they have already committed.
 
-### 6.6 Insights (`InsightsView.tsx`)
-- Org-wide, not personal: total hours contributed, completed engagements,
-  active contributors.
-- *Upskilling opportunities*: capabilities where organizational demand
-  outstrips available experts, computed from `capability_heatmap`.
-- *Demand vs supply by capability*: paired bar comparison per skill.
-- Exists to give admins and leads a data-driven answer to "what skill gap
-  should we actually be hiring or training for," sourced from real request
-  and applicant data rather than survey guesses.
+The two combine into an overall figure that is **never shown as a
+percentage**. It is a heuristic over declared data and is not accurate to the
+point; printing "73%" would claim precision the inputs do not have.
 
-### 6.7 Beyond Work (`BeyondWork.tsx`)
-Three sub-tabs sharing one shell, all opt-in and unrelated to the approval
-chain:
-- **Marketplace** — colleague-to-colleague listings (`listings`): sell,
-  free-giveaway, or event-ticket, with category/condition/price.
-- **Carpool** — one-way trip offers (`carpool_trips`) with day-of-week
-  recurrence, seats, women-only flag, and per-rider bookings
-  (`carpool_bookings`).
-- **Communities** — interest groups (`community_groups`) with posts and a
-  lightweight Q&A (`questions` / `answers`, with accepted-answer and vote
-  support) scoped per group.
+Instead the card shows a **three-segment meter** with the level beside it:
 
-### 6.8 Approvals (`ManagerInbox.tsx`) — manager & admin only
-- One card per pending `applications` row where the signed-in user is
-  `manager_id`, each with an inline **AI: Approve / Review Capacity / Not
-  Recommended** panel (§7.1) computed fresh on every load, never cached
-  stale advice.
-- Message / Decline / Approve, each with a confirmation step and optional
-  note; a *Decision history* section beneath the live queue for what's
-  already been decided.
+| Overall | Segments lit | Label | Colour |
+|---|---|---|---|
+| ≥ 70 | 3 | High match | `--accent-green` |
+| 40–69 | 2 | Medium match | `--primary` |
+| < 40 | 1 | Low match | `--ink-3` |
 
-### 6.9 Admin Console (`AdminConsole.tsx`) — admin only
-- **Overview**: active users, open requirements, pending approvals, approved
-  engagements, active carpool trips, marketplace listings; requirements
-  broken out by department.
-- **Users**: full directory including inactive accounts
-  (`?includeInactive=true`), with reset-password and activate/deactivate.
-- **Registrations**: requests to onboard a manager who doesn't yet have an
-  account, raised automatically when an employee applies under a manager
-  MBXchange has never seen — closes a real gap where an application would
-  otherwise have nowhere to route.
-- **Audit Log**: every login, application, approval decision, and
-  registration action, each attributed to an actor and timestamp, sourced
-  directly from `audit_log` with no filtering or redaction for admins.
+Opening a requirement shows the working: a line chart across **Skills →
+Bandwidth → Overall**, banded Low/Medium/High on the Y axis. A line rather
+than three bars, because the *shape* is the information — a flat high line
+and one that dips hard on bandwidth mean very different things, and the dip
+is what you need to see before applying.
 
-### 6.10 Cross-cutting
-- **Global search** (`GlobalSearch.tsx`, ⌘K) across opportunities, people,
-  and listings.
-- **Messages** (`MessagesDrawer.tsx`) — direct messaging tied to a work post
-  or collaboration context (`context_type`, `context_title`), not a general
-  chat product.
-- **Notifications** — typed, targeted either at a specific `recipient_id`
-  or broadcast to a `recipient_role`, with per-user read/clear state for the
-  broadcast case (`notification_clears`) so a role-wide announcement doesn't
-  force everyone into the same read state.
-- **Saved items** — bookmark any work post, listing, community, or carpool
-  trip (`saved_items`).
-- **Password change on first login** (`ForcePasswordChange.tsx`) — every
-  seeded/admin-created account starts with `must_change_password = true`.
+### 3.3 Applying — the two-stage approval
 
-## 7. Key business logic
+This is the spine of the product.
 
-The three algorithms below are the actual product differentiators — the UI
-around them is standard CRUD, but this logic is what makes an approval or a
-recommendation trustworthy rather than arbitrary. All three live in
-`server/rules.ts` and are unit-testable pure functions, deliberately kept
-free of side effects.
+```
+apply ──▶ pending_author ──▶ pending_manager ──▶ approved
+              │                     │
+              ▼                     ▼
+           rejected              rejected
+```
 
-### 7.1 Manager capacity check (`computeRecommendation`)
-Deterministic, not probabilistic. Given the applicant's declared weekly/
-monthly hours, hours already consumed this period, hours already committed
-to other pending/approved applications, and the opportunity's effort range:
+1. **Author's decision.** The person who posted the requirement decides
+   first. They received the help; they judge whether this applicant fits.
+2. **Line manager's decision.** Only after the author says yes does it reach
+   the applicant's manager, who is authorising the time. At this hand-off the
+   system computes a fresh bandwidth recommendation, so the manager decides
+   against current numbers rather than the ones at application time.
+3. **Seats fill → status advances.** When approved applications equal the
+   seat count, the requirement moves to *In Progress* automatically.
 
-- No effort estimate on the post → **Review Capacity** (can't compute,
-  say so explicitly rather than guessing).
-- Remaining capacity ≤ 0 → **Not Recommended**.
-- Remaining capacity covers the full upper estimate → **Approve**.
-- Remaining capacity covers the minimum but not the upper estimate →
-  **Review Capacity**, suggesting a reduced-scope commitment.
-- Remaining capacity is below even the minimum → **Not Recommended**.
+Rules enforced server-side:
+- A rejection at either stage requires a written reason.
+- Nobody can decide their own application; admins included.
+- An applicant with no registered manager parks at `awaiting_registration`
+  and raises a registration request to the admin rather than silently failing.
+- Withdrawing is allowed from any pending state.
 
-Every verdict returns a human-readable reason naming the exact numbers
-involved (e.g. *"Rakesh Kumar has only 6h of declared capacity, below the
-minimum 8h this task requires... Approving would exceed the employee's
-available work hours."*) plus a separate skill-alignment note — verified
-directly against the running app during functional testing.
+**`awaiting_registration` is reachable only from `pending_manager`** — the
+author has already said yes, and the only thing missing is a manager to hand
+off to.
 
-### 7.2 Opportunity match score (`computeMatch`)
-A 0–100 fit score shown on every opportunity card and detail page:
-`score = skillFit × 0.65 + capacityFit × 0.35`, plus a capped +5 bonus for
-crossing a department boundary (the behavior the whole platform exists to
-encourage). Skill fit degrades gracefully to title-word overlap (capped at
-60) when a post has no tags, rather than reporting a false 0% or 100%. The
-reason string is generated from the same inputs the score used, so the
-number is never unexplained.
+### 3.4 Direct collaboration requests
 
-### 7.3 Contribution tiers (`computeTier`, `TIERS`)
-Five tiers — Contributor → Collaborator → Connector → Catalyst → Principal —
-each gated on **all three** of hours contributed, engagement count, and
-distinct departments supported (e.g. Catalyst needs 100h *and* 12 gigs *and*
-3 departments; hours alone cannot buy a tier). `nextTierProgress()` reports
-the exact shortfall on whichever threshold(s) are still unmet, which is what
-powers the "16h more, 2 more engagements to reach Connector" copy on the
-tier card.
+Same two-stage shape, different entry point. From People & Skills you ask one
+named person for help on a specific task.
 
-## 8. Data model
+```
+request ──▶ pending (target decides) ──▶ pending_manager (their manager) ──▶ accepted
+```
 
-18 tables in `server/schema.sql`, PostgreSQL-compatible and also runnable
-against PGlite for a zero-install local dev database (`server/db.ts`). Core
-entities:
+If the target has no manager on record, accepting finalises immediately —
+there is nobody to hand off to.
 
-- **`users`** — identity, role, department, declared skills/interests,
-  bandwidth declaration (`available_hours_week`, `bandwidth_period`),
-  `manager_id` (self-referencing FK — the only org-chart data the system
-  keeps), tier/contribution stats, password hash.
-- **`work_posts`** → **`applications`** (one row per person applying, unique
-  per `(post_id, applicant_id)`) → **`work_comments`** (threaded discussion).
-- **`registration_requests`** — the manager-not-yet-registered escape hatch
-  described in §6.9.
-- **`collab_requests`** — informal person-to-person asks, separate from the
-  formal work-post pipeline.
-- **`bandwidth_offers`**, **`bandwidth_ledger`** — declared spare time and
-  the append-only ledger of hours drawn against it (kept as a ledger, not a
-  running total, specifically so a completion can be reversed and a manager
-  can see *where* capacity went, per the schema's own inline comment).
-- **`listings`**, **`carpool_trips`** + **`carpool_bookings`**,
-  **`community_groups`** + **`group_members`** + **`community_posts`**,
-  **`questions`** + **`answers`** — the Beyond Work surface.
-- **`messages`**, **`notifications`** + **`notification_clears`**,
-  **`saved_items`** — cross-cutting communication and personalization.
-- **`capability_heatmap`** — precomputed org-wide skill demand/supply, feeds
-  Insights.
-- **`audit_log`** — append-only, actor + action + subject + JSON detail.
-- **`appreciations`** — post-hoc recognition (message + optional rating)
-  written by a requirement's author or the helper's manager, shown on the
-  helper's profile.
+### 3.5 Bandwidth
 
-## 9. API surface
+Each person declares the hours per week they are willing to offer. This is an
+**offer, not a measurement**: somebody with one nominally free hour may choose
+to give four, and the product never infers availability from a sprint.
 
-~60 REST endpoints under `/api` (`server/routes.ts`), grouped by resource:
-`auth` (login, demo-accounts, change-password, impersonate/stop-impersonate
-— the latter for admin support access), `users`, `work-posts` (+ `:id`,
-`:id/apply`, `:id/comments`), `applications/:id` (+ `:id/withdraw`),
-`approvals` (+ `:id/decision`), `admin/overview`,
-`admin/registration-requests` (+ `:id/complete`, `:id/dismiss`),
-`collab-requests`, `bandwidth-offers`, `listings`, `carpool/trips` (+
-`:id/book`, `:id/cancel-booking`), `community` (groups, posts, questions,
-answers, votes), `messages`, `notifications`, `saved`, `milestones`,
-`appreciations`, `insights`, `telemetry`, and a `sync` endpoint the client
-polls for near-real-time cross-tab state (§10).
+The ledger records hours as engagements complete and releases them if an
+engagement is withdrawn or cancelled, so the figure behind a recommendation is
+always the current one.
 
-## 10. Non-functional requirements
+### 3.6 Recognition — badges
 
-- **Auth**: JWT-based sessions, `bcryptjs` password hashing, forced password
-  change on first login for provisioned accounts.
-- **Authorization**: role checks (`employee | manager | admin`) enforced
-  server-side in `routes.ts`, not just hidden in the UI — e.g. the
-  Approvals list is filtered to applications where the requester actually is
-  `manager_id`, and Admin Console routes require `system_role = 'admin'`.
-- **Auditability**: every state-changing action of consequence (login,
-  application, approval decision, registration) writes to `audit_log` —
-  verified directly in this session: three different demo-account logins and
-  one approval decision all appeared correctly, attributed and timestamped.
-- **Near-real-time sync**: `/api/sync` polling keeps notification counts,
-  approval queues, and dashboard stats current across role switches without
-  a full page reload.
-- **Responsive layout**: desktop sidebar collapses to a bottom tab bar under
-  the mobile breakpoint; verified at both ends of that range during this
-  session.
-- **Accessibility / motion**: the `TiltCard` 3D hover effect explicitly
-  checks `prefers-reduced-motion` and `(hover: hover) and (pointer: fine)`
-  before enabling itself, rather than assuming every device wants it.
-- **Theming**: light/dark mode toggle; Mercedes-Benz-derived visual language
-  (`--primary` orange accent, the three-pointed star mark, `INTERNAL` badge)
-  applied consistently across the login screen, shell header, and
-  marketing/overview collateral (see the companion deck, §12).
-- **Deployment**: single container serves both the built frontend and the
-  API (`Dockerfile`, `docker-compose.yml`, `k8s/` manifests included), with
-  a documented path for both local development (this doc's companion
-  README) and automated agent-driven deployment.
+**Badges are the recognition unit.** Recognition used to be a free-text note
+plus a 1–5 rating; everybody gave 5, so the rating said nothing while a badge
+names *what* the person did.
 
-## 11. Success metrics (as designed for, not yet measured in production)
+- **Who can award:** anyone who worked on a completed requirement may
+  recognise anyone else who did — the author, the people who did the work, and
+  either side's manager.
+- **When:** only once the requirement is *Completed*.
+- **Limit:** one badge per giver, per recipient, per requirement. You can
+  recognise several people on one piece of work; you cannot recognise the same
+  person twice for it.
+- **Optional, always.** Nothing blocks, gates or nags on the absence of a
+  badge. The prompt to recognise is a suggestion.
+- **Not self-serving:** you cannot award yourself.
 
-- **Time-to-fill**: median time from a work post going live to its seats
-  being filled.
-- **Approval latency**: median time from application to manager decision.
-- **Cross-department rate**: share of approved applications where
-  `crossDepartment = true` — the platform's core value proposition is
-  people working *outside* their own department.
-- **Repeat contribution**: share of employees with more than one approved
-  engagement in a rolling 90 days — a proxy for whether the tier/recognition
-  loop is actually motivating return use rather than one-off participation.
-- **Capacity-check override rate**: how often managers approve against a
-  *Not Recommended* verdict — a high rate would suggest the capacity model
-  needs recalibration rather than being ignored outright.
+The vocabulary is **admin-owned** (§3.9), seeded with 12 badges across four
+qualities: helping & mentorship, technical expertise, cross-team
+collaboration, reliability & follow-through. Each badge carries a
+`criteria` string — guidance shown to whoever is choosing one.
 
-## 12. Related artifacts
+Retiring a badge that has been awarded **deactivates** it rather than deleting
+it; nobody loses recognition they earned. Only an unheld badge is removed
+outright.
 
-- `README.md` — setup and deployment instructions (human-facing local setup
-  plus an automated-agent deployment section).
-- `docs/MBXchange_Overview.pptx` — a 2-slide, Mercedes-Benz-styled overview
-  deck built from this same product, covering the same core flow and
-  platform surface described in §5–§6.
+### 3.7 Contribution score
 
-## 13. Open questions / explicitly out of scope for now
+**Definition: hours contributed, and nothing else.**
 
-- No automated test suite exists yet (`npm run lint` type-checks only); the
-  functional verification behind this PRD's claims was a manual, scripted
-  end-to-end pass across employee/manager/admin roles, not a CI-enforced
-  regression suite.
-- The recommendation engine is intentionally rule-based and explainable
-  (§7.1); whether a learned model should ever augment or replace it is an
-  open product question, not a committed roadmap item.
-- No real-time push (websockets) — `sync` is poll-based. Acceptable at
-  current scale; worth revisiting if approval latency becomes
-  notification-latency-bound.
-- Payments/checkout for Beyond Work marketplace listings is explicitly out
-  of scope (§3) — listings are discovery only, transactions happen off
-  -platform.
+```
+score = 5 × min(1, hoursContributed / hoursTarget)
+```
+
+`hoursTarget` defaults to 250 and is the same admin-configurable number the
+tier ladder uses — one knob, not two.
+
+- Badges do **not** move it. Awarding one is recognition, not scoring.
+- It is recomputed wherever contribution totals change.
+- **Visibility:** the person, their line manager, and admins. `GET /score`
+  and `GET /milestones` refuse anyone else. It is not rankable on the
+  leaderboard and is not returned in the directory for other people.
+
+The Home card shows the number, the hours behind it, and how far the top of
+the scale is. Engagement and department counts sit alongside as context and
+are explicitly not inputs.
+
+### 3.8 Tiers
+
+A tier is a rank earned from contribution history. Points out of 100:
+
+```
+points = 100 × ( wHours × min(1, hours/hoursTarget)
+               + wContrib × min(1, contributions/contributionsTarget) )
+                 ÷ (wHours + wContrib)
+```
+
+Hours answer *how much did they give*; contribution count answers *how often
+did they show up*. Two different things, so each carries its own weight and
+its own saturation target. Weights are normalised, so they need not sum to 1.
+
+Defaults: `wHours 0.6`, `wContrib 0.4`, `hoursTarget 250`,
+`contributionsTarget 25`. Seeded ladder:
+
+| Tier | Reached at | Artifact |
+|---|---|---|
+| Contributor | 0 pts | tetrahedron |
+| Collaborator | 12 pts | octahedron |
+| Connector | 30 pts | dodecahedron |
+| Catalyst | 55 pts | icosahedron |
+| Principal | 80 pts | orbital icosa |
+
+Everything here is admin-editable. Changing a threshold or a weight
+re-evaluates every active user. A tier promotion notification fires only when
+the new tier's threshold is genuinely higher than the old one's, so a rename
+never reads as a promotion.
+
+### 3.9 Administration
+
+**Admin Console → Badges & Tiers.**
+
+- **Weighting editor** with a live preview against four sample profiles.
+  Saving re-tiers the whole organisation, so seeing the effect first is the
+  difference between a considered change and a surprise.
+- **Tier ladder:** add, rename, retune the threshold, edit the description,
+  pick the 3D artifact, deactivate. The ladder refuses to drop its last tier.
+- **Badge vocabulary:** add, edit name/icon/description/criteria, move between
+  qualities, retire. Changing a badge's quality re-buckets every award of it.
+
+**3D artifact catalogue: 15 solids** — deliberately more than the ladder needs
+so a newly created tier always has something distinctive available:
+tetrahedron, cube, octahedron, hex prism, diamond, dodecahedron, icosahedron,
+geodesic sphere, torus, torus knot, capsule, sphere, ringed core, orbital
+icosa, crown. Three carry an orbiting ring, which is the cheapest way to make
+the top of a ladder look like the top.
+
+Other admin surfaces: account creation with a generated one-time password,
+role and status changes, password reset, registration-request completion,
+impersonation (audit-logged, and admin checks use the *real* signed-in user so
+an impersonated session cannot escalate), and the audit log.
+
+### 3.10 Learning
+
+Anyone can host a lecture or training: title, description, skills taught,
+level, format (Virtual/In-person/Hybrid), location, date, start time,
+duration, seats.
+
+Registration is open — no host gate. A **full session waitlists** rather than
+refusing, so interest stays visible to the host, who can then widen the room
+or repeat it. Freeing a seat, either by a cancellation or by the host adding
+seats, promotes the longest-waiting person automatically and notifies them.
+
+Hosts see their roster on their own session cards and can cancel or
+reschedule; both notify everyone signed up.
+
+### 3.11 Insights
+
+- **Leaderboard.** Scoped to organisation / department / team, where "team"
+  means a manager's own reports and, for everyone else, their peer group under
+  the same manager. Ranks on badges, hours, engagements, or departments
+  reached — **never the contribution score**. Ranking is computed in SQL with
+  `DENSE_RANK`, so a page of five out of twenty thousand still carries true
+  positions and equal values share a place. Shows five, expands to twenty,
+  pages from there; if the viewer falls outside the visible page their own row
+  is appended so the board is never demotivating noise.
+- **Capability heatmap** — demand vs supply per skill, sourced from live
+  requirement tags.
+- **Team report** (managers and admins). An admin can pull organisation-wide,
+  by department, or by manager; **a manager is forced to their own reports
+  server-side regardless of what the request asks for**. The roster table
+  flags anyone whose committed hours exceed their declared bandwidth — the
+  reason to open it — and exports to CSV.
+
+### 3.12 Beyond Work
+
+Carpool and Communities. Carpool seat booking is a **request**, not an instant
+confirmation: the driver approves or declines, and the request lands in their
+Messages as a thread they can act on inline. A declined booking keeps its row
+so the thread still reads correctly; asking again clears it first.
+
+### 3.13 Profile
+
+Declared skills use a catalogue-backed chip editor. **CV import** reads a PDF
+(pdf.js), .docx (mammoth) or plain text **entirely in the browser — the CV is
+never uploaded** — and proposes skills as a pre-ticked review list.
+
+Matching is a catalogue lookup, not a language model: only skills already in
+the catalogue can be proposed, and each hit records the phrase it matched. The
+catalogue's own typeahead aliases are deliberately *not* used — they exist so
+typing "python" offers Django, which is exactly wrong as evidence. Short
+all-letter names (`C`, `R`, `Go`) are skipped: they hit "R&D" and "Go to
+market" constantly.
+
+---
+
+## 4. Security, privacy and GDPR
+
+### 4.1 Data minimisation
+
+The directory returns only what serves finding the right person and asking
+them for help.
+
+| Public to all colleagues | Restricted to self / line manager / admin |
+|---|---|
+| Name, initials, role, department, campus | Email address |
+| Skills, interests, specialisation | Manager (who they report to) |
+| Declared weekly bandwidth | Contribution score |
+| Badges, badge count, tier | Hours consumed |
+| Contribution totals (hours, engagements, departments) | `mustChangePassword` |
+| Online/offline **boolean** | Exact `lastSeen` timestamp |
+
+Presence is a dot, not a timestamp: a dot is useful, "last active at 14:07" is
+monitoring.
+
+### 4.2 Access control
+
+- `GET /score` and `GET /milestones` accept a `userId` and **refuse** unless
+  the caller is the subject, their line manager, or an admin.
+- `GET /reports` is manager/admin only, and a manager's scope is forced to
+  their own reports server-side.
+- Admin routes check the **real** signed-in user (`requireRealAdmin`), so an
+  impersonated session cannot perform admin actions.
+- Approvals are visible only to the person the decision is routed to.
+- Every administrative action is written to `audit_log`.
+
+### 4.3 Transport and application security
+
+- Password hashing with bcrypt; JWT bearer sessions.
+- `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
+  `Referrer-Policy: no-referrer` on every response.
+- Every query is parameterised — no string-built SQL anywhere.
+- 1 MB request body cap.
+- Errors return a generic message; details stay in the server log.
+
+---
+
+## 5. Visual specification
+
+### 5.1 Colour
+
+A cool corporate blue on a light neutral ground. Semantic accents sit off the
+primary hue so a status chip never reads as "branded".
+
+**Light**
+
+| Token | Value | Role |
+|---|---|---|
+| `--page` | `#f7f8fb` | page ground |
+| `--surface-solid` | `rgba(255,255,255,.97)` | cards |
+| `--surface-2` | `rgba(23,109,208,.06)` | inset fills |
+| `--line` | `#cbd2dc` | decorative hairline |
+| `--line-strong` | `#929dac` | input / control borders |
+| `--ink` | `#1b2736` | primary text |
+| `--ink-2` | `#4d5a66` | secondary text |
+| `--ink-3` | `#626d7a` | tertiary text |
+| `--primary` | `#176dd0` | brand fill |
+| `--primary-strong` | `#1157ae` | hover |
+| `--primary-text` | `#135caa` | brand text |
+| `--accent-green` | `#128166` | success |
+| `--accent-amber` | `#9a650d` | warning |
+| `--accent-red` | `#c22921` | danger |
+| `--accent-blue` | `#107a9c` | info (teal, to stay distinct from primary) |
+| `--accent-violet` | `#6758c8` | cross-department |
+
+**Dark** — navy-tinted, one step deeper: page `#0d131b`, cards
+`rgba(21,29,40,.97)`, ink `#eaf0f6`, primary `#4c9aef`.
+
+**Measured contrast** (light, against white / against page):
+
+| Pair | Ratio |
+|---|---|
+| ink | 15.1 / 14.2 |
+| ink-2 | 7.1 / 6.7 |
+| ink-3 | 5.3 / 5.0 |
+| primary-text | 6.7 / 6.3 |
+| white on primary | 5.1 |
+| green / amber / red / blue / violet | 4.8–5.8 |
+
+Dark mode holds 4.98:1 or better on the card for every text and accent token.
+
+### 5.2 Typography
+
+**Outfit**, 400/500/600/700/800.
+
+| Step | Size / line-height | Role |
+|---|---|---|
+| `xs` | 12 / 16 | chips and captions **only** |
+| `sm` | 14 / 22 | body, list rows |
+| `base` | 17 / 24 | card titles |
+| `lg` | 18 / 24 | section headings |
+| `xl` | 22 / 28 | sub-display |
+| `2xl` | 30 / 36 | view titles |
+| `3xl` | 40 / 44 | display |
+
+The scale was rebuilt from 12·14·16·20·28, which put three quarters of the
+app's text at 12 px — body, captions, chips and table cells all one size,
+separated only by weight, which is a weak hierarchy signal. 17 and 18 fill the
+hole that previously forced section headings *smaller* than the text they
+introduced.
+
+Uppercase micro-labels carry +0.055em tracking; caps at 12 px jam together
+without it. Numeric columns use `tabular-nums`.
+
+### 5.3 Layout and space
+
+- Content column **capped at 1280 px and centred**. Unbounded it stretched to
+  the full monitor, giving 100+ character measures and grids so sparse the
+  cards stopped reading as a set.
+- Page padding 40 px top / 48 px sides.
+- Section rhythm 56 px.
+- Card padding 20–24 px; grid gaps 16–20 px. The ratio matters more than
+  either number: space *inside* a card must exceed space *between* cards or
+  they stop reading as discrete objects.
+- Card radius 16 px.
+
+### 5.4 The filter row
+
+Every list page shares one `FilterBar`. The search field has a **fixed 312 px
+basis on every tab** and the dropdowns split the remainder evenly, so the row
+stays symmetric whether a page has two filters or four. All controls are a
+matched 44 px tall; the search sits on a faint primary tint so it reads as the
+control that drives the results rather than as another filter.
+
+### 5.5 Cards and depth
+
+Grid cards use a **cursor-tracked tilt**: ≤4° rotation, 1.015 scale, 6 px
+lift, 200 ms ease. Applied to every grid of content cards — Opportunities,
+People, Home recommendations, Learning, carpool, community groups and posts,
+Achievements milestones and badges, approvals, and the admin tier and badge
+cards.
+
+Deliberately **not** applied to My Requests, Insights or the Admin Console:
+those are full-width list rows and stat tiles, and tilting a row that spans
+the page reads as a glitch rather than as depth.
+
+There is **no cursor glare**. A radial highlight under the pointer washed out
+whatever text sat beneath it, making the part of the card you were looking at
+the least legible part of it.
+
+The effect is skipped entirely under `prefers-reduced-motion` and on touch
+devices, where there is no hover state and the transform fights scrolling.
+
+### 5.6 Layer scale
+
+Equal z-index falls back to DOM order, which is how a hovered card once
+painted over the sticky filter bar. The scale is fixed:
+
+```
+ 1  content card at rest
+ 5  content card lifted on hover
+20  in-page sticky bar
+30  app header
+40  impersonation banner, mobile bottom nav
+50  menus, drawers, modals
+```
+
+### 5.7 3D artifacts
+
+Tier solids render in three.js: standard material at 0.35 roughness / 0.6
+metalness with a 0.22-opacity wireframe overlay so facets stay legible at
+badge size. Rotation 0.008 rad/frame, paused when off-screen via
+`IntersectionObserver`, and frozen to a static pose under
+`prefers-reduced-motion`. Falls back to a flat glyph wherever WebGL is
+unavailable. Accent colour is read from the live CSS token and re-read on
+theme change.
+
+---
+
+## 6. Non-functional
+
+- **Stack:** React 19 + Vite, Express, PostgreSQL (PGlite in local dev — real
+  Postgres in-process, so the same SQL runs either way).
+- **Migrations** are idempotent and additive; a column is added defaulting to
+  the value that correctly backfills existing rows, then switched to its
+  going-forward default. No backfill `UPDATE` that would re-run on every boot.
+- **Seeding** runs only when the users table is empty; recognition defaults
+  fill only empty tables, so an admin's edits are never overwritten.
+- **Accessibility:** every text token clears WCAG AA; focus rings on all
+  interactive elements; the match meter states its level in text, not colour
+  alone; charts carry `role="img"` with a text label.
+- **Testing:** `docs/e2e-test.sh` drives the real HTTP API across all three
+  roles — 77 checks covering posting, applying, both approval stages,
+  recognition, collaboration requests, Learning with waitlisting, carpool,
+  manager reporting, the admin console, and every authorisation boundary.
+
+---
+
+## 7. Open questions
+
+1. **Hours target.** 250 h is the saturation point for both the score and the
+   tier ladder. It is a guess until there is real usage data; it is
+   admin-tunable precisely because it will need retuning.
+2. **Whose budget.** The product records that an engineer gave hours to
+   another team. It does not model cost transfer, and that is the first
+   question leadership will ask.
+3. **Badge inflation.** Nothing currently rate-limits awards beyond one per
+   giver/recipient/requirement. If badges become universal they stop meaning
+   anything; worth watching before adding more of them.
