@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Check, X, MessageSquare, RefreshCw } from 'lucide-react';
 import { useStore } from '../lib/store';
+import { TiltCard } from '../components/TiltCard';
 import { api, timeAgo, type ApprovalItem } from '../lib/api';
 import {
   Button, Card, Chip, Avatar, AiBadge, Modal, Field, TextArea, EmptyState, SkeletonGrid
@@ -106,7 +107,8 @@ export function ManagerInbox() {
     const note = a.kind === 'collab' ? a.notes : a.note;
 
     return (
-      <Card key={`${a.kind}:${a.id}`} className="p-5">
+      <TiltCard key={`${a.kind}:${a.id}`}>
+      <Card className="p-5 h-full flex flex-col">
         <div className="flex flex-wrap gap-4">
           <div className="flex items-start gap-3 flex-1 min-w-60">
             <Avatar initials={avatarInitials || '?'} size="lg" name={avatarName} />
@@ -169,6 +171,7 @@ export function ManagerInbox() {
           </div>
         )}
       </Card>
+      </TiltCard>
     );
   };
 

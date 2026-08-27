@@ -488,7 +488,7 @@ export function WorkExchange() {
       <div className="flex flex-wrap items-end justify-between gap-3 mb-5">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-ink">Opportunities</h1>
-          <p className="text-xs text-ink-2 mt-0.5">Projects and proofs of concept from any team or MB unit, alongside your day-to-day work</p>
+          <p className="text-xs text-ink-2 mt-0.5">Projects and proofs of concept you can pick up alongside your day-to-day work</p>
         </div>
         <div className="flex gap-2">
           <Button variant="soft" onClick={() => setOfferModal(true)}>

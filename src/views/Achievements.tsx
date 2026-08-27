@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Award, Heart, Sparkles, Send, Trophy, Check } from 'lucide-react';
 import { useStore } from '../lib/store';
+import { TiltCard } from '../components/TiltCard';
 import { api, timeAgo } from '../lib/api';
 import {
   Card, Button, Avatar, Modal, Field, TextArea, EmptyState, RowSkeleton, Reveal, Chip
@@ -188,7 +189,8 @@ export function Achievements() {
         <h2 className="text-sm font-semibold text-ink mb-3">Milestones</h2>
         <Reveal stagger className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
           {[...done, ...next].map((m) => (
-            <Card key={m.id} className={`p-4 h-full flex items-start gap-3 ${m.achieved ? '' : 'opacity-90'}`}>
+            <TiltCard key={m.id}>
+            <Card className={`p-4 h-full flex items-start gap-3 ${m.achieved ? '' : 'opacity-90'}`}>
               <span
                 aria-hidden="true"
                 className={`w-10 h-10 rounded-2xl flex items-center justify-center text-lg shrink-0 ${
@@ -213,6 +215,7 @@ export function Achievements() {
                 )}
               </div>
             </Card>
+            </TiltCard>
           ))}
         </Reveal>
       </section>
@@ -226,7 +229,8 @@ export function Achievements() {
           </h2>
           <Reveal stagger className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
             {earnedBadges.map(({ badge, count }) => (
-              <Card key={badge.id} className="p-4 h-full flex items-start gap-3">
+              <TiltCard key={badge.id}>
+              <Card className="p-4 h-full flex items-start gap-3">
                 <span className="w-10 h-10 rounded-2xl bg-amber-soft flex items-center justify-center text-lg shrink-0" aria-hidden="true">
                   {badge.icon}
                 </span>
@@ -239,6 +243,7 @@ export function Achievements() {
                   <p className="text-xs text-ink-3 mt-1">{dimensions[badge.dimension]}</p>
                 </div>
               </Card>
+              </TiltCard>
             ))}
           </Reveal>
         </section>

@@ -73,7 +73,7 @@ export function PeopleView() {
     <div className="anim-fade-up">
       <div className="mb-5">
         <h1 className="text-2xl font-bold tracking-tight text-ink">People & Skills</h1>
-        <p className="text-xs text-ink-2 mt-0.5">Colleagues across every department and MB unit, with the bandwidth they have offered</p>
+        <p className="text-xs text-ink-2 mt-0.5">Find the right skills, and the bandwidth people have offered to share them</p>
       </div>
 
       <FilterBar

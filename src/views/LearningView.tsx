@@ -4,6 +4,7 @@ import {
 } from 'lucide-react';
 import { useStore } from '../lib/store';
 import { TagEditor } from '../components/TagEditor';
+import { TiltCard } from '../components/TiltCard';
 import { api, type Training } from '../lib/api';
 import {
   Button, Card, Chip, Avatar, Modal, Field, TextInput, TextArea, Select,
@@ -197,7 +198,8 @@ export function LearningView() {
             const done = t.status === 'completed';
 
             return (
-              <Card key={t.id} className={`p-5 h-full flex flex-col ${cancelled ? 'opacity-60' : ''}`}>
+              <TiltCard key={t.id}>
+              <Card className={`p-5 h-full flex flex-col ${cancelled ? 'opacity-60' : ''}`}>
                 <div className="flex items-start justify-between gap-2">
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-primary-soft text-primary-text">
                     <CalendarDays className="w-3.5 h-3.5" />
@@ -294,6 +296,7 @@ export function LearningView() {
                   </div>
                 )}
               </Card>
+              </TiltCard>
             );
           })}
         </Reveal>

@@ -167,7 +167,8 @@ function Carpool() {
           const seatsLeft = t.seatsTotal - t.seatsBooked;
           const isDriver = t.driverId === s.user?.id;
           return (
-            <Card key={t.id} className="p-5 h-full flex flex-col">
+            <TiltCard key={t.id}>
+            <Card className="p-5 h-full flex flex-col">
               <div className="flex items-start justify-between gap-2">
                 <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold ${
                   t.direction === 'to_office' ? 'bg-amber-soft text-amber' : 'bg-violet-soft text-violet'
@@ -256,6 +257,7 @@ function Carpool() {
                 </div>
               )}
             </Card>
+            </TiltCard>
           );
         })}
         {filtered.length === 0 && (
@@ -396,7 +398,8 @@ function Communities() {
         <h3 className="text-sm font-semibold text-ink mb-3">Guilds & Groups</h3>
         <Reveal stagger className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
           {data.groups.map((g: any) => (
-            <Card key={g.id} className="p-4.5 p-5">
+            <TiltCard key={g.id}>
+            <Card className="p-5 h-full flex flex-col">
               <div className="flex items-start justify-between gap-2">
                 <span className="text-2xl leading-none">{g.icon}</span>
                 <Button
@@ -416,6 +419,7 @@ function Communities() {
                 {g.memberCount.toLocaleString()} members · {g.activeDiscussions} active discussions
               </p>
             </Card>
+            </TiltCard>
           ))}
         </Reveal>
       </section>
@@ -461,7 +465,8 @@ function Communities() {
         </div>
         <Reveal stagger className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
           {data.posts.map((p: any) => (
-            <Card key={p.id} className="p-4.5 p-5">
+            <TiltCard key={p.id}>
+            <Card className="p-5 h-full flex flex-col">
               <Chip tone="primary">{p.type}</Chip>
               <p className="text-sm font-normal text-ink mt-2 leading-snug">{p.title}</p>
               <p className="text-xs text-ink-2 mt-1.5 line-clamp-2">{p.description}</p>
@@ -469,6 +474,7 @@ function Communities() {
                 {p.location}{p.dateInfo ? ` · ${p.dateInfo}` : ''} · by {p.authorName} · {timeAgo(p.createdAt)}
               </p>
             </Card>
+            </TiltCard>
           ))}
         </Reveal>
       </section>

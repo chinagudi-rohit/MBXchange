@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Award, Plus, Pencil, Trash2, Sliders, Layers } from 'lucide-react';
 import { useStore } from '../lib/store';
+import { TiltCard } from '../components/TiltCard';
 import { api, type BadgeDef, type TierDef, type TierSettings } from '../lib/api';
 import {
   Card, Button, Chip, Modal, Field, TextInput, TextArea, Select, RowSkeleton
@@ -232,7 +233,8 @@ export function RecognitionAdmin() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3.5">
           {ladder.map((t) => (
-            <Card key={t.id} className={`p-5 ${t.active ? '' : 'opacity-60'}`}>
+            <TiltCard key={t.id}>
+            <Card className={`p-5 h-full flex flex-col ${t.active ? '' : 'opacity-60'}`}>
               <div className="flex items-start gap-3.5">
                 <span className="w-14 h-14 rounded-2xl bg-amber-soft text-amber flex items-center justify-center text-xl shrink-0 overflow-hidden">
                   <React.Suspense fallback={<span>{t.icon}</span>}>
@@ -258,6 +260,7 @@ export function RecognitionAdmin() {
                 </Button>
               </div>
             </Card>
+            </TiltCard>
           ))}
         </div>
       </section>
@@ -286,7 +289,8 @@ export function RecognitionAdmin() {
               <p className="text-xs font-semibold uppercase tracking-wide text-ink-3 mb-2">{label}</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
                 {inDim.map((b) => (
-                  <Card key={b.id} className={`p-4 ${b.active ? '' : 'opacity-55'}`}>
+                  <TiltCard key={b.id}>
+                  <Card className={`p-4 h-full flex flex-col ${b.active ? '' : 'opacity-55'}`}>
                     <div className="flex items-start gap-3">
                       <span className="w-10 h-10 rounded-2xl bg-amber-soft flex items-center justify-center text-lg shrink-0" aria-hidden="true">
                         {b.icon}
@@ -314,6 +318,7 @@ export function RecognitionAdmin() {
                       </Button>
                     </div>
                   </Card>
+                  </TiltCard>
                 ))}
               </div>
             </div>
