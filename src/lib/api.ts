@@ -63,7 +63,7 @@ export interface User {
   availableFor: string[];
   typicalAvailability: string;
   availableHoursWeek: number;
-  /** 0-5 mean of the peer ratings this person has been given. */
+  /** 0-5, derived from hours contributed. */
   contributionScore: number;
   /** Raw number of badges awarded to this person. */
   badgesCount: number;
@@ -328,10 +328,12 @@ export interface ScoreResponse {
   score: number;
   outOf: number;
   tier: string;
-  ratingCount: number;
+  /** The score is derived from this and nothing else. */
+  hoursContributed: number;
+  hoursTarget: number;
+  engagements: number;
+  departments: number;
   badgesCount: number;
-  /** Peer rating per dimension, each out of 5. */
-  breakdown: Record<string, number>;
 }
 
 /** A rung of the admin-editable tier ladder. */

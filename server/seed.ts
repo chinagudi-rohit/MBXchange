@@ -6,7 +6,7 @@
 import bcrypt from 'bcryptjs';
 import { q, one, newId } from './db.ts';
 import { computeRecommendation, parseHoursRange } from './rules.ts';
-import { recomputeRecognition } from './badges.ts';
+import { recomputeRecognition, recomputeContributionScore } from './badges.ts';
 import { getBadgeDefs, computeTierFromDb } from './recognition.ts';
 
 /** Short notes attached to the seeded badge awards, so the feed reads real. */
@@ -442,11 +442,14 @@ export async function seedIfEmpty(): Promise<void> {
     await q(`UPDATE users SET tier = $1 WHERE id = $2`, [tier.name, t.id]);
   }
 
-  // Only the badge tally is recomputed. contribution_score and
-  // rating_breakdown keep the seeded 1–5 peer-rating values — that is what
-  // the score has always been, and no badge award writes to it.
+  // Badge tally and contribution score both derive from real data, so the
+  // fixture values for them are recomputed away: the score is a function of
+  // hours contributed, which the history above has just established.
   const { rows: allUsers } = await q<{ id: string }>(`SELECT id FROM users`);
-  for (const u of allUsers) await recomputeRecognition(u.id);
+  for (const u of allUsers) {
+    await recomputeRecognition(u.id);
+    await recomputeContributionScore(u.id);
+  }
 
   // ---- Bandwidth offers
   for (const b of INITIAL_BANDWIDTH_OFFERS) {

@@ -18,7 +18,7 @@
  * picking one a chore and spreads the counts too thin to mean anything.
  */
 
-import { q } from './db.ts';
+import { q, one } from './db.ts';
 
 export type BadgeDimension = 'helping' | 'technicalExpertise' | 'collaboration' | 'reliability';
 
@@ -144,10 +144,9 @@ export function isBadgeId(id: unknown): id is string {
 /**
  * Roll a person's badge tally onto their user row.
  *
- * `contribution_score` is deliberately NOT touched here. It is the average of
- * the 1–5 peer ratings on `appreciations`, exactly as it has always been, and
- * is maintained by the rating path alone — a badge award carries no rating,
- * so giving one does not move the score.
+ * `contribution_score` is deliberately NOT touched here — it is a function of
+ * hours contributed alone (see recomputeContributionScore), so awarding a
+ * badge does not move it.
  *
  * Lives here rather than in routes.ts because the seed needs it too, and
  * routes.ts already imports from seed.ts.
@@ -164,16 +163,25 @@ export async function recomputeRecognition(userId: string): Promise<void> {
 }
 
 /**
- * The original peer score: the mean of every 1–5 rating a person has been
- * given. Kept as its own routine so the rating path is the only thing that
- * ever writes contribution_score.
+ * The contribution score: hours contributed, and nothing else.
+ *
+ * Upstream carried this as a static fixture value with no formula behind it,
+ * so it never moved. It is now derived from the one thing it claims to
+ * measure — total hours given to other teams — expressed on the same 0–5
+ * scale people already recognise.
+ *
+ * The saturation point is the admin-configurable `hours_target` that the tier
+ * ladder already uses, so there is one number to tune rather than two.
  */
 export async function recomputeContributionScore(userId: string): Promise<void> {
+  const st = await one<{ hours_target: string }>(
+    `SELECT hours_target FROM tier_settings WHERE id = 1`
+  );
+  const target = Math.max(1, Number(st?.hours_target) || 250);
   await q(
-    `UPDATE users SET contribution_score = COALESCE((
-       SELECT ROUND(AVG(rating)::numeric, 2) FROM appreciations
-        WHERE to_user_id = $1 AND rating IS NOT NULL
-     ), contribution_score) WHERE id = $1`,
-    [userId]
+    `UPDATE users SET contribution_score =
+       ROUND(LEAST(1.0, GREATEST(0, hours_contributed)::numeric / $1) * 5, 2)
+     WHERE id = $2`,
+    [target, userId]
   );
 }
